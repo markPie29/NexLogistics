@@ -1,0 +1,72 @@
+import type { NotificationItem, AiInsight } from "@/lib/types";
+
+export const seedNotifications: NotificationItem[] = [
+  { id: "n-001", type: "warning", title: "Overdue PMS", message: "NEX-104 oil change is overdue by 3 days.", at: "2026-05-09T07:00:00Z", read: false },
+  { id: "n-002", type: "info", title: "New Trip Assigned", message: "TRP-2024-170 assigned to Mark Santos.", at: "2026-05-09T06:30:00Z", read: false },
+  { id: "n-003", type: "danger", title: "Trip Delayed", message: "TRP-2024-169 reported delay due to traffic.", at: "2026-05-09T08:15:00Z", read: false },
+  { id: "n-004", type: "success", title: "Trip Completed", message: "TRP-2024-168 successfully delivered.", at: "2026-05-09T09:45:00Z", read: false },
+  { id: "n-005", type: "warning", title: "Insurance Expiring", message: "NEX-104 insurance expires in 21 days.", at: "2026-05-08T14:00:00Z", read: true },
+  { id: "n-006", type: "info", title: "Payroll Approved", message: "Payroll period Apr 16–30 approved.", at: "2026-05-02T10:00:00Z", read: true },
+  { id: "n-007", type: "info", title: "Document Uploaded", message: "POD uploaded for TRP-2024-167.", at: "2026-05-08T16:20:00Z", read: true },
+  { id: "n-008", type: "warning", title: "Driver License Expiring", message: "Joseph Tan license expires in 90 days.", at: "2026-05-07T09:00:00Z", read: true },
+  { id: "n-009", type: "success", title: "On-Time Streak", message: "Mark Santos hit 10 consecutive on-time deliveries.", at: "2026-05-06T11:00:00Z", read: true },
+  { id: "n-010", type: "info", title: "New Client Onboarded", message: "Pampanga Builders Depot signed a contract.", at: "2026-05-05T15:00:00Z", read: true },
+  { id: "n-011", type: "warning", title: "Fuel Spike", message: "NEX-104 fuel cost up 22% week-over-week.", at: "2026-05-05T10:00:00Z", read: true },
+  { id: "n-012", type: "info", title: "Route Update", message: "Manila→Pampanga has recurring delays.", at: "2026-05-04T08:00:00Z", read: true },
+];
+
+export const seedAiInsights: AiInsight[] = [
+  {
+    id: "ai-001",
+    category: "fuel",
+    severity: "warning",
+    title: "Truck NEX-104 has unusually high fuel usage",
+    description: "Fuel consumption is 22% above its 30-day average. Consider compressor inspection and route review.",
+    confidence: 92,
+    affectedEntity: "NEX-104",
+  },
+  {
+    id: "ai-002",
+    category: "driver",
+    severity: "positive",
+    title: "Driver Mark Santos has 96% on-time delivery",
+    description: "Top performer this month — consider for high-priority trips and incentive bonus.",
+    confidence: 97,
+    affectedEntity: "Mark Santos",
+  },
+  {
+    id: "ai-003",
+    category: "maintenance",
+    severity: "warning",
+    title: "Vehicle NEX-110 may require PMS soon",
+    description: "Predictive model estimates engine service required within 7–10 days based on mileage trend.",
+    confidence: 88,
+    affectedEntity: "NEX-110",
+  },
+  {
+    id: "ai-004",
+    category: "route",
+    severity: "critical",
+    title: "Route Manila → Pampanga has recurring delays",
+    description: "Average delay of 38 minutes over the past 14 days. Suggest alternate departure window 04:00–05:00.",
+    confidence: 84,
+    affectedEntity: "Manila → Pampanga",
+  },
+  {
+    id: "ai-005",
+    category: "cost",
+    severity: "info",
+    title: "Toll spend trending +12% MoM",
+    description: "Increase driven by NLEX/STAR usage. Evaluate batched dispatch on shared corridors.",
+    confidence: 79,
+  },
+  {
+    id: "ai-006",
+    category: "driver",
+    severity: "warning",
+    title: "Edwin Ramos showing fatigue pattern",
+    description: "3 consecutive days exceeding 10-hour driving window. Recommend rest day rotation.",
+    confidence: 81,
+    affectedEntity: "Edwin Ramos",
+  },
+];

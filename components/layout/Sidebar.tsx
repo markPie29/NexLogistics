@@ -1,0 +1,144 @@
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, Building2 } from "lucide-react";
+import { useUiStore } from "@/lib/store";
+import { useAuthStore } from "@/lib/store/auth";
+import { navForRole, ROLE_LABEL } from "@/lib/auth/roles";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+const GROUPS: Array<{ key: "operations" | "finance" | "customer" | "reports" | "others"; label: string }> = [
+  { key: "operations", label: "Operations" },
+  { key: "finance", label: "Finance & HR" },
+  { key: "customer", label: "Customer & Sales" },
+  { key: "reports", label: "Reports & Analytics" },
+  { key: "others", label: "Others" },
+];
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const collapsed = useUiStore((s) => s.sidebarCollapsed);
+  const toggle = useUiStore((s) => s.toggleSidebar);
+  const user = useAuthStore((s) => s.user);
+  const company = useAuthStore((s) => s.company);
+  const items = navForRole(user?.role);
+
+  return (
+    <aside
+      className={cn(
+        "fixed inset-y-0 left-0 z-30 flex flex-col bg-brand-navy text-white transition-[width] duration-300 ease-out",
+        collapsed ? "w-[78px]" : "w-[260px]"
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between h-16 px-4 border-b border-white/5 shrink-0">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-lg bg-brand-teal flex items-center justify-center shadow-glow shrink-0">
+            <span className="font-extrabold text-lg text-brand-navy">N</span>
+          </div>
+          {!collapsed && (
+            <div className="leading-none">
+              <div className="text-lg font-extrabold tracking-tight">
+                NE<span className="text-brand-teal">X</span>
+              </div>
+              <div className="text-[9px] tracking-[0.3em] text-brand-teal/90 font-semibold mt-0.5">
+                LOGISTICS
+              </div>
+            </div>
+          )}
+        </Link>
+        <button
+          onClick={toggle}
+          className="p-1.5 rounded-md hover:bg-white/10 transition shrink-0"
+          aria-label="Toggle sidebar"
+        >
+          <ChevronLeft className={cn("w-4 h-4 transition-transform", collapsed && "rotate-180")} />
+        </button>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto scrollbar-thin py-3 px-3 space-y-4">
+        {GROUPS.map((g) => {
+          const groupItems = items.filter((i) => i.group === g.key);
+          if (groupItems.length === 0) return null;
+          return (
+            <div key={g.key}>
+              {!collapsed && (
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40 px-3 py-2">
+                  {g.label}
+                </div>
+              )}
+              <ul className="space-y-1">
+                {groupItems.map((item) => {
+                  const active =
+                    pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all relative",
+                          active
+                            ? "bg-brand-teal text-white shadow-glow"
+                            : "text-white/70 hover:text-white hover:bg-white/5"
+                        )}
+                      >
+                        {active && !collapsed && (
+                          <motion.div
+                            layoutId="active-pill"
+                            className="absolute inset-0 rounded-lg bg-brand-teal -z-0"
+                            transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                          />
+                        )}
+                        <item.icon className="w-[18px] h-[18px] shrink-0 relative z-10" />
+                        {!collapsed && (
+                          <>
+                            <span className="flex-1 truncate relative z-10">{item.label}</span>
+                            {item.preview && (
+                              <Badge variant="preview" className="text-[9px] px-1.5 py-0 relative z-10">
+                                Preview
+                              </Badge>
+                            )}
+                          </>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
+      </nav>
+
+      {/* Company Card */}
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="p-3 border-t border-white/5"
+          >
+            <div className="rounded-xl bg-white/5 hover:bg-white/10 transition p-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-teal to-brand-teal-dark flex items-center justify-center shrink-0">
+                <Building2 className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold truncate">{company.name}</div>
+                <div className="text-[10px] text-white/50 truncate">ID: {company.code}</div>
+              </div>
+            </div>
+            {user && (
+              <div className="mt-2 px-1 text-[10px] text-white/40 truncate">
+                {ROLE_LABEL[user.role]} · {user.email}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </aside>
+  );
+}

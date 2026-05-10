@@ -1,0 +1,58 @@
+import type { Client } from "@/lib/types";
+
+export const seedClients: Client[] = [
+  {
+    id: "c-001",
+    name: "ABC Construction",
+    industry: "Construction",
+    contactPerson: "Engr. Robert Lim",
+    email: "robert@abcconstruction.demo",
+    phone: "(02) 8888 1100",
+    address: "Bonifacio Global City, Taguig",
+  },
+  {
+    id: "c-002",
+    name: "Manila Fresh Foods",
+    industry: "FMCG / Cold Chain",
+    contactPerson: "Aileen Reyes",
+    email: "aileen@manilafresh.demo",
+    phone: "(02) 8500 2200",
+    address: "Pasig City",
+  },
+  {
+    id: "c-003",
+    name: "Northline Distribution",
+    industry: "Distribution",
+    contactPerson: "Ramon Aquino",
+    email: "ramon@northline.demo",
+    phone: "(045) 432 1100",
+    address: "Pampanga",
+  },
+  {
+    id: "c-004",
+    name: "QuickMart Retail",
+    industry: "Retail",
+    contactPerson: "Lourdes Pascual",
+    email: "lourdes@quickmart.demo",
+    phone: "(02) 7900 4400",
+    address: "Quezon City",
+  },
+  {
+    id: "c-005",
+    name: "Prime Medical Supply",
+    industry: "Healthcare",
+    contactPerson: "Dr. Anton Vega",
+    email: "anton@primemed.demo",
+    phone: "(02) 8123 5566",
+    address: "Makati",
+  },
+  {
+    id: "c-006",
+    name: "Pampanga Builders Depot",
+    industry: "Construction Supply",
+    contactPerson: "Mario Gutierrez",
+    email: "mario@pbdepot.demo",
+    phone: "(045) 988 7788",
+    address: "San Fernando, Pampanga",
+  },
+];
