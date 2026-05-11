@@ -1,13 +1,22 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Building2 } from "lucide-react";
+import { ChevronLeft, ChevronDown, Building2, FileText, CloudUpload, FolderTree, Share2, FileQuestion, Trash2 } from "lucide-react";
 import { useUiStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/store/auth";
 import { navForRole, ROLE_LABEL } from "@/lib/auth/roles";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  LayoutGrid,
+  FileText as InvoiceIcon,
+  CreditCard,
+  Users as CustomersIcon,
+  FileX2,
+  RefreshCw,
+} from "lucide-react";
 
 const GROUPS: Array<{ key: "operations" | "finance" | "customer" | "reports" | "others"; label: string }> = [
   { key: "operations", label: "Operations" },
@@ -72,38 +81,47 @@ export function Sidebar() {
               )}
               <ul className="space-y-1">
                 {groupItems.map((item) => {
+                  const isBilling = item.href === "/billing";
+                  const isDocuments = item.href === "/documents";
                   const active =
-                    pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                    pathname === item.href || (item.href !== "/dashboard" && !isBilling && !isDocuments && pathname.startsWith(item.href));
+
                   return (
                     <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        className={cn(
-                          "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all relative",
-                          active
-                            ? "bg-brand-teal text-white shadow-glow"
-                            : "text-white/70 hover:text-white hover:bg-white/5"
-                        )}
-                      >
-                        {active && !collapsed && (
-                          <motion.div
-                            layoutId="active-pill"
-                            className="absolute inset-0 rounded-lg bg-brand-teal -z-0"
-                            transition={{ type: "spring", stiffness: 400, damping: 35 }}
-                          />
-                        )}
-                        <item.icon className="w-[18px] h-[18px] shrink-0 relative z-10" />
-                        {!collapsed && (
-                          <>
-                            <span className="flex-1 truncate relative z-10">{item.label}</span>
-                            {item.preview && (
-                              <Badge variant="preview" className="text-[9px] px-1.5 py-0 relative z-10">
-                                Preview
-                              </Badge>
-                            )}
-                          </>
-                        )}
-                      </Link>
+                      {isBilling ? (
+                        <ExpandableNav collapsed={collapsed} pathname={pathname} item={item} childrenItems={BILLING_CHILDREN} basePath="/billing" />
+                      ) : isDocuments ? (
+                        <ExpandableNav collapsed={collapsed} pathname={pathname} item={item} childrenItems={DOCUMENTS_CHILDREN} basePath="/documents" />
+                      ) : (
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all relative",
+                            active
+                              ? "bg-brand-teal text-white shadow-glow"
+                              : "text-white/70 hover:text-white hover:bg-white/5"
+                          )}
+                        >
+                          {active && !collapsed && (
+                            <motion.div
+                              layoutId="active-pill"
+                              className="absolute inset-0 rounded-lg bg-brand-teal -z-0"
+                              transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                            />
+                          )}
+                          <item.icon className="w-[18px] h-[18px] shrink-0 relative z-10" />
+                          {!collapsed && (
+                            <>
+                              <span className="flex-1 truncate relative z-10">{item.label}</span>
+                              {item.preview && (
+                                <Badge variant="preview" className="text-[9px] px-1.5 py-0 relative z-10">
+                                  Preview
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                        </Link>
+                      )}
                     </li>
                   );
                 })}
@@ -140,5 +158,79 @@ export function Sidebar() {
         )}
       </AnimatePresence>
     </aside>
+  );
+}
+
+/* ── Expandable Sub-Nav ── */
+const BILLING_CHILDREN = [
+  { label: "Overview", href: "/billing", icon: LayoutGrid },
+  { label: "Invoices", href: "/billing/invoices", icon: InvoiceIcon },
+  { label: "Payments", href: "/billing/payments", icon: CreditCard },
+  { label: "Customers", href: "/billing/customers", icon: CustomersIcon },
+  { label: "Credit Notes", href: "/billing/credit-notes", icon: FileX2 },
+  { label: "Recurring Invoices", href: "/billing/recurring", icon: RefreshCw },
+];
+
+const DOCUMENTS_CHILDREN = [
+  { label: "All Documents", href: "/documents", icon: FileText },
+  { label: "Upload Document", href: "/documents/upload", icon: CloudUpload },
+  { label: "Document Categories", href: "/documents/categories", icon: FolderTree },
+  { label: "Shared Documents", href: "/documents/shared", icon: Share2 },
+  { label: "Document Requests", href: "/documents/requests", icon: FileQuestion },
+  { label: "Recycle Bin", href: "/documents/recycle-bin", icon: Trash2 },
+];
+
+function ExpandableNav({ collapsed, pathname, item, childrenItems, basePath }: { collapsed: boolean; pathname: string; item: any; childrenItems: any[]; basePath: string }) {
+  const isOpen = pathname.startsWith(basePath);
+  const [expanded, setExpanded] = useState(isOpen);
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className={cn(
+          "w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all relative",
+          isOpen ? "bg-brand-teal/20 text-white" : "text-white/70 hover:text-white hover:bg-white/5"
+        )}
+      >
+        <item.icon className="w-[18px] h-[18px] shrink-0" />
+        {!collapsed && (
+          <>
+            <span className="flex-1 truncate text-left">{item.label}</span>
+            <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", expanded && "rotate-180")} />
+          </>
+        )}
+      </button>
+      <AnimatePresence initial={false}>
+        {expanded && !collapsed && (
+          <motion.ul
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden ml-5 border-l border-white/10 pl-2 mt-1 space-y-0.5"
+          >
+            {childrenItems.map((child) => {
+              const active = child.href === basePath ? pathname === basePath : pathname.startsWith(child.href);
+              return (
+                <li key={child.href}>
+                  <Link
+                    href={child.href}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-all",
+                      active
+                        ? "bg-brand-teal text-white shadow-glow"
+                        : "text-white/60 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    <child.icon className="w-[15px] h-[15px] shrink-0" />
+                    <span className="truncate">{child.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
