@@ -1,127 +1,698 @@
 "use client";
-import Link from "next/link";
+import { useState } from "react";
 import { useAuthStore } from "@/lib/store/auth";
-import { useTripStore, useFleetStore } from "@/lib/store";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { MapPin, Truck, Package, Phone, ClipboardCheck, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useTripStore, useFleetStore, useDriverStore, useClientStore, useUiStore } from "@/lib/store";
+import {
+  Bell, ChevronLeft, ChevronRight, LayoutGrid, ClipboardList, Camera,
+  MoreHorizontal, Truck, Package, Navigation2, Clock3, CheckCircle2,
+  MessageSquare, Wallet, Megaphone, Fuel, X,
+} from "lucide-react";
 import { toast } from "sonner";
-import type { TripStatus } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import type { TripStatus, Trip } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-const NEXT: Partial<Record<TripStatus, { next: TripStatus; label: string }>> = {
-  scheduled: { next: "driver_assigned", label: "Accept Trip" },
-  driver_assigned: { next: "vehicle_dispatched", label: "Dispatched" },
-  vehicle_dispatched: { next: "loaded", label: "Arrived at Pickup" },
-  loaded: { next: "in_transit", label: "Start Trip" },
-  in_transit: { next: "delivered", label: "Arrived at Dropoff" },
-  delivered: { next: "completed", label: "Capture POD" },
+// ─── Constants ────────────────────────────────────────────────
+const PROGRESS_STEPS: TripStatus[] = [
+  "driver_assigned",
+  "vehicle_dispatched",
+  "loaded",
+  "in_transit",
+  "delivered",
+  "completed",
+];
+
+const STATUS_LABELS: Record<string, string> = {
+  scheduled: "Scheduled",
+  driver_assigned: "Driver Assigned",
+  vehicle_dispatched: "Vehicle Dispatched",
+  loaded: "Loaded",
+  in_transit: "In Transit",
+  delivered: "Arrived at Destination",
+  completed: "Completed",
+  cancelled: "Cancelled",
 };
 
+const STATUS_COLOR: Record<string, string> = {
+  in_transit: "bg-blue-100 text-blue-700",
+  delivered: "bg-emerald-100 text-emerald-700",
+  completed: "bg-gray-100 text-gray-500",
+  scheduled: "bg-amber-100 text-amber-700",
+  driver_assigned: "bg-violet-100 text-violet-700",
+  vehicle_dispatched: "bg-indigo-100 text-indigo-700",
+  loaded: "bg-orange-100 text-orange-700",
+  cancelled: "bg-red-100 text-red-600",
+};
+
+const SHEET_STATUSES: { value: TripStatus; label: string }[] = [
+  { value: "loaded",    label: "Arrived at Pickup" },
+  { value: "in_transit", label: "Start Trip / In Transit" },
+  { value: "delivered", label: "Arrived at Destination" },
+  { value: "completed", label: "Trip Completed" },
+];
+
+type View = "dashboard" | "trip_details" | "trips_list";
+type Tab  = "dashboard" | "trips" | "pod" | "more";
+
+// ─── Main Page ────────────────────────────────────────────────
 export default function DriverPage() {
-  const user = useAuthStore((s) => s.user);
-  const trips = useTripStore((s) => s.trips);
-  const setStatus = useTripStore((s) => s.setStatus);
-  const vehicles = useFleetStore((s) => s.vehicles);
+  const user         = useAuthStore((s) => s.user);
+  const trips        = useTripStore((s) => s.trips);
+  const setStatus    = useTripStore((s) => s.setStatus);
+  const vehicles     = useFleetStore((s) => s.vehicles);
+  const drivers      = useDriverStore((s) => s.drivers);
+  const clients      = useClientStore((s) => s.clients);
+  const notifications = useUiStore((s) => s.notifications);
 
-  const driverId = user?.driverId;
-  const myTrips = trips.filter((t) => t.driverId === driverId);
-  const active = myTrips.find((t) => t.status !== "completed" && t.status !== "cancelled");
-  const completed = myTrips.filter((t) => t.status === "completed");
+  const [view,          setView]         = useState<View>("dashboard");
+  const [selectedTrip,  setSelectedTrip] = useState<Trip | null>(null);
+  const [activeTab,     setActiveTab]    = useState<Tab>("dashboard");
+  const [showSheet,     setShowSheet]    = useState(false);
+  const [sheetStatus,   setSheetStatus]  = useState<TripStatus>("in_transit");
+  const [sheetNote,     setSheetNote]    = useState("");
 
-  return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <PageHeader title="My Trip" subtitle={`Welcome, ${user?.name?.split(" ")[0] || "Driver"}`} breadcrumbs={[{ label: "Driver" }, { label: "My Trip" }]} />
+  // Resolve driver — fall back to first driver (Mark Santos) for demo
+  const driverId = user?.driverId ?? drivers[0]?.id;
+  const myDriver = drivers.find((d) => d.id === driverId) ?? drivers[0];
 
-      {!active && (
-        <Card><CardContent className="text-center py-12">
-          <Truck className="w-12 h-12 text-brand-teal mx-auto mb-3 opacity-50" />
-          <div className="font-bold text-brand-navy">No active trip</div>
-          <div className="text-sm text-muted-foreground">You'll be notified when a new trip is assigned.</div>
-        </CardContent></Card>
-      )}
+  const myTrips       = trips.filter((t) => t.driverId === driverId);
+  const activeTrip    = myTrips.find((t) => !["completed", "cancelled"].includes(t.status));
+  const completedTrips = myTrips.filter((t) => t.status === "completed");
+  const vehicle       = vehicles.find((v) => v.id === (activeTrip?.vehicleId ?? myDriver?.assignedVehicleId));
+  const unread        = notifications.filter((n) => !n.read).length;
 
-      {active && (() => {
-        const v = vehicles.find((x) => x.id === active.vehicleId);
-        const action = NEXT[active.status];
-        return (
-          <>
-            <Card className="overflow-hidden">
-              <div className="bg-gradient-to-br from-brand-teal to-brand-teal-dark text-white p-5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-xs opacity-90 uppercase tracking-wide">Active Trip</div>
-                    <div className="text-2xl font-bold mt-1">{active.id}</div>
-                    <Badge variant="neutral" className="mt-2 bg-white/20 text-white border-0">{active.status.replace(/_/g, " ")}</Badge>
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const firstName = user?.name?.split(" ")[0] ?? myDriver?.name?.split(" ")[0] ?? "Driver";
+  const fullName  = user?.name ?? myDriver?.name ?? "Mark Santos";
+
+  function openTrip(trip: Trip) {
+    setSelectedTrip(trip);
+    setView("trip_details");
+  }
+
+  function openStatusSheet() {
+    if (!activeTrip) return;
+    setSheetStatus(activeTrip.status);
+    setShowSheet(true);
+  }
+
+  function submitStatus() {
+    if (!activeTrip) return;
+    setStatus(activeTrip.id, sheetStatus, fullName, sheetNote || undefined);
+    toast.success(`Status updated: ${STATUS_LABELS[sheetStatus]}`);
+    setShowSheet(false);
+    setSheetNote("");
+  }
+
+  function handleTab(tab: Tab) {
+    setActiveTab(tab);
+    if (tab === "dashboard") { setView("dashboard"); return; }
+    if (tab === "trips")     { setView("trips_list"); return; }
+    if (tab === "pod")       { toast.info("Opening POD capture…"); return; }
+    toast.info("Coming soon");
+  }
+
+  // ─── Dashboard ──────────────────────────────────────────────
+  function Dashboard() {
+    return (
+      <div className="space-y-5 pb-24">
+        {/* Profile banner */}
+        <div className="-mx-4 -mt-4 px-5 pt-5 pb-6 bg-[#0B1C2E]">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xl font-bold shrink-0 select-none">
+              {fullName.charAt(0)}
+            </div>
+            <div>
+              <p className="text-sm text-white/60">{greeting},</p>
+              <p className="text-lg font-bold text-white leading-tight">{fullName}</p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs text-white/60">Online</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Today's Summary */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-[#0B1C2E] text-sm">Today's Summary</h2>
+            <button className="text-xs text-teal-600 font-semibold">View all</button>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {([
+              { label: "Assigned\nTrips",   value: myTrips.filter(t => !["completed","cancelled"].includes(t.status)).length || 1, icon: ClipboardList, color: "bg-blue-50 text-blue-600" },
+              { label: "Completed\nToday",  value: completedTrips.length,                                                           icon: CheckCircle2,  color: "bg-emerald-50 text-emerald-600" },
+              { label: "Travelled\n(km)",   value: activeTrip?.distanceKm ?? 120,                                                   icon: Navigation2,   color: "bg-amber-50 text-amber-600" },
+              { label: "On Duty\n(hrs)",    value: "8.5",                                                                           icon: Clock3,        color: "bg-rose-50 text-rose-600" },
+            ] as const).map((s) => (
+              <div key={s.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-2.5 flex flex-col items-center text-center gap-1.5">
+                <div className={`w-8 h-8 rounded-lg ${s.color} flex items-center justify-center`}>
+                  <s.icon className="w-4 h-4" />
+                </div>
+                <p className="text-sm font-extrabold text-[#0B1C2E] leading-none">{s.value}</p>
+                <p className="text-[9px] text-gray-500 leading-tight whitespace-pre-line">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Current Trip */}
+        <section>
+          {activeTrip ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                <h2 className="font-bold text-[#0B1C2E] text-sm">Current Trip</h2>
+                <span className={cn("text-[10px] px-2.5 py-1 rounded-full font-semibold", STATUS_COLOR[activeTrip.status] ?? "bg-gray-100 text-gray-600")}>
+                  {STATUS_LABELS[activeTrip.status]}
+                </span>
+              </div>
+              <div className="px-4 pb-3">
+                <div className="flex gap-3 items-stretch">
+                  {/* Route connector */}
+                  <div className="flex flex-col items-center pt-1">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-emerald-400 shrink-0" />
+                    <span className="w-0.5 flex-1 bg-gray-200 my-1" />
+                    <span className="w-3 h-3 rounded-full bg-red-500 border-2 border-white ring-1 ring-red-400 shrink-0" />
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs opacity-90">Fare</div>
-                    <div className="text-xl font-bold">{formatCurrency(active.fare)}</div>
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <p className="font-bold text-sm text-[#0B1C2E]">{activeTrip.pickup.address.split(",")[0]}</p>
+                      <p className="text-xs text-gray-400">Pick-up</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-[#0B1C2E]">{activeTrip.dropoff.address.split(",")[0]}</p>
+                      <p className="text-xs text-gray-400">Drop-off</p>
+                    </div>
+                  </div>
+                  <div className="text-right space-y-3 pt-0.5">
+                    <div>
+                      <p className="text-[10px] text-gray-400">ETA</p>
+                      <p className="font-bold text-sm text-[#0B1C2E]">
+                        {activeTrip.eta ? new Date(activeTrip.eta).toLocaleTimeString("en-PH",{hour:"2-digit",minute:"2-digit"}) : "10:30 AM"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400">Distance</p>
+                      <p className="font-bold text-sm text-[#0B1C2E]">{activeTrip.distanceKm} km</p>
+                    </div>
                   </div>
                 </div>
               </div>
-              <CardContent className="p-5 space-y-4">
-                <Row icon={MapPin} title="Pickup" value={active.pickup.address} sub={new Date(active.pickup.scheduledAt).toLocaleString()} />
-                <Row icon={MapPin} title="Dropoff" value={active.dropoff.address} sub={new Date(active.dropoff.scheduledAt).toLocaleString()} accent />
-                <Row icon={Package} title="Cargo" value={active.cargo.type} sub={`${active.cargo.weightKg} kg · ${active.cargo.units} units`} />
-                <Row icon={Truck} title="Vehicle" value={v?.plate || "—"} sub={v ? `${v.brand} ${v.model}` : ""} />
-              </CardContent>
-            </Card>
-
-            {action && (
-              action.next === "completed" ? (
-                <Button asChild size="lg" className="w-full h-16 text-base shadow-glow">
-                  <Link href={`/pod/${active.id}`}><ClipboardCheck className="w-5 h-5" /> {action.label}</Link>
-                </Button>
-              ) : (
-                <Button size="lg" className="w-full h-16 text-base shadow-glow" onClick={() => { setStatus(active.id, action.next, "driver"); toast.success(`→ ${action.next.replace(/_/g, " ")}`); }}>
-                  <CheckCircle2 className="w-5 h-5" /> {action.label} <ArrowRight className="w-4 h-4 ml-auto" />
-                </Button>
-              )
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" size="lg" className="h-14"><Phone className="w-4 h-4" /> Call Dispatch</Button>
-              <Button variant="outline" size="lg" className="h-14" onClick={() => toast("Issue reported")}>Report Issue</Button>
+              <div className="px-4 pb-2 flex justify-between text-xs text-gray-400 border-t border-gray-50 pt-2">
+                <span>Trip ID: <span className="font-semibold text-[#0B1C2E]">{activeTrip.id}</span></span>
+                <span>Vehicle: <span className="font-semibold text-[#0B1C2E]">{vehicle?.plate ?? "NEX-101"}</span></span>
+              </div>
+              <div className="px-4 pb-4 pt-2">
+                <button
+                  onClick={() => openTrip(activeTrip)}
+                  className="w-full h-12 bg-[#0B6E4F] hover:bg-[#0a5f44] active:scale-[0.98] text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+                >
+                  View Trip Details <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          </>
-        );
-      })()}
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+              <Truck className="w-10 h-10 text-teal-400 mx-auto mb-3 opacity-40" />
+              <p className="font-bold text-[#0B1C2E]">No active trip</p>
+              <p className="text-sm text-gray-400 mt-1">You'll be notified when a trip is assigned.</p>
+            </div>
+          )}
+        </section>
 
-      <div>
-        <h3 className="font-bold text-brand-navy mb-3">Recent Completed ({completed.length})</h3>
-        <div className="space-y-2">
-          {completed.slice(0, 5).map((t) => (
-            <Card key={t.id}><CardContent className="p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center"><CheckCircle2 className="w-4 h-4 text-emerald-600" /></div>
+        {/* My Vehicle */}
+        {vehicle && (
+          <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-[#0B1C2E] text-sm">My Vehicle</h2>
+              <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold",
+                vehicle.status === "in_trip" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500")}>
+                {vehicle.status === "in_trip" ? "● Online" : vehicle.status}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-14 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Truck className="w-7 h-7 text-gray-400" />
+              </div>
+              <div>
+                <p className="font-bold text-[#0B1C2E] text-sm">{vehicle.plate}</p>
+                <p className="text-xs text-gray-500">{vehicle.brand} {vehicle.model} Wing Van</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Plate Number",  value: vehicle.plate },
+                { label: "Fuel Level",    value: "70%",                          extra: <Fuel className="w-3 h-3 text-blue-500 inline mr-0.5" /> },
+                { label: "Odometer",      value: `${vehicle.odometer.toLocaleString()} km` },
+              ].map((d) => (
+                <div key={d.label} className="bg-gray-50 rounded-xl p-2.5">
+                  <p className="text-[10px] text-gray-400">{d.label}</p>
+                  <p className="font-bold text-xs text-[#0B1C2E] mt-0.5">{d.extra}{d.value}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Quick Actions */}
+        <section>
+          <h2 className="font-bold text-[#0B1C2E] text-sm mb-3">Quick Actions</h2>
+          <div className="grid grid-cols-4 gap-3">
+            {([
+              { label: "Update\nStatus",  icon: CheckCircle2,  onClick: openStatusSheet,                         badge: 0 },
+              { label: "Upload\nPOD",     icon: Camera,        onClick: () => toast.info("Camera coming soon"),  badge: 0 },
+              { label: "Expenses",        icon: Wallet,        onClick: () => toast.info("Expenses module"),     badge: 0 },
+              { label: "Messages",        icon: MessageSquare, onClick: () => toast.info("Messages coming soon"), badge: 2 },
+            ] as const).map((a) => (
+              <button
+                key={a.label}
+                onClick={a.onClick}
+                className="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex flex-col items-center gap-1.5 text-center active:scale-95 transition-transform"
+              >
+                {a.badge > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center z-10">
+                    {a.badge}
+                  </span>
+                )}
+                <div className="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center">
+                  <a.icon className="w-4 h-4 text-teal-600" />
+                </div>
+                <span className="text-[10px] text-gray-600 font-medium leading-tight whitespace-pre-line">{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Announcements */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-[#0B1C2E] text-sm">Announcements</h2>
+            <button className="text-xs text-teal-600 font-semibold">View all</button>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-start gap-3">
+            <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
+              <Megaphone className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-gray-700 leading-snug">Safety first! Always wear your seatbelt and follow traffic rules.</p>
+              <p className="text-xs text-gray-400 mt-1">May 25, 2024 • 08:00 AM</p>
+            </div>
+            <span className="w-2 h-2 rounded-full bg-red-500 mt-1 shrink-0" />
+          </div>
+        </section>
+
+        {/* Recent completed trips */}
+        {completedTrips.length > 0 && (
+          <section>
+            <h2 className="font-bold text-[#0B1C2E] text-sm mb-3">Recent Trips</h2>
+            <div className="space-y-2">
+              {completedTrips.slice(0, 3).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => openTrip(t)}
+                  className="w-full bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm text-[#0B1C2E]">{t.id}</p>
+                    <p className="text-xs text-gray-400 truncate">{t.dropoff.address}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Trip Details ────────────────────────────────────────────
+  function TripDetails({ trip }: { trip: Trip }) {
+    const v      = vehicles.find((x) => x.id === trip.vehicleId);
+    const client = clients.find((c) => c.id === trip.clientId);
+    const isActive = trip.id === activeTrip?.id;
+
+    return (
+      <div className="space-y-4 pb-24">
+        {/* Header card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide">TRIP ID</p>
+              <p className="text-lg font-extrabold text-[#0B1C2E] mt-0.5">{trip.id}</p>
+            </div>
+            <span className={cn("text-xs px-3 py-1.5 rounded-full font-semibold", STATUS_COLOR[trip.status] ?? "bg-gray-100 text-gray-500")}>
+              {STATUS_LABELS[trip.status]}
+            </span>
+          </div>
+          {client && (
+            <p className="text-xs text-gray-500 mt-2">
+              <span className="font-medium text-gray-700">Client: </span>{client.name}
+            </p>
+          )}
+        </div>
+
+        {/* Route card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex gap-4 items-stretch">
+            <div className="flex flex-col items-center pt-1">
+              <span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-emerald-300" />
+              <span className="w-0.5 flex-1 bg-gray-200 my-1" />
+              <span className="w-3 h-3 rounded-full bg-red-500 border-2 border-white ring-1 ring-red-300" />
+            </div>
+            <div className="grid grid-cols-2 flex-1 gap-3">
+              <div>
+                <p className="text-[10px] text-gray-400 mb-0.5">Pick-up</p>
+                <p className="font-bold text-sm text-[#0B1C2E] leading-tight">{trip.pickup.address.split(",")[0]}</p>
+                {trip.pickup.address.includes(",") && (
+                  <p className="text-[11px] text-gray-400">{trip.pickup.address.split(",").slice(1).join(",").trim()}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 mb-0.5">Drop-off</p>
+                <p className="font-bold text-sm text-[#0B1C2E] leading-tight">{trip.dropoff.address.split(",")[0]}</p>
+                {trip.dropoff.address.includes(",") && (
+                  <p className="text-[11px] text-gray-400">{trip.dropoff.address.split(",").slice(1).join(",").trim()}</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-gray-50">
+            <div>
+              <p className="text-[10px] text-gray-400">Scheduled</p>
+              <p className="font-semibold text-xs text-[#0B1C2E]">
+                {new Date(trip.pickup.scheduledAt).toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"})} &bull; {new Date(trip.pickup.scheduledAt).toLocaleTimeString("en-PH",{hour:"2-digit",minute:"2-digit"})}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-400">ETA</p>
+              <p className="font-semibold text-xs text-[#0B1C2E]">
+                {trip.eta ? new Date(trip.eta).toLocaleTimeString("en-PH",{hour:"2-digit",minute:"2-digit"}) : "10:30 AM"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Cargo */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <h3 className="font-bold text-sm text-[#0B1C2E] mb-3">Cargo Information</h3>
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
+              <Package className="w-5 h-5 text-gray-500" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-[#0B1C2E]">{trip.cargo.type}</p>
+              <p className="text-xs text-gray-500">{trip.cargo.weightKg.toLocaleString()} kg • {trip.cargo.units} Pallets</p>
+              {trip.cargo.description && (
+                <p className="text-xs text-gray-400 mt-0.5">Notes: {trip.cargo.description}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Trip Progress */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <h3 className="font-bold text-sm text-[#0B1C2E] mb-4">Trip Progress</h3>
+          <div className="space-y-0">
+            {PROGRESS_STEPS.map((step, i) => {
+              const log      = trip.statusLogs.find((l) => l.status === step);
+              const done     = Boolean(log);
+              const current  = trip.status === step;
+              const last     = i === PROGRESS_STEPS.length - 1;
+              return (
+                <div key={step} className="flex gap-3">
+                  {/* spine */}
+                  <div className="flex flex-col items-center">
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 z-10 bg-white",
+                      done    ? "border-[#0B6E4F] bg-[#0B6E4F]" :
+                      current ? "border-[#0B6E4F]" : "border-gray-300"
+                    )}>
+                      {done && <CheckCircle2 className="w-3 h-3 text-white" />}
+                      {current && !done && <span className="w-2 h-2 rounded-full bg-[#0B6E4F]" />}
+                    </div>
+                    {!last && <div className={cn("w-0.5 h-7 mt-0", done ? "bg-[#0B6E4F]" : "bg-gray-200")} />}
+                  </div>
+                  {/* label */}
+                  <div className={cn("flex-1 pb-2", last ? "pb-0" : "")}>
+                    <p className={cn("text-sm font-semibold leading-tight",
+                      done || current ? "text-[#0B1C2E]" : "text-gray-400")}>
+                      {STATUS_LABELS[step]}
+                    </p>
+                    {log && (
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {new Date(log.at).toLocaleDateString("en-PH",{month:"short",day:"numeric"})} &bull; {new Date(log.at).toLocaleTimeString("en-PH",{hour:"2-digit",minute:"2-digit"})}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Map placeholder */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="h-40 bg-gradient-to-br from-green-50 via-teal-50 to-blue-50 flex flex-col items-center justify-center gap-2 text-gray-500">
+            <Navigation2 className="w-8 h-8 text-teal-500" />
+            <span className="text-xs font-medium text-gray-600">Live GPS coming soon</span>
+            <span className="text-[10px] text-gray-400 px-6 text-center">{trip.pickup.address} → {trip.dropoff.address}</span>
+          </div>
+        </div>
+
+        {/* Update status CTA */}
+        {isActive && !["completed","cancelled"].includes(trip.status) && (
+          <button
+            onClick={openStatusSheet}
+            className="w-full h-14 bg-[#0B6E4F] hover:bg-[#0a5f44] active:scale-[0.98] text-white rounded-2xl font-bold text-sm flex items-center justify-center transition-all shadow-lg shadow-teal-900/20"
+          >
+            Update Trip Status
+          </button>
+        )}
+
+        {/* Driver & Vehicle */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <h3 className="font-bold text-sm text-[#0B1C2E] mb-3">Driver &amp; Vehicle</h3>
+          <div className="space-y-3">
+            {/* Driver row */}
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold shrink-0">
+                {fullName.charAt(0)}
+              </div>
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm">{t.id}</div>
-                <div className="text-xs text-muted-foreground truncate">{t.dropoff.address}</div>
+                <p className="font-semibold text-sm text-[#0B1C2E]">{fullName}</p>
+                <p className="text-xs text-gray-400">{myDriver?.phone ?? "0917 123 4567"}</p>
               </div>
-              <div className="text-right">
-                <div className="font-bold text-sm">{formatCurrency(t.fare)}</div>
-                <div className="text-xs text-muted-foreground">{new Date(t.dropoff.scheduledAt).toLocaleDateString()}</div>
+              <button
+                onClick={() => toast.info("Chat coming soon")}
+                className="w-9 h-9 rounded-full bg-teal-50 flex items-center justify-center active:scale-95 transition-transform"
+              >
+                <MessageSquare className="w-4 h-4 text-teal-600" />
+              </button>
+            </div>
+            {/* Vehicle row */}
+            {v && (
+              <div className="flex items-center gap-3 pt-2 border-t border-gray-50">
+                <div className="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                  <Truck className="w-5 h-5 text-gray-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-[#0B1C2E]">{v.plate}</p>
+                  <p className="text-xs text-gray-400">{v.brand} {v.model} Wing Van</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
               </div>
-            </CardContent></Card>
-          ))}
-          {completed.length === 0 && <div className="text-sm text-muted-foreground text-center py-6">No completed trips yet.</div>}
+            )}
+          </div>
         </div>
       </div>
+    );
+  }
+
+  // ─── Trips List ──────────────────────────────────────────────
+  function TripsList() {
+    return (
+      <div className="space-y-4 pb-24">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <h2 className="font-bold text-[#0B1C2E] text-sm mb-4">All Trips ({myTrips.length})</h2>
+          {myTrips.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-8">No trips assigned yet.</p>
+          )}
+          <div className="space-y-2">
+            {myTrips.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => openTrip(t)}
+                className="w-full text-left flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 active:scale-[0.99] transition-all"
+              >
+                <span className={cn("w-2.5 h-2.5 rounded-full shrink-0 mt-0.5",
+                  t.status === "completed"   ? "bg-emerald-500" :
+                  t.status === "in_transit"  ? "bg-blue-500"    :
+                  t.status === "cancelled"   ? "bg-red-500"     : "bg-amber-500"
+                )} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-[#0B1C2E]">{t.id}</p>
+                  <p className="text-xs text-gray-400 truncate">{t.pickup.address} → {t.dropoff.address}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold", STATUS_COLOR[t.status] ?? "bg-gray-100 text-gray-500")}>
+                    {STATUS_LABELS[t.status]}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-gray-400 ml-auto mt-0.5" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Render ──────────────────────────────────────────────────
+  return (
+    <div className="max-w-sm mx-auto -mt-6 -mx-6 min-h-screen flex flex-col bg-gray-50 sm:-mx-auto sm:mx-auto">
+      {/* ── Sticky header ── */}
+      <header className="sticky top-0 z-30 bg-[#0B1C2E] h-14 px-4 flex items-center justify-between shrink-0">
+        <button
+          onClick={() => toast.info("Menu")}
+          className="w-9 h-9 flex flex-col justify-center items-start gap-1 p-1"
+          aria-label="Menu"
+        >
+          <span className="block w-5 h-0.5 bg-white rounded" />
+          <span className="block w-5 h-0.5 bg-white rounded" />
+          <span className="block w-3.5 h-0.5 bg-white rounded" />
+        </button>
+        <div className="text-center leading-none">
+          <p className="text-white font-extrabold text-sm tracking-tight">NE<span className="text-teal-400">X</span></p>
+          <p className="text-[8px] tracking-[0.25em] text-teal-400/80 font-semibold">LOGISTICS</p>
+        </div>
+        <button
+          onClick={() => toast.info("Notifications")}
+          className="relative w-9 h-9 flex items-center justify-center"
+          aria-label="Notifications"
+        >
+          <Bell className="w-5 h-5 text-white" />
+          {unread > 0 && (
+            <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </button>
+      </header>
+
+      {/* ── Sub-view back bar ── */}
+      {view !== "dashboard" && (
+        <div className="sticky top-14 z-20 bg-white border-b border-gray-100 h-11 px-4 flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => { setView("dashboard"); setActiveTab("dashboard"); setSelectedTrip(null); }}
+            className="flex items-center gap-1 text-sm font-semibold text-[#0B1C2E]"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            {view === "trip_details" ? "Trip Details" : "All Trips"}
+          </button>
+        </div>
+      )}
+
+      {/* ── Scrollable content ── */}
+      <main className="flex-1 overflow-y-auto px-4 pt-4">
+        {view === "dashboard"    && <Dashboard />}
+        {view === "trip_details" && selectedTrip && <TripDetails trip={selectedTrip} />}
+        {view === "trips_list"   && <TripsList />}
+      </main>
+
+      {/* ── Bottom nav ── */}
+      <nav className="sticky bottom-0 z-30 bg-white border-t border-gray-100 h-16 flex items-center shadow-[0_-4px_20px_rgba(0,0,0,0.07)]">
+        {([
+          { id: "dashboard", label: "Dashboard", icon: LayoutGrid },
+          { id: "trips",     label: "Trips",     icon: ClipboardList },
+          { id: "pod",       label: "POD",       icon: Camera },
+          { id: "more",      label: "More",      icon: MoreHorizontal },
+        ] as const).map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => handleTab(id)}
+            className={cn(
+              "flex-1 flex flex-col items-center justify-center gap-1 h-full transition-colors",
+              activeTab === id ? "text-[#0B6E4F]" : "text-gray-400"
+            )}
+          >
+            <Icon className={cn("w-5 h-5 transition-transform", activeTab === id && "scale-110")} />
+            <span className="text-[10px] font-medium">{label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {/* ── Update Status Bottom Sheet ── */}
+      {showSheet && activeTrip && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowSheet(false)}
+          />
+          <div className="relative bg-white rounded-t-3xl px-5 pt-3 pb-8 w-full max-w-sm mx-auto shadow-2xl">
+            {/* drag handle */}
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-[#0B1C2E]">Update Trip Status</h3>
+              <button
+                onClick={() => setShowSheet(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            {/* Status options */}
+            <div className="space-y-2 mb-4">
+              {SHEET_STATUSES.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setSheetStatus(value)}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-colors",
+                    sheetStatus === value
+                      ? "border-[#0B6E4F] bg-teal-50"
+                      : "border-gray-100 bg-gray-50 hover:bg-gray-100"
+                  )}
+                >
+                  <div className={cn(
+                    "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0",
+                    sheetStatus === value ? "border-[#0B6E4F]" : "border-gray-300"
+                  )}>
+                    {sheetStatus === value && <span className="w-2.5 h-2.5 rounded-full bg-[#0B6E4F]" />}
+                  </div>
+                  <span className={cn(
+                    "text-sm font-medium",
+                    sheetStatus === value ? "text-[#0B6E4F]" : "text-gray-600"
+                  )}>
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {/* Notes */}
+            <textarea
+              rows={3}
+              maxLength={200}
+              placeholder="Add notes (optional)"
+              value={sheetNote}
+              onChange={(e) => setSheetNote(e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-teal-300 text-gray-700 placeholder:text-gray-400"
+            />
+            <p className="text-[10px] text-gray-400 text-right mb-4">{sheetNote.length}/200</p>
+            <button
+              onClick={submitStatus}
+              className="w-full py-4 bg-[#0B6E4F] hover:bg-[#0a5f44] active:scale-[0.98] text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-teal-900/20"
+            >
+              Submit Update
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function Row({ icon: Icon, title, value, sub, accent }: any) {
-  return (
-    <div className="flex gap-3">
-      <div className={`w-10 h-10 rounded-lg ${accent ? "bg-brand-teal text-white" : "bg-brand-teal-light text-brand-teal"} flex items-center justify-center shrink-0`}><Icon className="w-4 h-4" /></div>
-      <div className="min-w-0">
-        <div className="text-xs text-muted-foreground">{title}</div>
-        <div className="font-bold text-brand-navy">{value}</div>
-        {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
-      </div>
-    </div>
-  );
-}
