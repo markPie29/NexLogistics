@@ -48,7 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "My Trip", href: "/driver", icon: Truck, group: "operations", roles: ["driver"] },
 
   // === Client-specific ===
-  { label: "My Shipments", href: "/clients", icon: Briefcase, group: "customer", roles: ["client"] },
+  { label: "Client Portal", href: "/client-portal", icon: Briefcase, group: "customer", roles: ["client"] },
 
   // === Customer ===
   { label: "Client Management", href: "/clients", icon: Briefcase, group: "customer", roles: ["super_admin", "company_admin"] },
@@ -59,20 +59,20 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Trip & Dispatch", href: "/trips", icon: Route, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"] },
   { label: "Live GPS Tracking", href: "/gps", icon: MapPinned, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "driver"] },
   { label: "PMS / Maintenance", href: "/pms", icon: Wrench, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"] },
-  { label: "Proof of Delivery", href: "/pod", icon: PackageCheck, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "driver", "client"] },
+  { label: "Proof of Delivery", href: "/pod", icon: PackageCheck, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "driver"] },
 
   // === Finance ===
   { label: "Fuel & Expenses", href: "/expenses", icon: Fuel, group: "finance", roles: ["super_admin", "company_admin", "accounting"] },
   { label: "Payroll", href: "/payroll", icon: Wallet, group: "finance", roles: ["super_admin", "company_admin", "accounting"] },
   { label: "Attendance", href: "/attendance", icon: CalendarClock, group: "finance", roles: ["super_admin", "company_admin", "accounting"] },
-  { label: "Billing & Invoices", href: "/billing", icon: Receipt, group: "finance", roles: ["super_admin", "company_admin", "accounting", "client"] },
+  { label: "Billing & Invoices", href: "/billing", icon: Receipt, group: "finance", roles: ["super_admin", "company_admin", "accounting"] },
 
   // === Reports ===
   { label: "Reports & Analytics", href: "/reports", icon: BarChart3, group: "reports", roles: ["super_admin", "company_admin", "accounting"] },
   { label: "AI Insights", href: "/ai-insights", icon: Sparkles, group: "reports", preview: true, roles: ["super_admin", "company_admin"] },
 
   // === Others / Admin ===
-  { label: "Documents", href: "/documents", icon: FileText, group: "others", preview: true, roles: ["super_admin", "company_admin", "dispatcher"] },
+  { label: "Documents", href: "/documents", icon: FileText, group: "others", roles: ["super_admin", "company_admin", "dispatcher"] },
   { label: "Warehouse", href: "/warehouse", icon: Warehouse, group: "others", preview: true, roles: ["super_admin", "company_admin"] },
   { label: "Route Optimization", href: "/routes", icon: GitBranch, group: "others", preview: true, roles: ["super_admin", "company_admin", "dispatcher"] },
   { label: "Settings", href: "/settings", icon: Settings, group: "others" },
@@ -99,5 +99,5 @@ export const DEFAULT_LANDING: Record<Role, string> = {
   dispatcher: "/dispatcher",
   driver: "/driver",
   accounting: "/accounting",
-  client: "/clients",
+  client: "/client-portal/overview",
 };

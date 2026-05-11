@@ -56,10 +56,6 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "cv11", "ss01";
   }
-  body {
-    background: #F5F7FA;
-  }
-  .dark body { background: hsl(222 47% 6%); }
 }
 
 @layer utilities {
@@ -84,6 +80,9 @@
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+  }
+  .dark .glass {
+    background: rgba(11, 18, 32, 0.7);
   }
 }
 

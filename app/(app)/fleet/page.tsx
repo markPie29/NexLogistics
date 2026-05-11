@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Truck, CheckCircle2, Wrench, AlertTriangle, Activity, Plus, Filter, Download, Search, MoreHorizontal, ChevronDown, FileText, Eye, Pencil, Trash2,
 } from "lucide-react";
@@ -36,6 +37,7 @@ export default function FleetPage() {
   const vehicles = useFleetStore((s) => s.vehicles);
   const removeVehicle = useFleetStore((s) => s.deleteVehicle);
   const drivers = useDriverStore((s) => s.drivers);
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -182,8 +184,8 @@ export default function FleetPage() {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem><Eye className="w-4 h-4" /> View</DropdownMenuItem>
-                            <DropdownMenuItem><Pencil className="w-4 h-4" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/fleet/${v.id}`)}><Eye className="w-4 h-4" /> View Detail</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/fleet/${v.id}`)}><Pencil className="w-4 h-4" /> Edit</DropdownMenuItem>
                             <DropdownMenuItem><FileText className="w-4 h-4" /> Documents</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem destructive onClick={() => { removeVehicle(v.id); toast.success("Vehicle deleted"); }}>

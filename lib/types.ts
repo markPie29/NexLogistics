@@ -213,3 +213,83 @@ export interface Company {
   code: string;
   logoUrl?: string;
 }
+
+// ─── Billing & Invoices ──────────────────────────────────────
+
+export type InvoiceStatus = "draft" | "sent" | "paid" | "partially_paid" | "overdue" | "cancelled";
+
+export interface InvoiceLineItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  clientId: string;
+  referenceNo: string;
+  invoiceDate: string;
+  dueDate: string;
+  status: InvoiceStatus;
+  items: InvoiceLineItem[];
+  subtotal: number;
+  vatRate: number;
+  vatAmount: number;
+  totalAmount: number;
+  paidAmount: number;
+  balance: number;
+  salesperson: string;
+  paymentTerms: string;
+  notes?: string;
+}
+
+export type PaymentType = "received" | "sent" | "refund";
+export type PaymentMethod = "bank_transfer" | "credit_card" | "gcash" | "cash" | "check";
+export type PaymentStatus = "completed" | "pending" | "failed";
+
+export interface BillingPayment {
+  id: string;
+  paymentId: string;
+  type: PaymentType;
+  clientId: string;
+  invoiceId: string;
+  referenceNo: string;
+  paymentDate: string;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  amount: number;
+  bank?: string;
+  accountNo?: string;
+  notes?: string;
+}
+
+export type CreditNoteStatus = "draft" | "applied" | "refunded";
+
+export interface CreditNote {
+  id: string;
+  creditNoteNumber: string;
+  clientId: string;
+  invoiceId?: string;
+  date: string;
+  reason: string;
+  items: InvoiceLineItem[];
+  amount: number;
+  status: CreditNoteStatus;
+}
+
+export type RecurringFrequency = "weekly" | "monthly" | "quarterly" | "yearly";
+export type RecurringStatus = "active" | "paused" | "cancelled";
+
+export interface RecurringInvoice {
+  id: string;
+  clientId: string;
+  frequency: RecurringFrequency;
+  nextDate: string;
+  templateItems: InvoiceLineItem[];
+  amount: number;
+  status: RecurringStatus;
+  lastGenerated?: string;
+  totalGenerated: number;
+}

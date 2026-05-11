@@ -51,9 +51,18 @@ export function KpiCard({
           <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", iconBg)}>
             <Icon className={cn("w-5 h-5", iconColor)} />
           </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <div className="text-xs font-semibold text-muted-foreground leading-snug break-words hyphens-auto">{label}</div>
-            <div className="text-2xl lg:text-3xl font-black text-brand-navy mt-0.5 leading-none tracking-tight">{value}</div>
+          <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
+            <div className="text-xs font-semibold text-muted-foreground leading-snug">{label}</div>
+            <div
+              title={String(value)}
+              className={cn(
+                "font-black text-brand-navy dark:text-white mt-0.5 leading-none tracking-tight truncate",
+                String(value).length > 12 ? "text-base" :
+                String(value).length > 9  ? "text-lg" :
+                String(value).length > 6  ? "text-xl" :
+                "text-2xl xl:text-3xl"
+              )}
+            >{value}</div>
           </div>
         </div>
         

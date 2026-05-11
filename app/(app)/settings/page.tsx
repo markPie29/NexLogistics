@@ -6,8 +6,8 @@ import { Input, Label } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/lib/store/auth";
-import { resetAllDemoData } from "@/lib/store";
-import { Settings as SettingsIcon, User as UserIcon, Bell, Lock, Palette, RefreshCw, Sparkles } from "lucide-react";
+import { resetAllDemoData, useUiStore } from "@/lib/store";
+import { Settings as SettingsIcon, User as UserIcon, Bell, Lock, Palette, RefreshCw, Sparkles, Sun, Moon, Monitor } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +15,8 @@ import { initials } from "@/lib/utils";
 
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
+  const darkMode = useUiStore((s) => s.darkMode);
+  const toggleDarkMode = useUiStore((s) => s.toggleDarkMode);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const handleReset = () => {
@@ -91,20 +93,47 @@ export default function SettingsPage() {
 
         <TabsContent value="appearance" className="mt-4">
           <Card>
-            <CardHeader><CardTitle>Appearance <Badge variant="preview" className="ml-2">Preview</Badge></CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                {[{ name: "Light", c: "bg-white border-2 border-brand-teal" }, { name: "Dark", c: "bg-brand-navy" }, { name: "System", c: "bg-gradient-to-br from-white to-brand-navy" }].map((t) => (
-                  <button key={t.name} className="p-4 rounded-xl border border-brand-border hover:border-brand-teal transition">
-                    <div className={`w-full h-20 rounded-lg ${t.c} mb-2`} />
-                    <div className="text-sm font-medium">{t.name}</div>
+            <CardHeader><CardTitle>Appearance</CardTitle></CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <Label className="text-sm font-semibold text-brand-navy dark:text-white mb-3 block">Theme</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    onClick={() => darkMode && toggleDarkMode()}
+                    className={`p-4 rounded-xl border-2 transition ${!darkMode ? "border-brand-teal shadow-sm" : "border-brand-border hover:border-brand-teal/60"}`}
+                  >
+                    <div className="w-full h-20 rounded-lg bg-white border border-gray-200 mb-2 flex items-center justify-center">
+                      <Sun className="w-6 h-6 text-brand-teal" />
+                    </div>
+                    <div className="text-sm font-semibold text-brand-navy dark:text-white">Light</div>
+                    {!darkMode && <div className="text-xs text-brand-teal mt-0.5 font-medium">✓ Active</div>}
                   </button>
-                ))}
+                  <button
+                    onClick={() => !darkMode && toggleDarkMode()}
+                    className={`p-4 rounded-xl border-2 transition ${darkMode ? "border-brand-teal shadow-sm" : "border-brand-border hover:border-brand-teal/60"}`}
+                  >
+                    <div className="w-full h-20 rounded-lg bg-brand-navy mb-2 flex items-center justify-center">
+                      <Moon className="w-6 h-6 text-brand-teal" />
+                    </div>
+                    <div className="text-sm font-semibold text-brand-navy dark:text-white">Dark</div>
+                    {darkMode && <div className="text-xs text-brand-teal mt-0.5 font-medium">✓ Active</div>}
+                  </button>
+                  <button
+                    onClick={() => toast.info("System theme syncing coming soon")}
+                    className="p-4 rounded-xl border-2 border-brand-border hover:border-brand-teal/60 transition"
+                  >
+                    <div className="w-full h-20 rounded-lg bg-gradient-to-br from-white to-brand-navy mb-2 flex items-center justify-center">
+                      <Monitor className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="text-sm font-semibold text-brand-navy dark:text-white">System</div>
+                  </button>
+                </div>
               </div>
-              <div><Label>Accent Color</Label>
+              <div>
+                <Label className="text-sm font-semibold text-brand-navy dark:text-white mb-3 block">Accent Color</Label>
                 <div className="flex gap-2 mt-2">
                   {["#66B2B2", "#0EA5E9", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"].map((c) => (
-                    <button key={c} className="w-10 h-10 rounded-full border-4 border-white ring-1 ring-brand-border hover:ring-brand-navy" style={{ background: c }} />
+                    <button key={c} onClick={() => toast.info(`Accent ${c} — override coming soon`)} className="w-10 h-10 rounded-full border-4 border-white ring-1 ring-brand-border hover:ring-brand-navy transition" style={{ background: c }} />
                   ))}
                 </div>
               </div>

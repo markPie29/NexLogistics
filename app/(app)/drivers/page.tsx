@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Users, Star, Truck, Activity, Search, Plus, Phone, MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import { KpiCard } from "@/components/dashboard/KpiCard";
 import { useDriverStore, useFleetStore, useTripStore } from "@/lib/store";
 import { initials } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { AddDriverSheet } from "@/components/forms/AddDriverSheet";
 import { toast } from "sonner";
 
 const STATUS_VARIANT: Record<string, any> = {
@@ -26,8 +28,10 @@ export default function DriversPage() {
   const deleteDriver = useDriverStore((s) => s.deleteDriver);
   const vehicles = useFleetStore((s) => s.vehicles);
   const trips = useTripStore((s) => s.trips);
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const filtered = useMemo(() => drivers.filter((d) => {
     if (search && !d.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -48,7 +52,7 @@ export default function DriversPage() {
         title="Driver Management"
         subtitle="Manage drivers, monitor performance, and assign vehicles"
         breadcrumbs={[{ label: "Operations" }, { label: "Drivers" }]}
-        actions={<Button size="sm" onClick={() => toast.info("Use the demo seed drivers — Add Driver form coming next sprint")}><Plus className="w-4 h-4" /> Add Driver</Button>}
+        actions={<Button size="sm" onClick={() => setSheetOpen(true)}><Plus className="w-4 h-4" /> Add Driver</Button>}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4">
@@ -98,13 +102,13 @@ export default function DriversPage() {
                   return (
                     <tr key={d.id} className="border-b border-brand-border/60 hover:bg-gray-50">
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
+                        <Link href={`/drivers/${d.id}`} className="flex items-center gap-3 hover:opacity-80 transition">
                           <Avatar className="h-10 w-10"><AvatarFallback>{initials(d.name)}</AvatarFallback></Avatar>
                           <div>
-                            <div className="font-semibold text-brand-navy">{d.name}</div>
+                            <div className="font-semibold text-brand-navy hover:text-brand-teal transition">{d.name}</div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" /> {d.phone}</div>
                           </div>
-                        </div>
+                        </Link>
                       </td>
                       <td className="py-3 px-4">
                         <div className="font-medium">{d.licenseNumber}</div>
@@ -126,8 +130,8 @@ export default function DriversPage() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><button className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"><MoreHorizontal className="w-4 h-4" /></button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem><Eye className="w-4 h-4" /> View</DropdownMenuItem>
-                            <DropdownMenuItem><Pencil className="w-4 h-4" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/drivers/${d.id}`)}><Eye className="w-4 h-4" /> View Profile</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/drivers/${d.id}`)}><Pencil className="w-4 h-4" /> Edit</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem destructive onClick={() => { deleteDriver(d.id); toast.success("Driver removed"); }}><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>
                           </DropdownMenuContent>
@@ -141,6 +145,7 @@ export default function DriversPage() {
           </div>
         </CardContent>
       </Card>
+      <AddDriverSheet open={sheetOpen} onOpenChange={setSheetOpen} />
     </div>
   );
 }

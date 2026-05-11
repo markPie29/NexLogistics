@@ -16,6 +16,11 @@ import {
   Users as CustomersIcon,
   FileX2,
   RefreshCw,
+  Truck,
+  Receipt,
+  LifeBuoy,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 
 const GROUPS: Array<{ key: "operations" | "finance" | "customer" | "reports" | "others"; label: string }> = [
@@ -83,8 +88,9 @@ export function Sidebar() {
                 {groupItems.map((item) => {
                   const isBilling = item.href === "/billing";
                   const isDocuments = item.href === "/documents";
+                  const isClientPortal = item.href === "/client-portal";
                   const active =
-                    pathname === item.href || (item.href !== "/dashboard" && !isBilling && !isDocuments && pathname.startsWith(item.href));
+                    pathname === item.href || (item.href !== "/dashboard" && !isBilling && !isDocuments && !isClientPortal && pathname.startsWith(item.href));
 
                   return (
                     <li key={item.href}>
@@ -92,6 +98,8 @@ export function Sidebar() {
                         <ExpandableNav collapsed={collapsed} pathname={pathname} item={item} childrenItems={BILLING_CHILDREN} basePath="/billing" />
                       ) : isDocuments ? (
                         <ExpandableNav collapsed={collapsed} pathname={pathname} item={item} childrenItems={DOCUMENTS_CHILDREN} basePath="/documents" />
+                      ) : isClientPortal ? (
+                        <ExpandableNav collapsed={collapsed} pathname={pathname} item={item} childrenItems={CLIENT_PORTAL_CHILDREN} basePath="/client-portal" />
                       ) : (
                         <Link
                           href={item.href}
@@ -178,6 +186,15 @@ const DOCUMENTS_CHILDREN = [
   { label: "Shared Documents", href: "/documents/shared", icon: Share2 },
   { label: "Document Requests", href: "/documents/requests", icon: FileQuestion },
   { label: "Recycle Bin", href: "/documents/recycle-bin", icon: Trash2 },
+];
+
+const CLIENT_PORTAL_CHILDREN = [
+  { label: "Overview", href: "/client-portal/overview", icon: LayoutGrid },
+  { label: "Shipments", href: "/client-portal/shipments", icon: Truck },
+  { label: "Documents", href: "/client-portal/documents", icon: FileText },
+  { label: "Invoices", href: "/client-portal/invoices", icon: Receipt },
+  { label: "Tickets & Support", href: "/client-portal/support", icon: LifeBuoy },
+  { label: "Reports", href: "/client-portal/reports", icon: BarChart3 },
 ];
 
 function ExpandableNav({ collapsed, pathname, item, childrenItems, basePath }: { collapsed: boolean; pathname: string; item: any; childrenItems: any[]; basePath: string }) {

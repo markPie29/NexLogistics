@@ -1,6 +1,22 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Bell, Inbox, Maximize2, Search, ChevronDown, LogOut, User, Settings as SettingsIcon } from "lucide-react";
+import {
+  Bell,
+  Inbox,
+  Maximize2,
+  Search,
+  ChevronDown,
+  LogOut,
+  User,
+  Settings as SettingsIcon,
+  Sun,
+  Moon,
+  Zap,
+  Plus,
+  Truck,
+  Route,
+  Users,
+} from "lucide-react";
 import { useAuthStore } from "@/lib/store/auth";
 import { useUiStore } from "@/lib/store";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,6 +41,8 @@ export function Topbar() {
   const logout = useAuthStore((s) => s.logout);
   const notifications = useUiStore((s) => s.notifications);
   const markAllRead = useUiStore((s) => s.markAllRead);
+  const darkMode = useUiStore((s) => s.darkMode);
+  const toggleDarkMode = useUiStore((s) => s.toggleDarkMode);
   const unread = notifications.filter((n) => !n.read).length;
 
   const onLogout = () => {
@@ -40,11 +58,11 @@ export function Topbar() {
   if (!user) return null;
 
   return (
-    <header className="sticky top-0 z-20 h-16 bg-white border-b border-brand-border flex items-center px-6 gap-4">
+    <header className="sticky top-0 z-20 h-16 bg-white dark:bg-brand-navy border-b border-brand-border dark:border-white/10 flex items-center px-6 gap-4">
       {/* Welcome */}
       <div className="hidden md:block min-w-0">
         <div className="text-xs text-muted-foreground">Welcome back,</div>
-        <div className="text-base font-bold text-brand-navy flex items-center gap-1">
+        <div className="text-base font-bold text-brand-navy dark:text-white flex items-center gap-1">
           {user.name.split(" ")[0]} <span>👋</span>
         </div>
       </div>
@@ -55,20 +73,59 @@ export function Topbar() {
           <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             placeholder="Search anything..."
-            className="w-full h-10 pl-11 pr-4 rounded-full bg-gray-50 border border-transparent hover:border-brand-border focus:border-brand-teal focus:bg-white text-sm outline-none transition"
+            className="w-full h-10 pl-11 pr-4 rounded-full bg-gray-50 dark:bg-white/5 border border-transparent hover:border-brand-border dark:hover:border-white/20 focus:border-brand-teal focus:bg-white dark:focus:bg-white/10 text-sm outline-none transition dark:text-white dark:placeholder:text-white/40"
           />
-          <kbd className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white border border-brand-border text-muted-foreground">
+          <kbd className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-white/10 border border-brand-border dark:border-white/20 text-muted-foreground">
             Ctrl+K
           </kbd>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
+        {/* Quick Actions */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 flex items-center justify-center transition" aria-label="Quick actions">
+              <Zap className="w-5 h-5 text-brand-teal" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push("/fleet")}>
+              <Truck className="w-4 h-4" /> Add Vehicle
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/drivers")}>
+              <Users className="w-4 h-4" /> Add Driver
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/trips/new")}>
+              <Route className="w-4 h-4" /> Create Trip
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/trips/dispatch")}>
+              <Plus className="w-4 h-4" /> Open Dispatch Board
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Dark/Light mode toggle */}
+        <button
+          onClick={toggleDarkMode}
+          className="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 flex items-center justify-center transition"
+          aria-label="Toggle dark mode"
+        >
+          {darkMode ? (
+            <Sun className="w-5 h-5 text-amber-400" />
+          ) : (
+            <Moon className="w-5 h-5 text-brand-gray dark:text-white/70" />
+          )}
+        </button>
+
+        {/* Notifications */}
         <Popover>
           <PopoverTrigger asChild>
-            <button className="relative w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition">
-              <Bell className="w-5 h-5 text-brand-gray" />
+            <button className="relative w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 flex items-center justify-center transition">
+              <Bell className="w-5 h-5 text-brand-gray dark:text-white/70" />
               {unread > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-status-danger text-white text-[10px] font-bold flex items-center justify-center">
                   {unread}
@@ -78,21 +135,21 @@ export function Topbar() {
           </PopoverTrigger>
           <PopoverContent align="end" className="w-96 p-0 max-h-[480px] overflow-y-auto scrollbar-thin">
             <div className="flex items-center justify-between p-4 border-b border-brand-border">
-              <div className="font-semibold text-brand-navy">Notifications</div>
+              <div className="font-semibold text-brand-navy dark:text-white">Notifications</div>
               <button onClick={markAllRead} className="text-xs text-brand-teal hover:underline">
                 Mark all read
               </button>
             </div>
             <div className="divide-y divide-brand-border/60">
               {notifications.slice(0, 8).map((n) => (
-                <div key={n.id} className="p-3 hover:bg-gray-50 flex gap-3">
+                <div key={n.id} className="p-3 hover:bg-gray-50 dark:hover:bg-white/5 flex gap-3">
                   <div
                     className={`w-2 h-2 rounded-full mt-2 shrink-0 ${
                       n.type === "danger" ? "bg-status-danger" : n.type === "warning" ? "bg-status-warning" : n.type === "success" ? "bg-status-success" : "bg-status-info"
                     }`}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-brand-navy">{n.title}</div>
+                    <div className="text-sm font-medium text-brand-navy dark:text-white">{n.title}</div>
                     <div className="text-xs text-muted-foreground line-clamp-2">{n.message}</div>
                     <div className="text-[10px] text-muted-foreground mt-1">
                       {formatDistanceToNow(new Date(n.at), { addSuffix: true })}
@@ -104,25 +161,25 @@ export function Topbar() {
           </PopoverContent>
         </Popover>
 
-        <button className="relative w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition">
-          <Inbox className="w-5 h-5 text-brand-gray" />
+        <button className="relative w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 flex items-center justify-center transition">
+          <Inbox className="w-5 h-5 text-brand-gray dark:text-white/70" />
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-teal text-white text-[10px] font-bold flex items-center justify-center">
             5
           </span>
         </button>
 
-        <button onClick={onFullscreen} className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition">
-          <Maximize2 className="w-4 h-4 text-brand-gray" />
+        <button onClick={onFullscreen} className="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 flex items-center justify-center transition">
+          <Maximize2 className="w-4 h-4 text-brand-gray dark:text-white/70" />
         </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2.5 pl-2 pr-3 h-12 rounded-xl hover:bg-gray-100 transition">
+            <button className="flex items-center gap-2.5 pl-2 pr-3 h-12 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition">
               <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-brand-navy text-white">{initials(user.name)}</AvatarFallback>
+                <AvatarFallback className="bg-brand-navy text-white dark:bg-brand-teal dark:text-brand-navy">{initials(user.name)}</AvatarFallback>
               </Avatar>
               <div className="text-left">
-                <div className="text-sm font-semibold text-brand-navy leading-tight">{user.name}</div>
+                <div className="text-sm font-semibold text-brand-navy dark:text-white leading-tight">{user.name}</div>
                 <div className="text-[10px] text-muted-foreground leading-tight">{ROLE_LABEL[user.role]}</div>
               </div>
               <ChevronDown className="w-4 h-4 text-muted-foreground" />

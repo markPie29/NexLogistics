@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
@@ -9,8 +9,15 @@ import { cn } from "@/lib/utils";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
+  const darkMode = useUiStore((s) => s.darkMode);
+
+  // Hydrate dark mode class on mount
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     // small delay so persisted store hydrates
@@ -19,6 +26,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }, 50);
     return () => clearTimeout(t);
   }, [router]);
+
+  useEffect(() => {
+    if (!user || user.role !== "client") return;
+    if (pathname.startsWith("/billing") || pathname.startsWith("/pod")) {
+      router.replace("/client-portal/overview");
+    }
+  }, [pathname, router, user]);
 
   if (!user) {
     return (
@@ -29,7 +43,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg">
+    <div className="min-h-screen bg-brand-bg dark:bg-background">
       <Sidebar />
       <div className={cn("transition-[padding] duration-300", collapsed ? "pl-[78px]" : "pl-[260px]")}>
         <Topbar />

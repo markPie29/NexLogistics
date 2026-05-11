@@ -13,6 +13,10 @@ import type {
   NotificationItem,
   AiInsight,
   Client,
+  Invoice,
+  BillingPayment,
+  CreditNote,
+  RecurringInvoice,
 } from "@/lib/types";
 import { seedVehicles } from "@/lib/data/vehicles";
 import { seedDrivers } from "@/lib/data/drivers";
@@ -22,6 +26,7 @@ import { seedExpenses } from "@/lib/data/expenses";
 import { seedPayroll } from "@/lib/data/payroll";
 import { seedClients } from "@/lib/data/clients";
 import { seedNotifications, seedAiInsights } from "@/lib/data/notifications";
+import { seedInvoices, seedBillingPayments, seedCreditNotes, seedRecurringInvoices } from "@/lib/data/billing";
 
 interface FleetState {
   vehicles: Vehicle[];
@@ -234,6 +239,8 @@ interface UiState {
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
   setSidebar: (v: boolean) => void;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
   notifications: NotificationItem[];
   markAllRead: () => void;
   insights: AiInsight[];
@@ -244,12 +251,122 @@ export const useUiStore = create<UiState>()(
       sidebarCollapsed: false,
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setSidebar: (v) => set({ sidebarCollapsed: v }),
+      darkMode: false,
+      toggleDarkMode: () =>
+        set((s) => {
+          const next = !s.darkMode;
+          if (typeof document !== "undefined") {
+            document.documentElement.classList.toggle("dark", next);
+          }
+          return { darkMode: next };
+        }),
       notifications: seedNotifications,
       markAllRead: () =>
         set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
       insights: seedAiInsights,
     }),
     { name: "nex-ui" }
+  )
+);
+// ─── Billing Stores ──────────────────────────────────────────
+
+interface InvoiceState {
+  invoices: Invoice[];
+  addInvoice: (i: Omit<Invoice, "id">) => Invoice;
+  updateInvoice: (id: string, patch: Partial<Invoice>) => void;
+  deleteInvoice: (id: string) => void;
+  reset: () => void;
+}
+export const useInvoiceStore = create<InvoiceState>()(
+  persist(
+    (set) => ({
+      invoices: seedInvoices,
+      addInvoice: (i) => {
+        const ni: Invoice = { ...i, id: `inv-${Date.now().toString(36)}` };
+        set((s) => ({ invoices: [ni, ...s.invoices] }));
+        return ni;
+      },
+      updateInvoice: (id, patch) =>
+        set((s) => ({ invoices: s.invoices.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      deleteInvoice: (id) => set((s) => ({ invoices: s.invoices.filter((x) => x.id !== id) })),
+      reset: () => set({ invoices: seedInvoices }),
+    }),
+    { name: "nex-invoices" }
+  )
+);
+
+interface BillingPaymentState {
+  payments: BillingPayment[];
+  addPayment: (p: Omit<BillingPayment, "id">) => BillingPayment;
+  updatePayment: (id: string, patch: Partial<BillingPayment>) => void;
+  deletePayment: (id: string) => void;
+  reset: () => void;
+}
+export const useBillingPaymentStore = create<BillingPaymentState>()(
+  persist(
+    (set) => ({
+      payments: seedBillingPayments,
+      addPayment: (p) => {
+        const np: BillingPayment = { ...p, id: `bp-${Date.now().toString(36)}` };
+        set((s) => ({ payments: [np, ...s.payments] }));
+        return np;
+      },
+      updatePayment: (id, patch) =>
+        set((s) => ({ payments: s.payments.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      deletePayment: (id) => set((s) => ({ payments: s.payments.filter((x) => x.id !== id) })),
+      reset: () => set({ payments: seedBillingPayments }),
+    }),
+    { name: "nex-billing-payments" }
+  )
+);
+
+interface CreditNoteState {
+  creditNotes: CreditNote[];
+  addCreditNote: (c: Omit<CreditNote, "id">) => CreditNote;
+  updateCreditNote: (id: string, patch: Partial<CreditNote>) => void;
+  deleteCreditNote: (id: string) => void;
+  reset: () => void;
+}
+export const useCreditNoteStore = create<CreditNoteState>()(
+  persist(
+    (set) => ({
+      creditNotes: seedCreditNotes,
+      addCreditNote: (c) => {
+        const nc: CreditNote = { ...c, id: `cn-${Date.now().toString(36)}` };
+        set((s) => ({ creditNotes: [nc, ...s.creditNotes] }));
+        return nc;
+      },
+      updateCreditNote: (id, patch) =>
+        set((s) => ({ creditNotes: s.creditNotes.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      deleteCreditNote: (id) => set((s) => ({ creditNotes: s.creditNotes.filter((x) => x.id !== id) })),
+      reset: () => set({ creditNotes: seedCreditNotes }),
+    }),
+    { name: "nex-credit-notes" }
+  )
+);
+
+interface RecurringInvoiceState {
+  recurring: RecurringInvoice[];
+  addRecurring: (r: Omit<RecurringInvoice, "id">) => RecurringInvoice;
+  updateRecurring: (id: string, patch: Partial<RecurringInvoice>) => void;
+  deleteRecurring: (id: string) => void;
+  reset: () => void;
+}
+export const useRecurringInvoiceStore = create<RecurringInvoiceState>()(
+  persist(
+    (set) => ({
+      recurring: seedRecurringInvoices,
+      addRecurring: (r) => {
+        const nr: RecurringInvoice = { ...r, id: `ri-${Date.now().toString(36)}` };
+        set((s) => ({ recurring: [nr, ...s.recurring] }));
+        return nr;
+      },
+      updateRecurring: (id, patch) =>
+        set((s) => ({ recurring: s.recurring.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      deleteRecurring: (id) => set((s) => ({ recurring: s.recurring.filter((x) => x.id !== id) })),
+      reset: () => set({ recurring: seedRecurringInvoices }),
+    }),
+    { name: "nex-recurring" }
   )
 );
 
@@ -266,6 +383,10 @@ export function resetAllDemoData() {
     "nex-pods",
     "nex-ui",
     "nex-auth",
+    "nex-invoices",
+    "nex-billing-payments",
+    "nex-credit-notes",
+    "nex-recurring",
   ].forEach((k) => localStorage.removeItem(k));
   window.location.reload();
 }
