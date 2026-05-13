@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { useTripStore, useFleetStore, useDriverStore, useClientStore, useUiStore } from "@/lib/store";
 import {
@@ -55,6 +56,7 @@ type Tab  = "dashboard" | "trips" | "pod" | "more";
 
 // ─── Main Page ────────────────────────────────────────────────
 export default function DriverPage() {
+  const router       = useRouter();
   const user         = useAuthStore((s) => s.user);
   const trips        = useTripStore((s) => s.trips);
   const setStatus    = useTripStore((s) => s.setStatus);
@@ -108,7 +110,7 @@ export default function DriverPage() {
     setActiveTab(tab);
     if (tab === "dashboard") { setView("dashboard"); return; }
     if (tab === "trips")     { setView("trips_list"); return; }
-    if (tab === "pod")       { toast.info("Opening POD capture…"); return; }
+    if (tab === "pod")       { router.push("/pod"); return; }
     toast.info("Coming soon");
   }
 
@@ -261,7 +263,7 @@ export default function DriverPage() {
           <div className="grid grid-cols-4 gap-3">
             {([
               { label: "Update\nStatus",  icon: CheckCircle2,  onClick: openStatusSheet,                         badge: 0 },
-              { label: "Upload\nPOD",     icon: Camera,        onClick: () => toast.info("Camera coming soon"),  badge: 0 },
+              { label: "Upload\nPOD",     icon: Camera,        onClick: () => router.push(activeTrip ? `/pod/${activeTrip.id}` : "/pod"),  badge: 0 },
               { label: "Expenses",        icon: Wallet,        onClick: () => toast.info("Expenses module"),     badge: 0 },
               { label: "Messages",        icon: MessageSquare, onClick: () => toast.info("Messages coming soon"), badge: 2 },
             ] as const).map((a) => (

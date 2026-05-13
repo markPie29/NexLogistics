@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,19 +10,23 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LiveMapDynamic } from "@/components/maps/LiveMapDynamic";
 import { useFleetStore, useDriverStore, useTripStore } from "@/lib/store";
+import { useAuthStore } from "@/lib/store/auth";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Truck, Search, CheckCircle2, PauseCircle, PowerOff, AlertTriangle,
   MapPin, Phone, MessageSquare, Compass, Gauge, Fuel, Signal, Filter,
   X, Clock, Play, ChevronLeft, ChevronRight, Route as RouteIcon,
-  CircleDot, History, Activity
+  CircleDot, History, Activity, Bell, Navigation2, RefreshCw
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function GpsPage() {
-  const vehicles = useFleetStore((s) => s.vehicles);
-  const drivers = useDriverStore((s) => s.drivers);
-  const trips = useTripStore((s) => s.trips); // available if needed
+  const user      = useAuthStore((s) => s.user);
+  const vehicles  = useFleetStore((s) => s.vehicles);
+  const drivers   = useDriverStore((s) => s.drivers);
+  const trips     = useTripStore((s) => s.trips);
 
+  // All hooks must be declared before any conditional return
   const [activeTab, setActiveTab] = useState<"all" | "active" | "in_trip">("all");
   const [search, setSearch] = useState("");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
@@ -50,6 +55,13 @@ export default function GpsPage() {
 
   const selectedVehicle = useMemo(() => vehicles.find(v => v.id === selectedVehicleId), [vehicles, selectedVehicleId]);
   const activeDriver = selectedVehicle?.assignedDriverId ? drivers.find(d => d.id === selectedVehicle?.assignedDriverId) : null;
+
+  // ── Driver role → render mobile GPS view ──
+  if (user?.role === "driver") {
+    return <DriverGpsView user={user} vehicles={vehicles} drivers={drivers} trips={trips} />;
+  }
+
+  // ── Admin / dispatcher view (unchanged) ──
 
   return (
     <div className="space-y-4 lg:space-y-6 h-full flex flex-col pb-6">
@@ -406,4 +418,208 @@ function KpiBlock({ icon: Icon, title, value, valueColor, sub }: { icon: any, ti
       </div>
     </Card>
   )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Driver Mobile GPS View
+// ─────────────────────────────────────────────────────────────
+function DriverGpsView({ user, vehicles, drivers, trips }: {
+  user: any;
+  vehicles: any[];
+  drivers: any[];
+  trips: any[];
+}) {
+  const router = useRouter();
+
+  const driverId  = user?.driverId ?? drivers[0]?.id;
+  const myDriver  = drivers.find((d) => d.id === driverId) ?? drivers[0];
+  const myVehicle = vehicles.find((v) => v.id === myDriver?.assignedVehicleId);
+  const activeTrip = trips.find((t) => t.driverId === driverId && !["completed", "cancelled"].includes(t.status));
+
+  const statusLabel = myVehicle?.status === "in_trip" ? "In Transit" :
+                      myVehicle?.status === "available" ? "Idle" :
+                      myVehicle?.status === "maintenance" ? "Maintenance" : "Offline";
+  const statusColor = myVehicle?.status === "in_trip" ? "bg-blue-100 text-blue-700" :
+                      myVehicle?.status === "available" ? "bg-emerald-100 text-emerald-700" :
+                      "bg-gray-100 text-gray-500";
+
+  return (
+    <div className="max-w-sm mx-auto -mt-6 -mx-6 min-h-screen flex flex-col bg-gray-50 sm:mx-auto">
+      {/* Sticky header */}
+      <header className="sticky top-0 z-30 bg-[#0B1C2E] h-14 px-4 flex items-center justify-between shrink-0">
+        <button
+          onClick={() => router.back()}
+          className="w-9 h-9 flex items-center justify-center"
+          aria-label="Back"
+        >
+          <ChevronLeft className="w-5 h-5 text-white" />
+        </button>
+        <div className="text-center leading-none">
+          <p className="text-white font-extrabold text-sm tracking-tight">
+            NE<span className="text-teal-400">X</span>
+          </p>
+          <p className="text-[8px] tracking-[0.25em] text-teal-400/80 font-semibold">LOGISTICS</p>
+        </div>
+        <button
+          onClick={() => {}}
+          className="w-9 h-9 flex items-center justify-center"
+          aria-label="Refresh"
+        >
+          <RefreshCw className="w-4 h-4 text-white" />
+        </button>
+      </header>
+
+      {/* Page title bar */}
+      <div className="bg-[#0B1C2E] px-5 pb-5 pt-1">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-white font-bold text-lg">My Location</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs text-white/60">Live Tracking</span>
+            </div>
+          </div>
+          {myVehicle && (
+            <span className={cn("text-xs px-3 py-1.5 rounded-full font-semibold", statusColor)}>
+              {statusLabel}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <main className="flex-1 overflow-y-auto pb-6">
+        {/* Map */}
+        <div className="relative h-[55vw] min-h-52 max-h-72 bg-gradient-to-br from-green-50 via-teal-50 to-blue-50 flex flex-col items-center justify-center">
+          <LiveMapDynamic />
+          {/* Overlay badge */}
+          <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow border border-white/60">
+            <div className="flex items-center gap-1.5">
+              <CircleDot className="w-3 h-3 text-red-500 animate-pulse" />
+              <span className="text-[11px] font-bold text-[#0B1C2E]">LIVE</span>
+            </div>
+          </div>
+          {myVehicle && (
+            <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow border border-white/60">
+              <p className="text-[11px] font-bold text-[#0B1C2E]">{myVehicle.plate}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="px-4 space-y-4 mt-4">
+          {/* Vehicle card */}
+          {myVehicle ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
+                  <Truck className="w-6 h-6 text-gray-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-[#0B1C2E]">{myVehicle.plate}</p>
+                  <p className="text-xs text-gray-500">{myVehicle.brand} {myVehicle.model}</p>
+                </div>
+                <span className={cn("text-[10px] px-2.5 py-1 rounded-full font-semibold", statusColor)}>
+                  {statusLabel}
+                </span>
+              </div>
+
+              {/* Telemetry grid */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { icon: Gauge,     label: "Speed",      value: "42 km/h",      color: "text-blue-600 bg-blue-50" },
+                  { icon: Fuel,      label: "Fuel",       value: "70%",          color: "text-emerald-600 bg-emerald-50" },
+                  { icon: Signal,    label: "GPS Signal", value: "Strong",       color: "text-teal-600 bg-teal-50" },
+                  { icon: Activity,  label: "Engine",     value: "Running",      color: "text-green-600 bg-green-50" },
+                  { icon: Compass,   label: "Heading",    value: "NE",           color: "text-amber-600 bg-amber-50" },
+                  { icon: Clock,     label: "Last Ping",  value: "Just now",     color: "text-gray-600 bg-gray-50" },
+                ].map((item) => (
+                  <div key={item.label} className="bg-gray-50 rounded-xl p-2.5 flex flex-col gap-1.5">
+                    <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", item.color)}>
+                      <item.icon className="w-3.5 h-3.5" />
+                    </div>
+                    <p className="text-[10px] text-gray-400">{item.label}</p>
+                    <p className="text-xs font-bold text-[#0B1C2E]">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+              <Truck className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="font-bold text-[#0B1C2E]">No vehicle assigned</p>
+              <p className="text-sm text-gray-400 mt-1">Contact your dispatcher.</p>
+            </div>
+          )}
+
+          {/* Current route */}
+          {activeTrip && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <h3 className="font-bold text-sm text-[#0B1C2E] mb-3">Current Route</h3>
+              <div className="flex gap-3 items-stretch">
+                <div className="flex flex-col items-center pt-1">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-emerald-400" />
+                  <span className="w-0.5 flex-1 bg-gray-200 my-1" />
+                  <span className="w-3 h-3 rounded-full bg-red-500 border-2 border-white ring-1 ring-red-400" />
+                </div>
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <p className="font-bold text-sm text-[#0B1C2E]">{activeTrip.pickup.address.split(",")[0]}</p>
+                    <p className="text-xs text-gray-400">Pick-up</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-[#0B1C2E]">{activeTrip.dropoff.address.split(",")[0]}</p>
+                    <p className="text-xs text-gray-400">Drop-off</p>
+                  </div>
+                </div>
+                <div className="text-right space-y-3 pt-0.5">
+                  <div>
+                    <p className="text-[10px] text-gray-400">Distance</p>
+                    <p className="font-bold text-sm text-[#0B1C2E]">{activeTrip.distanceKm} km</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400">ETA</p>
+                    <p className="font-bold text-sm text-[#0B1C2E]">
+                      {activeTrip.eta
+                        ? new Date(activeTrip.eta).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })
+                        : "10:30 AM"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => router.push("/driver")}
+                className="mt-4 w-full h-11 bg-[#0B6E4F] hover:bg-[#0a5f44] active:scale-[0.98] text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+              >
+                <Navigation2 className="w-4 h-4" /> View Trip Details
+              </button>
+            </div>
+          )}
+
+          {/* Location history placeholder */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <h3 className="font-bold text-sm text-[#0B1C2E] mb-3">Today's Route History</h3>
+            <div className="space-y-2">
+              {[
+                { time: "08:00 AM", place: "Depot — Manila Port",           km: "0" },
+                { time: "09:45 AM", place: "EDSA — Caloocan",               km: "18" },
+                { time: "11:00 AM", place: "NLEX — Marilao",                km: "36" },
+                { time: "12:30 PM", place: "NLEX — San Fernando",           km: "78" },
+              ].map((item) => (
+                <div key={item.time} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center shrink-0">
+                    <MapPin className="w-3.5 h-3.5 text-teal-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#0B1C2E] truncate">{item.place}</p>
+                    <p className="text-xs text-gray-400">{item.time}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-gray-500">{item.km} km</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 }

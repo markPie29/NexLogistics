@@ -1,11 +1,11 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, User as UserIcon, Truck, Star, Phone, Mail, MapPin, Shield, Calendar, TrendingUp, Route, Wallet, Activity } from "lucide-react";
+import { ArrowLeft, User as UserIcon, Truck, Star, Phone, Mail, MapPin, Shield, Calendar, TrendingUp, Route, Wallet, Activity, CheckCircle2, Settings2, BadgePercent, PiggyBank, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDriverStore, useFleetStore, useTripStore, usePayrollStore } from "@/lib/store";
+import { useDriverStore, useFleetStore, useTripStore, useDriverPayrollProfileStore, usePayrollPeriodStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -21,7 +21,9 @@ export default function DriverDetailPage() {
   const driver = useDriverStore((s) => s.drivers.find((d) => d.id === params.id));
   const vehicles = useFleetStore((s) => s.vehicles);
   const trips = useTripStore((s) => s.trips);
-  const payroll = usePayrollStore((s) => s.records);
+  const profiles = useDriverPayrollProfileStore((s) => s.profiles);
+  const summaries = usePayrollPeriodStore((s) => s.summaries);
+  const periods = usePayrollPeriodStore((s) => s.periods);
 
   if (!driver) {
     return (
@@ -38,8 +40,13 @@ export default function DriverDetailPage() {
   const driverTrips = trips.filter((t) => t.driverId === driver.id);
   const activeTrip = driverTrips.find((t) => ["in_transit", "loaded", "vehicle_dispatched", "driver_assigned"].includes(t.status));
   const completedTrips = driverTrips.filter((t) => t.status === "completed" || t.status === "delivered");
-  const driverPayroll = payroll.filter((p) => p.driverId === driver.id);
-  const totalEarned = driverPayroll.filter((p) => p.status === "paid").reduce((s, p) => s + p.net, 0);
+  const payrollProfile = profiles.find((p) => p.driverId === driver.id);
+  const driverSummaries = summaries.filter((s) => s.driverId === driver.id).sort((a, b) => {
+    const pa = periods.find((p) => p.id === a.payrollPeriodId);
+    const pb = periods.find((p) => p.id === b.payrollPeriodId);
+    return (pb ? new Date(pb.endDate).getTime() : 0) - (pa ? new Date(pa.endDate).getTime() : 0);
+  });
+  const totalEarned = driverSummaries.filter((s) => s.status === "paid").reduce((a, b) => a + b.netPay, 0);
 
   return (
     <div className="space-y-6">
@@ -165,6 +172,7 @@ export default function DriverDetailPage() {
         <TabsList>
           <TabsTrigger value="trips">Trip History ({driverTrips.length})</TabsTrigger>
           <TabsTrigger value="payroll">Payroll Summary</TabsTrigger>
+          <TabsTrigger value="payroll_settings">Payroll Settings</TabsTrigger>
           <TabsTrigger value="active">Active Trip</TabsTrigger>
         </TabsList>
 
@@ -178,6 +186,7 @@ export default function DriverDetailPage() {
                     <th className="py-3 px-4">Route</th>
                     <th className="py-3 px-4">Fare</th>
                     <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Approval</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -197,9 +206,17 @@ export default function DriverDetailPage() {
                           t.status === "in_transit" ? "info" : "neutral"
                         }>{t.status.replace(/_/g, " ")}</Badge>
                       </td>
+                      <td className="py-3 px-4">
+                        {(t.status === "completed" || t.status === "delivered") && (
+                          <Badge variant={
+                            t.approvalStatus === "approved" ? "success" :
+                            t.approvalStatus === "rejected" ? "danger" : "neutral"
+                          }>{t.approvalStatus ?? "pending"}</Badge>
+                        )}
+                      </td>
                     </tr>
                   ))}
-                  {driverTrips.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No trip history.</td></tr>}
+                  {driverTrips.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No trip history.</td></tr>}
                 </tbody>
               </table>
             </CardContent>
@@ -209,7 +226,7 @@ export default function DriverDetailPage() {
         <TabsContent value="payroll">
           <Card>
             <CardContent className="p-0">
-              {driverPayroll.length > 0 ? (
+              {driverSummaries.length > 0 ? (
                 <>
                   <div className="p-4 border-b border-brand-border bg-brand-teal-light/40 flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">Total Earned (Paid)</div>
@@ -219,31 +236,142 @@ export default function DriverDetailPage() {
                     <thead>
                       <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50">
                         <th className="py-3 px-4">Period</th>
-                        <th className="py-3 px-4">Base</th>
+                        <th className="py-3 px-4">Mode</th>
+                        <th className="py-3 px-4">Trips</th>
+                        <th className="py-3 px-4">Trip Earnings</th>
                         <th className="py-3 px-4">Incentives</th>
-                        <th className="py-3 px-4">Net</th>
+                        <th className="py-3 px-4">Deductions</th>
+                        <th className="py-3 px-4">Net Pay</th>
                         <th className="py-3 px-4">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {driverPayroll.map((p) => (
-                        <tr key={p.id} className="border-b border-brand-border/60">
-                          <td className="py-3 px-4 text-muted-foreground">{p.periodStart} – {p.periodEnd}</td>
-                          <td className="py-3 px-4">{formatCurrency(p.baseSalary)}</td>
-                          <td className="py-3 px-4">{formatCurrency(p.incentives)}</td>
-                          <td className="py-3 px-4 font-bold text-brand-navy">{formatCurrency(p.net)}</td>
-                          <td className="py-3 px-4">
-                            <Badge variant={p.status === "paid" ? "success" : p.status === "approved" ? "info" : "neutral"}>
-                              {p.status}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
+                      {driverSummaries.map((s) => {
+                        const period = periods.find((p) => p.id === s.payrollPeriodId);
+                        return (
+                          <tr key={s.id} className="border-b border-brand-border/60 hover:bg-gray-50 cursor-pointer transition"
+                            onClick={() => router.push(`/payroll/${s.payrollPeriodId}`)}>
+                            <td className="py-3 px-4 text-muted-foreground">{period?.name ?? s.payrollPeriodId}</td>
+                            <td className="py-3 px-4 text-xs capitalize">{s.payrollMode.replace(/_/g, " ")}</td>
+                            <td className="py-3 px-4">{s.tripsCount}</td>
+                            <td className="py-3 px-4">{formatCurrency(s.tripEarnings)}</td>
+                            <td className="py-3 px-4 text-emerald-600">+{formatCurrency(s.incentives)}</td>
+                            <td className="py-3 px-4 text-red-500">−{formatCurrency(s.totalDeductions)}</td>
+                            <td className="py-3 px-4 font-bold text-brand-navy">{formatCurrency(s.netPay)}</td>
+                            <td className="py-3 px-4">
+                              <Badge variant={s.status === "paid" ? "success" : s.status === "approved" ? "info" : "neutral"}>
+                                {s.status}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </>
               ) : (
-                <div className="py-10 text-center text-muted-foreground">No payroll records.</div>
+                <div className="py-10 text-center text-muted-foreground">
+                  <Wallet className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p>No payroll records yet.</p>
+                  <p className="text-xs mt-1">Run a payroll period to see earnings here.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="payroll_settings">
+          <Card>
+            <CardHeader className="pb-3 border-b border-gray-100">
+              <CardTitle className="text-base font-bold text-brand-navy flex items-center gap-2">
+                <Settings2 className="w-4 h-4" /> Payroll Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              {payrollProfile ? (
+                <div className="space-y-5">
+                  {/* Mode & Base */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-xl border border-brand-border p-4">
+                      <div className="text-xs uppercase text-muted-foreground mb-1">Payroll Mode</div>
+                      <div className="font-bold text-brand-navy capitalize">{payrollProfile.payrollMode.replace(/_/g, " ")}</div>
+                    </div>
+                    <div className="rounded-xl border border-brand-border p-4">
+                      <div className="text-xs uppercase text-muted-foreground mb-1">Base Salary (Monthly)</div>
+                      <div className="font-bold text-brand-navy">{formatCurrency(payrollProfile.baseSalary)}</div>
+                    </div>
+                    {payrollProfile.allowanceEnabled && (
+                      <div className="rounded-xl border border-brand-border p-4">
+                        <div className="text-xs uppercase text-muted-foreground mb-1">Monthly Allowance</div>
+                        <div className="font-bold text-brand-navy">{formatCurrency(payrollProfile.monthlyAllowance ?? 0)}</div>
+                      </div>
+                    )}
+                    {payrollProfile.perTripFlatRate && (
+                      <div className="rounded-xl border border-brand-border p-4">
+                        <div className="text-xs uppercase text-muted-foreground mb-1">Per Trip Rate</div>
+                        <div className="font-bold text-brand-navy">{formatCurrency(payrollProfile.perTripFlatRate)}</div>
+                      </div>
+                    )}
+                    {payrollProfile.perDeliveryRate && (
+                      <div className="rounded-xl border border-brand-border p-4">
+                        <div className="text-xs uppercase text-muted-foreground mb-1">Per Delivery Rate</div>
+                        <div className="font-bold text-brand-navy">{formatCurrency(payrollProfile.perDeliveryRate)}</div>
+                      </div>
+                    )}
+                    {payrollProfile.commissionPercent && (
+                      <div className="rounded-xl border border-brand-border p-4">
+                        <div className="text-xs uppercase text-muted-foreground mb-1">Commission</div>
+                        <div className="font-bold text-brand-navy">{payrollProfile.commissionPercent}%</div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Government Deductions */}
+                  <div>
+                    <div className="text-xs uppercase text-muted-foreground font-semibold mb-2">Government Deductions</div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { label: "SSS", enabled: payrollProfile.sssEnabled },
+                        { label: "PhilHealth", enabled: payrollProfile.philhealthEnabled },
+                        { label: "Pag-IBIG", enabled: payrollProfile.pagibigEnabled },
+                        { label: "Withholding Tax", enabled: payrollProfile.taxEnabled },
+                      ].map((g) => (
+                        <div key={g.label} className={`rounded-xl border p-3 flex items-center gap-2 ${g.enabled ? "border-emerald-200 bg-emerald-50" : "border-gray-200 bg-gray-50"}`}>
+                          {g.enabled ? <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                          <span className={`text-sm font-medium ${g.enabled ? "text-emerald-800" : "text-gray-400"}`}>{g.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Extras */}
+                  <div>
+                    <div className="text-xs uppercase text-muted-foreground font-semibold mb-2">Additional Features</div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[
+                        { label: "Overtime Pay", enabled: payrollProfile.overtimeEnabled },
+                        { label: "Allowances", enabled: payrollProfile.allowanceEnabled },
+                      ].map((f) => (
+                        <div key={f.label} className={`rounded-xl border p-3 flex items-center gap-2 ${f.enabled ? "border-sky-200 bg-sky-50" : "border-gray-200 bg-gray-50"}`}>
+                          {f.enabled ? <CheckCircle2 className="w-4 h-4 text-sky-600 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                          <span className={`text-sm font-medium ${f.enabled ? "text-sky-800" : "text-gray-400"}`}>{f.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <a href="/payroll?tab=profiles">Edit Profile in Payroll</a>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-10 text-center text-muted-foreground">
+                  <Settings2 className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p>No payroll profile configured.</p>
+                  <p className="text-xs mt-1">Set up a payroll profile from the Payroll module.</p>
+                  <Button variant="outline" size="sm" className="mt-3" asChild>
+                    <a href="/payroll?tab=profiles">Configure Payroll Profile</a>
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>

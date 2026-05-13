@@ -21,6 +21,7 @@ import {
   LifeBuoy,
   BarChart3,
   Settings,
+  Handshake,
 } from "lucide-react";
 
 const GROUPS: Array<{ key: "operations" | "finance" | "customer" | "reports" | "others"; label: string }> = [
@@ -177,6 +178,7 @@ const BILLING_CHILDREN = [
   { label: "Customers", href: "/billing/customers", icon: CustomersIcon },
   { label: "Credit Notes", href: "/billing/credit-notes", icon: FileX2 },
   { label: "Recurring Invoices", href: "/billing/recurring", icon: RefreshCw },
+  { label: "Subcon Payables", href: "/billing/payables", icon: Handshake },
 ];
 
 const DOCUMENTS_CHILDREN = [

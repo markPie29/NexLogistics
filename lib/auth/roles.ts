@@ -21,6 +21,7 @@ import {
   Layers,
   Calculator,
   Building2,
+  Handshake,
   type LucideIcon,
 } from "lucide-react";
 
@@ -46,6 +47,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   // === Driver-specific ===
   { label: "My Trip", href: "/driver", icon: Truck, group: "operations", roles: ["driver"] },
+  { label: "My Earnings", href: "/driver/earnings", icon: Wallet, group: "finance", roles: ["driver"] },
 
   // === Client-specific ===
   { label: "Client Portal", href: "/client-portal", icon: Briefcase, group: "customer", roles: ["client"] },
@@ -57,6 +59,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Fleet Management", href: "/fleet", icon: Truck, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"] },
   { label: "Driver Management", href: "/drivers", icon: Users, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"] },
   { label: "Trip & Dispatch", href: "/trips", icon: Route, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"] },
+  { label: "Subcon Partners", href: "/partners", icon: Handshake, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "accounting"] },
   { label: "Live GPS Tracking", href: "/gps", icon: MapPinned, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "driver"] },
   { label: "PMS / Maintenance", href: "/pms", icon: Wrench, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"] },
   { label: "Proof of Delivery", href: "/pod", icon: PackageCheck, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "driver"] },

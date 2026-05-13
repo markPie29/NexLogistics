@@ -3,19 +3,21 @@ import Link from "next/link";
 import {
   Briefcase, Truck, MapPin, Package, CheckCircle2, Clock, PhoneCall,
   Building2, Mail, Phone, TrendingUp, Download, ChevronRight, Search,
+  Plus, Pencil, Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuthStore } from "@/lib/store/auth";
-import { useTripStore, useClientStore } from "@/lib/store";
+import { useTripStore, useClientStore, useInvoiceStore } from "@/lib/store";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import type { TripStatus } from "@/lib/types";
+import type { TripStatus, Client } from "@/lib/types";
 
 const STATUS_VARIANT: Record<TripStatus, any> = {
   scheduled: "neutral",
@@ -155,11 +157,57 @@ function ClientView() {
 function AdminClientView() {
   const trips = useTripStore((s) => s.trips);
   const clients = useClientStore((s) => s.clients);
+  const addClient = useClientStore((s) => s.addClient);
+  const updateClient = useClientStore((s) => s.updateClient);
+  const deleteClient = useClientStore((s) => s.deleteClient);
+  const invoices = useInvoiceStore((s) => s.invoices);
   const [search, setSearch] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Client | null>(null);
+  const [form, setForm] = useState<Omit<Client, "id">>({
+    name: "", industry: "", contactPerson: "", email: "", phone: "", address: "", logoUrl: "",
+  });
 
   const filtered = clients.filter((c) =>
     search === "" || c.name.toLowerCase().includes(search.toLowerCase()) || c.contactPerson.toLowerCase().includes(search.toLowerCase())
   );
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ name: "", industry: "", contactPerson: "", email: "", phone: "", address: "", logoUrl: "" });
+    setDialogOpen(true);
+  };
+  const openEdit = (c: Client) => {
+    setEditing(c);
+    setForm({ name: c.name, industry: c.industry, contactPerson: c.contactPerson, email: c.email, phone: c.phone, address: c.address, logoUrl: c.logoUrl ?? "" });
+    setDialogOpen(true);
+  };
+  const submit = () => {
+    if (!form.name.trim() || !form.contactPerson.trim()) {
+      toast.error("Name and contact person are required");
+      return;
+    }
+    const payload = { ...form, logoUrl: form.logoUrl?.trim() || undefined };
+    if (editing) {
+      updateClient(editing.id, payload);
+      toast.success(`Updated ${form.name}`);
+    } else {
+      const c = addClient(payload);
+      toast.success(`Added ${c.name}`);
+    }
+    setDialogOpen(false);
+  };
+  const handleDelete = (c: Client) => {
+    const tripCount = trips.filter((t) => t.clientId === c.id).length;
+    const invCount = invoices.filter((i) => i.clientId === c.id).length;
+    if (tripCount > 0 || invCount > 0) {
+      toast.error(`Cannot delete — ${c.name} has ${tripCount} trip(s) and ${invCount} invoice(s)`);
+      return;
+    }
+    if (!confirm(`Delete client "${c.name}"? This cannot be undone.`)) return;
+    deleteClient(c.id);
+    toast.success(`Deleted ${c.name}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -168,8 +216,8 @@ function AdminClientView() {
         subtitle="Manage cargo customers, view their shipments and account status"
         breadcrumbs={[{ label: "Customer" }, { label: "Clients" }]}
         actions={
-          <Button size="sm" onClick={() => toast.success("Add client — coming in full version")}>
-            <Building2 className="w-4 h-4" /> Add Client
+          <Button size="sm" onClick={openAdd}>
+            <Plus className="w-4 h-4" /> Add Client
           </Button>
         }
       />
@@ -222,11 +270,14 @@ function AdminClientView() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" asChild>
-                    <Link href="/billing">Invoices</Link>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(c)}>
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50 hover:border-red-200" onClick={() => handleDelete(c)}>
+                    <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                   <Button size="sm" className="flex-1" asChild>
-                    <Link href="/trips">View Trips</Link>
+                    <Link href="/trips">Trips</Link>
                   </Button>
                 </div>
               </CardContent>
@@ -240,6 +291,52 @@ function AdminClientView() {
           </div>
         )}
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editing ? `Edit ${editing.name}` : "Add Client"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Company Name *">
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Acme Corp." />
+              </Field>
+              <Field label="Industry">
+                <Input value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="Retail / FMCG" />
+              </Field>
+              <Field label="Contact Person *">
+                <Input value={form.contactPerson} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} placeholder="Juan Dela Cruz" />
+              </Field>
+              <Field label="Phone">
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+63 917 555 0000" />
+              </Field>
+              <Field label="Email" className="col-span-2">
+                <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ops@acme.com" />
+              </Field>
+              <Field label="Address" className="col-span-2">
+                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Street, City, Province" />
+              </Field>
+              <Field label="Logo URL (optional)" className="col-span-2">
+                <Input value={form.logoUrl ?? ""} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} placeholder="https://…" />
+              </Field>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={submit}>{editing ? "Save Changes" : "Create Client"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={className}>
+      <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
+      {children}
     </div>
   );
 }

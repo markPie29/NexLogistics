@@ -87,12 +87,25 @@ export const useDriverStore = create<DriverState>()(
 
 interface ClientState {
   clients: Client[];
+  addClient: (c: Omit<Client, "id">) => Client;
+  updateClient: (id: string, patch: Partial<Client>) => void;
+  deleteClient: (id: string) => void;
   reset: () => void;
 }
 export const useClientStore = create<ClientState>()(
   persist(
     (set) => ({
       clients: seedClients,
+      addClient: (c) => {
+        const nc: Client = { ...c, id: `c-${Date.now().toString(36)}` };
+        set((s) => ({ clients: [nc, ...s.clients] }));
+        return nc;
+      },
+      updateClient: (id, patch) =>
+        set((s) => ({
+          clients: s.clients.map((x) => (x.id === id ? { ...x, ...patch } : x)),
+        })),
+      deleteClient: (id) => set((s) => ({ clients: s.clients.filter((x) => x.id !== id) })),
       reset: () => set({ clients: seedClients }),
     }),
     { name: "nex-clients" }
@@ -104,6 +117,9 @@ interface TripState {
   addTrip: (t: Omit<Trip, "id" | "createdAt" | "statusLogs">) => Trip;
   updateTrip: (id: string, patch: Partial<Trip>) => void;
   setStatus: (id: string, status: TripStatus, by?: string, note?: string) => void;
+  approveTrip: (id: string, by: string) => void;
+  rejectTrip: (id: string, by: string, reason?: string) => void;
+  lockTripsToPeriod: (ids: string[], periodId: string) => void;
   deleteTrip: (id: string) => void;
   reset: () => void;
 }
@@ -134,6 +150,26 @@ export const useTripStore = create<TripState>()(
           ),
         }));
       },
+      approveTrip: (id, by) =>
+        set((s) => ({
+          trips: s.trips.map((t) =>
+            t.id === id
+              ? { ...t, approvalStatus: "approved", approvedBy: by, approvedAt: new Date().toISOString() }
+              : t
+          ),
+        })),
+      rejectTrip: (id, by, reason) =>
+        set((s) => ({
+          trips: s.trips.map((t) =>
+            t.id === id
+              ? { ...t, approvalStatus: "rejected", approvedBy: by, approvedAt: new Date().toISOString(), statusLogs: [...t.statusLogs, { status: t.status, at: new Date().toISOString(), by, note: `Rejected: ${reason ?? ""}` }] }
+              : t
+          ),
+        })),
+      lockTripsToPeriod: (ids, periodId) =>
+        set((s) => ({
+          trips: s.trips.map((t) => (ids.includes(t.id) ? { ...t, payrollProcessed: true, payrollPeriodId: periodId } : t)),
+        })),
       deleteTrip: (id) => set((s) => ({ trips: s.trips.filter((t) => t.id !== id) })),
       reset: () => set({ trips: seedTrips }),
     }),
@@ -387,6 +423,28 @@ export function resetAllDemoData() {
     "nex-billing-payments",
     "nex-credit-notes",
     "nex-recurring",
+    "nex-trip-rates",
+    "nex-driver-payroll-profiles",
+    "nex-incentives",
+    "nex-deductions",
+    "nex-payroll-periods",
+    "nex-partners",
   ].forEach((k) => localStorage.removeItem(k));
   window.location.reload();
 }
+
+// Re-export payroll stores so callers can import from "@/lib/store"
+export {
+  useTripRateStore,
+  useDriverPayrollProfileStore,
+  useIncentiveStore,
+  useDeductionStore,
+  usePayrollPeriodStore,
+  buildDriverSummary,
+  computeGovernmentDeductions,
+  findBestRate,
+  getEligibleTripsForDriver,
+} from "./payroll";
+
+// Subcon partners
+export { usePartnerStore } from "./partners";

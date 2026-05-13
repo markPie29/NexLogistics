@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   Layers, Truck, Users, MapPin, Route, CheckCircle2, Clock, AlertTriangle,
   ChevronRight, UserCheck, PhoneCall, Navigation, Package, Filter,
+  ThumbsUp, ThumbsDown, BadgeCheck, AlertCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,8 @@ export default function DispatcherPage() {
   const user = useAuthStore((s) => s.user);
   const trips = useTripStore((s) => s.trips);
   const setStatus = useTripStore((s) => s.setStatus);
+  const approveTrip = useTripStore((s) => s.approveTrip);
+  const rejectTrip = useTripStore((s) => s.rejectTrip);
   const vehicles = useFleetStore((s) => s.vehicles);
   const drivers = useDriverStore((s) => s.drivers);
 
@@ -43,6 +46,13 @@ export default function DispatcherPage() {
   const availableDrivers = drivers.filter((d) => d.status === "active" && !trips.find((t) => t.driverId === d.id && t.status !== "completed" && t.status !== "cancelled")).length;
   const availableVehicles = vehicles.filter((v) => v.status === "available").length;
   const delayedTrips = trips.filter((t) => t.status === "delayed").length;
+
+  // Trips completed or delivered but pending payroll approval
+  const pendingApproval = trips.filter(
+    (t) => (t.status === "completed" || t.status === "delivered") &&
+      (!t.approvalStatus || t.approvalStatus === "pending") &&
+      !t.payrollProcessed
+  );
 
   const filteredTrips = trips.filter((t) => {
     if (filter === "unassigned") return t.status === "scheduled";
@@ -85,7 +95,7 @@ export default function DispatcherPage() {
         <KpiCard label="Unassigned" value={unassigned} icon={Clock} iconColor="text-amber-600" iconBg="bg-amber-50" footerLabel="Needs assignment" href="/trips" />
         <KpiCard label="Delayed" value={delayedTrips} icon={AlertTriangle} iconColor="text-red-500" iconBg="bg-red-50" footerLabel="Needs attention" />
         <KpiCard label="Avail. Drivers" value={availableDrivers} icon={Users} iconColor="text-emerald-600" iconBg="bg-emerald-50" sparklineData={[5,6,7,8,7,9,8,availableDrivers]} sparklineColor="#10B981" footerLabel="Ready to dispatch" />
-        <KpiCard label="Avail. Vehicles" value={availableVehicles} icon={Truck} iconColor="text-violet-600" iconBg="bg-violet-50" footerLabel="Parked at depot" href="/fleet" />
+        <KpiCard label="Pending Approval" value={pendingApproval.length} icon={BadgeCheck} iconColor="text-rose-600" iconBg="bg-rose-50" footerLabel="Awaiting payroll approval" />
       </div>
 
       {/* Main Content: Trip Queue + Driver Status */}
@@ -234,6 +244,95 @@ export default function DispatcherPage() {
           </Card>
         </div>
       </div>
+
+      {/* ── Trip Approval Queue ─────────────────────────────── */}
+      <Card className="border-brand-border shadow-sm">
+        <CardHeader className="border-b border-gray-100 pb-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <CardTitle className="text-xl font-bold text-brand-navy flex items-center gap-2">
+                <BadgeCheck className="w-5 h-5 text-brand-teal" />
+                Trip Approval Queue
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Review completed trips and approve them for payroll processing
+              </p>
+            </div>
+            {pendingApproval.length > 0 && (
+              <Badge variant="danger" className="text-xs">{pendingApproval.length} pending</Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {pendingApproval.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground">
+              <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-400" />
+              <div className="font-semibold">All caught up!</div>
+              <div className="text-sm">No trips awaiting approval</div>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {pendingApproval.map((t) => {
+                const driver = drivers.find((d) => d.id === t.driverId);
+                const vehicle = vehicles.find((v) => v.id === t.vehicleId);
+                return (
+                  <div key={t.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/60 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                      <AlertCircle className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-brand-navy text-sm">{t.id}</span>
+                        <Badge variant="success">{t.status.replace(/_/g, " ")}</Badge>
+                        <Badge variant="neutral">pending approval</Badge>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                        <MapPin className="w-3 h-3 shrink-0 text-emerald-500" />
+                        <span className="truncate">{t.pickup.address}</span>
+                        <span className="mx-1">→</span>
+                        <MapPin className="w-3 h-3 shrink-0 text-red-500" />
+                        <span className="truncate">{t.dropoff.address}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                        {driver && <span className="flex items-center gap-1"><UserCheck className="w-3 h-3" />{driver.name}</span>}
+                        {vehicle && <span className="flex items-center gap-1"><Truck className="w-3 h-3" />{vehicle.plate}</span>}
+                        <span className="font-semibold text-brand-navy">{formatCurrency(t.fare)}</span>
+                        <span>{t.distanceKm} km</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => {
+                          rejectTrip(t.id, user?.name ?? "dispatcher", "Rejected by dispatcher");
+                          toast.error(`Trip ${t.id} rejected`);
+                        }}
+                      >
+                        <ThumbsDown className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => {
+                          approveTrip(t.id, user?.name ?? "dispatcher");
+                          toast.success(`Trip ${t.id} approved for payroll`);
+                        }}
+                      >
+                        <ThumbsUp className="w-3.5 h-3.5 mr-1" /> Approve
+                      </Button>
+                      <Button size="sm" variant="ghost" asChild>
+                        <Link href={`/trips/${t.id}`}><ChevronRight className="w-4 h-4" /></Link>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
