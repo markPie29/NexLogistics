@@ -36,6 +36,8 @@ export default function DispatchPage() {
     const map: Record<string, Trip[]> = {};
     COLUMNS.forEach((c) => (map[c.id] = []));
     trips.forEach((t) => {
+      // Phase 5 — exclude rate-pending trips from dispatch board
+      if (t.approvalStatus === "pending_rate_approval") return;
       if (map[t.status]) map[t.status].push(t);
     });
     return map;

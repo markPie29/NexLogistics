@@ -55,6 +55,8 @@ export default function DispatcherPage() {
   );
 
   const filteredTrips = trips.filter((t) => {
+    // Phase 5 — hide trips still awaiting Super Admin rate confirmation
+    if (t.approvalStatus === "pending_rate_approval") return false;
     if (filter === "unassigned") return t.status === "scheduled";
     if (filter === "active") return ["driver_assigned", "vehicle_dispatched", "loaded", "in_transit"].includes(t.status);
     if (filter === "delayed") return t.status === "delayed";

@@ -1,4 +1,4 @@
-import type { Partner } from "@/lib/types";
+import type { Partner, PartnerRequest } from "@/lib/types";
 
 export const seedPartners: Partner[] = [
   {
@@ -82,5 +82,28 @@ export const seedPartners: Partner[] = [
     status: "suspended",
     createdAt: "2025-06-30T08:00:00.000Z",
     notes: "On hold pending insurance renewal (expires 2026-06).",
+  },
+];
+
+export const seedPartnerRequests: PartnerRequest[] = [
+  {
+    id: "prq-001",
+    partnerId: "ptn-001",
+    type: "diesel",
+    amount: 8500,
+    reason: "Refuel before Bulacan and Pampanga dispatch window",
+    requestedAt: "2026-05-12T08:30:00.000Z",
+    status: "pending",
+  },
+  {
+    id: "prq-002",
+    partnerId: "ptn-003",
+    type: "cash_advance",
+    amount: 12000,
+    reason: "Port handling and toll cash float",
+    requestedAt: "2026-05-10T10:15:00.000Z",
+    status: "approved",
+    reviewedBy: "Super Admin",
+    reviewedAt: "2026-05-10T13:05:00.000Z",
   },
 ];

@@ -165,8 +165,9 @@ interface PayrollPeriodState {
   updatePeriod: (id: string, patch: Partial<PayrollPeriod>) => void;
   deletePeriod: (id: string) => void;
   setSummariesForPeriod: (periodId: string, summaries: PayrollSummary[], tripPayrolls: TripPayroll[]) => void;
-  approvePeriod: (id: string, by: string) => void;
-  payPeriod: (id: string, by: string) => void;
+  approvePeriod: (id: string, by: string, notes?: string) => void;
+  payPeriod: (id: string, by: string, paymentMethod?: string, paymentRef?: string, actualPayDate?: string, notes?: string) => void;
+  closePeriod: (id: string, by: string) => void;
   reset: () => void;
 }
 export const usePayrollPeriodStore = create<PayrollPeriodState>()(
@@ -193,15 +194,25 @@ export const usePayrollPeriodStore = create<PayrollPeriodState>()(
           summaries: [...s.summaries.filter((x) => x.payrollPeriodId !== periodId), ...summaries],
           tripPayrolls: [...s.tripPayrolls.filter((x) => x.payrollPeriodId !== periodId), ...tripPayrolls],
         })),
-      approvePeriod: (id, by) =>
+      approvePeriod: (id, by, notes) =>
         set((s) => ({
-          periods: s.periods.map((p) => (p.id === id ? { ...p, status: "approved", approvedBy: by, approvedAt: new Date().toISOString() } : p)),
+          periods: s.periods.map((p) => (p.id === id ? { ...p, status: "approved", approvedBy: by, approvedAt: new Date().toISOString(), ...(notes ? { notes } : {}) } : p)),
           summaries: s.summaries.map((sm) => (sm.payrollPeriodId === id ? { ...sm, status: "approved" } : sm)),
         })),
-      payPeriod: (id, by) =>
+      payPeriod: (id, by, paymentMethod, paymentRef, actualPayDate, notes) =>
         set((s) => ({
-          periods: s.periods.map((p) => (p.id === id ? { ...p, status: "paid", paidBy: by, paidAt: new Date().toISOString() } : p)),
+          periods: s.periods.map((p) => (p.id === id ? {
+            ...p, status: "paid", paidBy: by, paidAt: new Date().toISOString(),
+            ...(paymentMethod ? { paymentMethod } : {}),
+            ...(paymentRef ? { paymentRef } : {}),
+            ...(actualPayDate ? { payDate: actualPayDate } : {}),
+            ...(notes ? { notes } : {}),
+          } : p)),
           summaries: s.summaries.map((sm) => (sm.payrollPeriodId === id ? { ...sm, status: "paid", paidAt: new Date().toISOString() } : sm)),
+        })),
+      closePeriod: (id, by) =>
+        set((s) => ({
+          periods: s.periods.map((p) => (p.id === id ? { ...p, status: "closed", closedBy: by, closedAt: new Date().toISOString() } : p)),
         })),
       reset: () =>
         set({ periods: seedPayrollPeriods, summaries: seedPayrollSummaries, tripPayrolls: seedTripPayroll }),

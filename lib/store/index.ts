@@ -119,6 +119,10 @@ interface TripState {
   setStatus: (id: string, status: TripStatus, by?: string, note?: string) => void;
   approveTrip: (id: string, by: string) => void;
   rejectTrip: (id: string, by: string, reason?: string) => void;
+  // Phase 5 — Super Admin rate-confirmation gate at trip creation
+  submitForRateApproval: (id: string) => void;
+  approveRates: (id: string, by: string, notes?: string) => void;
+  rejectRates: (id: string, by: string, reason?: string) => void;
   lockTripsToPeriod: (ids: string[], periodId: string) => void;
   deleteTrip: (id: string) => void;
   reset: () => void;
@@ -129,8 +133,15 @@ export const useTripStore = create<TripState>()(
       trips: seedTrips,
       addTrip: (t) => {
         const id = `TRP-2026-${Math.floor(Math.random() * 900 + 100)}`;
+        // Back-compat: mirror legacy consignee* fields onto customer* if caller passed only one form.
+        const customerName    = t.customerName    ?? t.consigneeName;
+        const customerContact = t.customerContact ?? t.consigneeContact;
         const trip: Trip = {
           ...t,
+          customerName,
+          customerContact,
+          consigneeName:    customerName,    // mirror back for any legacy reader
+          consigneeContact: customerContact,
           id,
           createdAt: new Date().toISOString(),
           statusLogs: [{ status: t.status, at: new Date().toISOString(), by: "system" }],
@@ -163,6 +174,45 @@ export const useTripStore = create<TripState>()(
           trips: s.trips.map((t) =>
             t.id === id
               ? { ...t, approvalStatus: "rejected", approvedBy: by, approvedAt: new Date().toISOString(), statusLogs: [...t.statusLogs, { status: t.status, at: new Date().toISOString(), by, note: `Rejected: ${reason ?? ""}` }] }
+              : t
+          ),
+        })),
+      // ── Phase 5 rate-approval gate ──
+      submitForRateApproval: (id) =>
+        set((s) => ({
+          trips: s.trips.map((t) =>
+            t.id === id
+              ? { ...t, approvalStatus: "pending_rate_approval" }
+              : t
+          ),
+        })),
+      approveRates: (id, by, notes) =>
+        set((s) => ({
+          trips: s.trips.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  approvalStatus: "approved",
+                  rateApprovedBy: by,
+                  rateApprovedAt: new Date().toISOString(),
+                  rateApprovalNotes: notes,
+                  statusLogs: [...t.statusLogs, { status: t.status, at: new Date().toISOString(), by, note: `Rates approved${notes ? `: ${notes}` : ""}` }],
+                }
+              : t
+          ),
+        })),
+      rejectRates: (id, by, reason) =>
+        set((s) => ({
+          trips: s.trips.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  approvalStatus: "rejected",
+                  rateApprovedBy: by,
+                  rateApprovedAt: new Date().toISOString(),
+                  rateApprovalNotes: reason,
+                  statusLogs: [...t.statusLogs, { status: t.status, at: new Date().toISOString(), by, note: `Rates rejected: ${reason ?? ""}` }],
+                }
               : t
           ),
         })),
@@ -429,6 +479,8 @@ export function resetAllDemoData() {
     "nex-deductions",
     "nex-payroll-periods",
     "nex-partners",
+    "nex-helpers",
+    "nex-calendar",
   ].forEach((k) => localStorage.removeItem(k));
   window.location.reload();
 }
@@ -447,4 +499,10 @@ export {
 } from "./payroll";
 
 // Subcon partners
-export { usePartnerStore } from "./partners";
+export { usePartnerStore, usePartnerRequestStore } from "./partners";
+
+// Helpers (Phase 1)
+export { useHelperStore } from "./helpers";
+
+// Department Calendar (Phase 6)
+export { useCalendarStore } from "./calendar";

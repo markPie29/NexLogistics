@@ -21,6 +21,7 @@ import {
   useIncentiveStore,
   useDeductionStore,
   usePayrollPeriodStore,
+  useHelperStore,
 } from "@/lib/store";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
@@ -289,6 +290,7 @@ export default function PayrollHubPage() {
           <TabsTrigger value="periods"><Receipt className="w-4 h-4 mr-1.5" />Periods</TabsTrigger>
           <TabsTrigger value="rates"><Plug className="w-4 h-4 mr-1.5" />Trip Rates</TabsTrigger>
           <TabsTrigger value="profiles"><Users className="w-4 h-4 mr-1.5" />Driver Profiles</TabsTrigger>
+          <TabsTrigger value="monthly"><Users className="w-4 h-4 mr-1.5" />Monthly Employees</TabsTrigger>
           <TabsTrigger value="incentives"><BadgePercent className="w-4 h-4 mr-1.5" />Incentives</TabsTrigger>
           <TabsTrigger value="deductions"><PiggyBank className="w-4 h-4 mr-1.5" />Deductions</TabsTrigger>
         </TabsList>
@@ -339,9 +341,82 @@ export default function PayrollHubPage() {
 
         <TabsContent value="rates" className="mt-4"><TripRatesPanel /></TabsContent>
         <TabsContent value="profiles" className="mt-4"><DriverProfilesPanel /></TabsContent>
+        <TabsContent value="monthly" className="mt-4"><MonthlyEmployeesPanel /></TabsContent>
         <TabsContent value="incentives" className="mt-4"><IncentivesPanel /></TabsContent>
         <TabsContent value="deductions" className="mt-4"><DeductionsPanel /></TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Monthly Employees Panel — drivers + helpers paid monthly/hybrid
+// ─────────────────────────────────────────────────────────────
+function MonthlyEmployeesPanel() {
+  const drivers = useDriverStore((s) => s.drivers);
+  const helpers = useHelperStore((s) => s.helpers);
+
+  const monthlyDrivers = drivers.filter((d) => d.employmentType === "monthly" || d.employmentType === "hybrid");
+  const monthlyHelpers = helpers.filter((h) => h.employmentType === "monthly" || h.employmentType === "hybrid");
+
+  const totalMonthly =
+    monthlyDrivers.reduce((a, d) => a + (d.monthlyBaseSalary || 0), 0) +
+    monthlyHelpers.reduce((a, h) => a + (h.monthlyBaseSalary || 0), 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <KpiCard label="Monthly Drivers"  value={monthlyDrivers.length} icon={Users} iconColor="text-brand-teal"   iconBg="bg-brand-teal-light" />
+        <KpiCard label="Monthly Helpers"  value={monthlyHelpers.length} icon={Users} iconColor="text-violet-600"   iconBg="bg-violet-50" />
+        <KpiCard label="Total Monthly Payroll" value={formatCurrency(totalMonthly)} icon={Wallet} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
+      </div>
+
+      <Card>
+        <CardContent className="p-0 overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
+            <thead>
+              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
+                <th className="py-3 px-4 font-medium">Employee</th>
+                <th className="py-3 px-4 font-medium">Role</th>
+                <th className="py-3 px-4 font-medium">Employment</th>
+                <th className="py-3 px-4 font-medium text-right">Monthly Salary</th>
+                <th className="py-3 px-4 font-medium text-right">Per Trip</th>
+                <th className="py-3 px-4 font-medium text-right">Commission %</th>
+                <th className="py-3 px-4 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthlyDrivers.map((d) => (
+                <tr key={`d-${d.id}`} className="border-b border-brand-border/60 hover:bg-gray-50">
+                  <td className="py-3 px-4 font-medium text-brand-navy">{d.name}</td>
+                  <td className="py-3 px-4"><Badge variant="info">Driver</Badge></td>
+                  <td className="py-3 px-4 capitalize">{(d.employmentType || "").replace("_", " ")}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(d.monthlyBaseSalary || 0)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{d.baseRatePerTrip ? formatCurrency(d.baseRatePerTrip) : "—"}</td>
+                  <td className="py-3 px-4 text-right">{d.commissionPercent ? `${d.commissionPercent}%` : "—"}</td>
+                  <td className="py-3 px-4"><Badge variant={d.status === "active" ? "success" : "neutral"}>{d.status.replace("_", " ")}</Badge></td>
+                </tr>
+              ))}
+              {monthlyHelpers.map((h) => (
+                <tr key={`h-${h.id}`} className="border-b border-brand-border/60 hover:bg-gray-50">
+                  <td className="py-3 px-4 font-medium text-brand-navy">{h.name}</td>
+                  <td className="py-3 px-4"><Badge variant="purple">Helper</Badge></td>
+                  <td className="py-3 px-4 capitalize">{(h.employmentType || "").replace("_", " ")}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(h.monthlyBaseSalary || 0)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{h.baseRatePerTrip ? formatCurrency(h.baseRatePerTrip) : "—"}</td>
+                  <td className="py-3 px-4 text-right">{h.commissionPercent ? `${h.commissionPercent}%` : "—"}</td>
+                  <td className="py-3 px-4"><Badge variant={h.status === "active" ? "success" : "neutral"}>{h.status.replace("_", " ")}</Badge></td>
+                </tr>
+              ))}
+              {monthlyDrivers.length + monthlyHelpers.length === 0 && (
+                <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">
+                  No monthly-paid employees yet. Set employment type to <span className="font-semibold">Monthly</span> or <span className="font-semibold">Hybrid</span> on a driver or helper to see them here.
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

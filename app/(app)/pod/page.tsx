@@ -1,14 +1,20 @@
 "use client";
+import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useTripStore, usePodStore, useDriverStore } from "@/lib/store";
+import { useTripStore, usePodStore, useDriverStore, useUiStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/store/auth";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ClipboardCheck, ChevronLeft, ChevronRight, Camera, CheckCircle2 } from "lucide-react";
+import {
+  ClipboardCheck, ChevronRight, Camera, CheckCircle2, FileImage, Bell,
+} from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { DriverNav } from "@/components/driver/DriverNav";
+import { DriverSidebar } from "@/components/driver/DriverSidebar";
 
 export default function PodListPage() {
   const user    = useAuthStore((s) => s.user);
@@ -82,7 +88,7 @@ export default function PodListPage() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Driver Mobile POD List
+// Driver Mobile POD List — full DVH, safe areas, brand tokens
 // ─────────────────────────────────────────────────────────────
 function DriverPodList({ user, trips, pods, drivers, needsPod, captured }: {
   user: any;
@@ -92,103 +98,198 @@ function DriverPodList({ user, trips, pods, drivers, needsPod, captured }: {
   needsPod: any[];
   captured: any[];
 }) {
-  const router = useRouter();
+  const router        = useRouter();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const notifications = useUiStore((s) => s.notifications);
+  const unread        = notifications.filter((n: any) => !n.read).length;
 
-  const driverId     = user?.driverId ?? drivers[0]?.id;
-  const myNeedsPod   = needsPod.filter((t) => t.driverId === driverId);
-  const myCaptured   = captured.filter((t) => t.driverId === driverId);
+  const driverId   = user?.driverId ?? drivers[0]?.id;
+  const myNeedsPod = needsPod.filter((t) => t.driverId === driverId);
+  const myCaptured = captured.filter((t) => t.driverId === driverId);
 
   return (
-    <div className="max-w-sm mx-auto -mt-6 -mx-6 min-h-screen flex flex-col bg-gray-50 sm:mx-auto">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#0B1C2E] h-14 px-4 flex items-center justify-between shrink-0">
-        <button onClick={() => router.push("/driver")} className="w-9 h-9 flex items-center justify-center" aria-label="Back">
-          <ChevronLeft className="w-5 h-5 text-white" />
-        </button>
-        <div className="text-center leading-none">
-          <p className="text-white font-extrabold text-sm tracking-tight">NE<span className="text-teal-400">X</span></p>
-          <p className="text-[8px] tracking-[0.25em] text-teal-400/80 font-semibold">LOGISTICS</p>
-        </div>
-        <div className="w-9" />
-      </header>
+    <div className="min-h-[100dvh] w-full flex flex-col bg-gray-50 overscroll-none">
 
-      {/* Title bar */}
-      <div className="bg-[#0B1C2E] px-5 pb-5 pt-1">
-        <p className="text-white font-bold text-lg">Proof of Delivery</p>
-        <p className="text-xs text-white/50 mt-0.5">Capture delivery confirmations</p>
-      </div>
+      {/* ── Sticky header — identical to driver page ── */}
+      <header
+        className="sticky top-0 z-30 bg-brand-navy w-full shrink-0"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
+        <div className="max-w-lg mx-auto h-14 px-4 flex items-center justify-between">
+          {/* Hamburger — matches driver page */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="min-w-[44px] min-h-[44px] flex flex-col justify-center items-start gap-1.5 p-2 -ml-2"
+            aria-label="Menu"
+          >
+            <span className="block w-5 h-0.5 bg-white rounded" />
+            <span className="block w-5 h-0.5 bg-white rounded" />
+            <span className="block w-3.5 h-0.5 bg-white rounded" />
+          </button>
 
-      <main className="flex-1 overflow-y-auto px-4 pt-4 space-y-4 pb-8">
-        {/* Awaiting */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-sm text-[#0B1C2E]">Awaiting POD</h2>
-            <span className="text-xs text-white bg-amber-500 rounded-full px-2 py-0.5 font-semibold">{myNeedsPod.length}</span>
+          {/* Brand — identical to driver page */}
+          <div className="text-center leading-none select-none">
+            <p className="text-white font-extrabold text-sm tracking-tight">
+              NE<span className="text-brand-teal">X</span>
+            </p>
+            <p className="text-[8px] tracking-[0.25em] text-brand-teal/80 font-semibold">
+              LOGISTICS
+            </p>
           </div>
 
-          {myNeedsPod.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-              <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2 opacity-60" />
-              <p className="font-bold text-[#0B1C2E]">All caught up!</p>
-              <p className="text-sm text-gray-400 mt-1">No deliveries need a POD right now.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {myNeedsPod.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => router.push(`/pod/${t.id}`)}
-                  className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left flex items-center gap-3 active:scale-[0.99] transition-transform"
-                >
-                  <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
-                    <Camera className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-[#0B1C2E]">{t.id}</p>
-                    <p className="text-xs text-gray-500 truncate">{t.dropoff.address}</p>
-                    <span className="mt-1 inline-block text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">
-                      Pending
-                    </span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
+          {/* Bell — matches driver page */}
+          <button
+            onClick={() => toast.info("Notifications")}
+            className="relative min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2"
+            aria-label="Notifications"
+          >
+            <Bell className="w-5 h-5 text-white" />
+            {unread > 0 && (
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </button>
+        </div>
+      </header>
 
-        {/* Captured */}
-        {myCaptured.length > 0 && (
+      {/* ── Title banner ── */}
+      <div className="bg-brand-navy px-5 pb-5 pt-1 shrink-0">
+        <div className="max-w-lg mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-teal/20 flex items-center justify-center shrink-0">
+              <FileImage className="w-5 h-5 text-brand-teal" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-lg leading-tight">Proof of Delivery</p>
+              <p className="text-xs text-white/50">Capture delivery confirmations</p>
+            </div>
+          </div>
+          {/* Summary pills */}
+          <div className="flex gap-2 mt-4">
+            <span className="flex items-center gap-1.5 bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold px-3 py-1.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              {myNeedsPod.length} Pending
+            </span>
+            <span className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-semibold px-3 py-1.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              {myCaptured.length} Captured
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Scrollable content ── */}
+      <main className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="max-w-lg mx-auto px-4 pt-5 space-y-5 pb-8">
+
+          {/* Awaiting section */}
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-sm text-[#0B1C2E]">Captured</h2>
-              <span className="text-xs text-white bg-emerald-500 rounded-full px-2 py-0.5 font-semibold">{myCaptured.length}</span>
+              <h2 className="font-bold text-sm text-brand-navy">Awaiting POD</h2>
+              {myNeedsPod.length > 0 && (
+                <span className="text-[11px] text-white bg-amber-500 rounded-full px-2.5 py-0.5 font-semibold">
+                  {myNeedsPod.length}
+                </span>
+              )}
             </div>
-            <div className="space-y-2">
-              {myCaptured.map((t) => {
-                const pod = pods.find((p: any) => p.tripId === t.id);
-                return (
-                  <div key={t.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
-                    <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0">
-                      <ClipboardCheck className="w-5 h-5 text-emerald-600" />
+
+            {myNeedsPod.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3 opacity-60" />
+                <p className="font-bold text-brand-navy">All caught up!</p>
+                <p className="text-sm text-gray-400 mt-1">No deliveries need a POD right now.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {myNeedsPod.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => router.push(`/pod/${t.id}`)}
+                    className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left flex items-center gap-3 active:scale-[0.99] transition-transform min-h-[76px]"
+                  >
+                    <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
+                      <Camera className="w-5 h-5 text-amber-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-[#0B1C2E]">{t.id}</p>
-                      {pod && <p className="text-xs text-gray-500">Received by: {pod.receiverName}</p>}
-                      {pod && (
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {new Date(pod.timestamp).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
-                        </p>
-                      )}
+                      <p className="font-bold text-sm text-brand-navy">{t.id}</p>
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{t.dropoff.address}</p>
+                      <span className="mt-1.5 inline-block text-[10px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">
+                        Awaiting Capture
+                      </span>
                     </div>
-                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold shrink-0">Done</span>
-                  </div>
-                );
-              })}
-            </div>
+                    <div className="shrink-0 flex flex-col items-center gap-1">
+                      <div className="w-8 h-8 rounded-full bg-brand-teal/10 flex items-center justify-center">
+                        <ChevronRight className="w-4 h-4 text-brand-teal" />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
-        )}
+
+          {/* Captured section */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-sm text-brand-navy">Captured</h2>
+              {myCaptured.length > 0 && (
+                <span className="text-[11px] text-white bg-emerald-500 rounded-full px-2.5 py-0.5 font-semibold">
+                  {myCaptured.length}
+                </span>
+              )}
+            </div>
+            {myCaptured.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center">
+                <ClipboardCheck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No PODs captured yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {myCaptured.map((t) => {
+                  const pod = pods.find((p: any) => p.tripId === t.id);
+                  return (
+                    <div
+                      key={t.id}
+                      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3 min-h-[72px]"
+                    >
+                      <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0">
+                        <ClipboardCheck className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-brand-navy">{t.id}</p>
+                        {pod && (
+                          <p className="text-xs text-gray-500 mt-0.5">Received by: <span className="font-medium">{pod.receiverName}</span></p>
+                        )}
+                        {pod && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {new Date(pod.timestamp).toLocaleDateString("en-PH", {
+                              month: "short", day: "numeric", year: "numeric",
+                            })} &bull; {new Date(pod.timestamp).toLocaleTimeString("en-PH", {
+                              hour: "2-digit", minute: "2-digit",
+                            })}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold shrink-0">
+                        Done
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
       </main>
+
+      <DriverNav active={"pod"} />
+
+      <DriverSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        active="pod"
+      />
     </div>
   );
 }

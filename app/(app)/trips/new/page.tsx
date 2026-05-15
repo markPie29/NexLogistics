@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTripStore, useDriverStore, useFleetStore, useClientStore, usePartnerStore } from "@/lib/store";
+import { useTripStore, useDriverStore, useFleetStore, useClientStore, usePartnerStore, useHelperStore } from "@/lib/store";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
@@ -30,10 +30,15 @@ const schema = z.object({
   consigneeContact: z.string().optional(),
   notes: z.string().optional(),
   driverId: z.string().optional(),
+  helperId: z.string().optional(),
   vehicleId: z.string().optional(),
   partnerId: z.string().optional(),
   fare: z.coerce.number().min(0),
   distanceKm: z.coerce.number().min(0),
+  driverRate: z.coerce.number().min(0).optional(),
+  helperRate: z.coerce.number().min(0).optional(),
+  commissionPct: z.coerce.number().min(0).max(100).optional(),
+  partnerRate: z.coerce.number().min(0).optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -46,6 +51,7 @@ export default function NewTripPage() {
   const vehicles = useFleetStore((s) => s.vehicles);
   const clients = useClientStore((s) => s.clients);
   const partners = usePartnerStore((s) => s.partners.filter((p) => p.status === "active"));
+  const helpers = useHelperStore((s) => s.helpers.filter((h) => h.status === "active"));
   const [step, setStep] = useState(0);
   const [useSubcon, setUseSubcon] = useState(false);
   const [otherFees, setOtherFees] = useState<TripFee[]>([]);
@@ -82,20 +88,31 @@ export default function NewTripPage() {
       vehicleId: useSubcon ? undefined : v.vehicleId,
       partnerId: useSubcon ? v.partnerId : undefined,
       partnerPayoutStatus: useSubcon ? "pending" : undefined,
+      helperId: !useSubcon && v.helperId ? v.helperId : undefined,
+      helperName: !useSubcon && v.helperId ? helpers.find((h) => h.id === v.helperId)?.name : undefined,
+      helperContact: !useSubcon && v.helperId ? helpers.find((h) => h.id === v.helperId)?.phone : undefined,
       pickup: { address: v.pickupAddress, scheduledAt: v.pickupAt, lat: 14.5995, lng: 120.9842 },
       dropoff: { address: v.dropoffAddress, scheduledAt: v.dropoffAt, lat: 14.6760, lng: 121.0437 },
       cargo: { type: v.cargoType, weightKg: v.weightKg, units: v.units, description: v.description },
       distanceKm: v.distanceKm,
       fare: v.fare,
+      driverRate: !useSubcon ? v.driverRate : undefined,
+      helperRate: !useSubcon && v.helperId ? v.helperRate : undefined,
+      commissionPct: useSubcon ? v.commissionPct : undefined,
+      partnerRate: useSubcon ? v.partnerRate : undefined,
       status: "scheduled",
+      // 🔒 Phase 5 — every new trip enters Super Admin rate-confirmation queue
+      approvalStatus: "pending_rate_approval",
       eta: v.dropoffAt,
       documentNo: v.documentNo || undefined,
       consigneeName: v.consigneeName || undefined,
       consigneeContact: v.consigneeContact || undefined,
+      customerName: v.consigneeName || undefined,
+      customerContact: v.consigneeContact || undefined,
       notes: v.notes || undefined,
       otherFees: cleanFees.length ? cleanFees : undefined,
     });
-    toast.success(`Trip ${trip.id} created`);
+    toast.success(`Trip ${trip.id} submitted for rate approval`);
     router.push(`/trips/${trip.id}`);
   };
 
@@ -131,7 +148,7 @@ export default function NewTripPage() {
               </div>
               <Field label="Warehouse / Pickup Point" error={errors.pickupAddress?.message}><Input placeholder="Manila Port Area" {...register("pickupAddress")} /></Field>
               <Field label="Load Date / Time" error={errors.pickupAt?.message}><Input type="datetime-local" {...register("pickupAt")} /></Field>
-              <Field label="Deliver Address" error={errors.dropoffAddress?.message}><Input placeholder="San Fernando, Pampanga" {...register("dropoffAddress")} /></Field>
+              <Field label="Delivery Address" error={errors.dropoffAddress?.message}><Input placeholder="San Fernando, Pampanga" {...register("dropoffAddress")} /></Field>
               <Field label="Unload Date / Time" error={errors.dropoffAt?.message}><Input type="datetime-local" {...register("dropoffAt")} /></Field>
             </div>
           )}
@@ -147,8 +164,8 @@ export default function NewTripPage() {
                 <Field label="Weight (kg)" error={errors.weightKg?.message}><Input type="number" {...register("weightKg")} /></Field>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Deliver To (Consignee)"><Input placeholder="Juan dela Cruz" {...register("consigneeName")} /></Field>
-                <Field label="Consignee Contact"><Input placeholder="0917XXXXXXX" {...register("consigneeContact")} /></Field>
+                <Field label="Customer / Client (Deliver To)"><Input placeholder="Juan dela Cruz" {...register("consigneeName")} /></Field>
+                <Field label="Customer / Client Contact"><Input placeholder="0917XXXXXXX" {...register("consigneeContact")} /></Field>
               </div>
               <Field label="Cargo Description"><Textarea rows={2} {...register("description")} /></Field>
               <Field label="Notes"><Textarea rows={3} placeholder="Special handling, gate access, etc." {...register("notes")} /></Field>
@@ -183,12 +200,18 @@ export default function NewTripPage() {
               </div>
 
               {useSubcon ? (
-                <Field label="Subcon Partner">
-                  <Select onValueChange={(v) => setValue("partnerId", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select partner..." /></SelectTrigger>
-                    <SelectContent>{partners.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </Field>
+                <>
+                  <Field label="Subcon Partner">
+                    <Select onValueChange={(v) => setValue("partnerId", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select partner..." /></SelectTrigger>
+                      <SelectContent>{partners.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </Field>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Subcon Payout Rate (₱)"><Input type="number" placeholder="e.g. 8000" {...register("partnerRate")} /></Field>
+                    <Field label="Commission % (to subcon)"><Input type="number" placeholder="e.g. 10" {...register("commissionPct")} /></Field>
+                  </div>
+                </>
               ) : (
                 <>
                   <Field label="Driver">
@@ -197,12 +220,25 @@ export default function NewTripPage() {
                       <SelectContent>{drivers.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </Field>
+                  <Field label="Helper (optional)">
+                    <Select onValueChange={(v) => setValue("helperId", v === "__none__" ? "" : v)}>
+                      <SelectTrigger><SelectValue placeholder="Assign helper (optional)..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— None —</SelectItem>
+                        {helpers.map((h) => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </Field>
                   <Field label="Vehicle (Plate #)">
                     <Select onValueChange={(v) => setValue("vehicleId", v)}>
                       <SelectTrigger><SelectValue placeholder="Assign vehicle..." /></SelectTrigger>
-                      <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.plate} — {v.brand} {v.model}</SelectItem>)}</SelectContent>
+                      <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.plate} — {v.brand} {v.model} {v.ownership === "subcon" ? "(Subcon)" : ""}</SelectItem>)}</SelectContent>
                     </Select>
                   </Field>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Driver Rate (₱)"><Input type="number" placeholder="e.g. 1500" {...register("driverRate")} /></Field>
+                    <Field label="Helper Rate (₱)"><Input type="number" placeholder="e.g. 500" {...register("helperRate")} /></Field>
+                  </div>
                 </>
               )}
 
@@ -248,14 +284,21 @@ export default function NewTripPage() {
               <ReviewRow label="DR# / Document" value={watch("documentNo")} />
               <ReviewRow label="Pickup" value={`${watch("pickupAddress")} · ${watch("pickupAt")}`} />
               <ReviewRow label="Dropoff" value={`${watch("dropoffAddress")} · ${watch("dropoffAt")}`} />
-              <ReviewRow label="Consignee" value={watch("consigneeName") ? `${watch("consigneeName")} · ${watch("consigneeContact") || "—"}` : undefined} />
+              <ReviewRow label="Customer / Client" value={watch("consigneeName") ? `${watch("consigneeName")} · ${watch("consigneeContact") || "—"}` : undefined} />
               <ReviewRow label="Cargo" value={`${watch("cargoType")} · ${watch("weightKg")}kg · ${watch("units")} units`} />
               {useSubcon ? (
-                <ReviewRow label="Subcon Partner" value={partners.find(p => p.id === watch("partnerId"))?.name} />
+                <>
+                  <ReviewRow label="Subcon Partner" value={partners.find(p => p.id === watch("partnerId"))?.name} />
+                  {watch("partnerRate") ? <ReviewRow label="Subcon Payout Rate" value={formatCurrency(Number(watch("partnerRate")) || 0)} /> : null}
+                  {watch("commissionPct") ? <ReviewRow label="Commission %" value={`${watch("commissionPct")}%`} /> : null}
+                </>
               ) : (
                 <>
                   <ReviewRow label="Driver" value={drivers.find(d => d.id === watch("driverId"))?.name} />
+                  <ReviewRow label="Helper" value={helpers.find(h => h.id === watch("helperId"))?.name} />
                   <ReviewRow label="Vehicle" value={vehicles.find(v => v.id === watch("vehicleId"))?.plate} />
+                  {watch("driverRate") ? <ReviewRow label="Driver Rate" value={formatCurrency(Number(watch("driverRate")) || 0)} /> : null}
+                  {watch("helperRate") ? <ReviewRow label="Helper Rate" value={formatCurrency(Number(watch("helperRate")) || 0)} /> : null}
                 </>
               )}
               <ReviewRow label="Distance" value={`${watch("distanceKm")} km`} />
@@ -272,7 +315,7 @@ export default function NewTripPage() {
             {step < STEPS.length - 1 ? (
               <Button type="button" onClick={() => setStep((s) => s + 1)}>Next <ChevronRight className="w-4 h-4" /></Button>
             ) : (
-              <Button type="submit">Create Trip <Check className="w-4 h-4" /></Button>
+              <Button type="submit">Submit for Approval <Check className="w-4 h-4" /></Button>
             )}
           </div>
         </form>

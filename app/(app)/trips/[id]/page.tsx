@@ -1,10 +1,10 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, Truck, User as UserIcon, Package, Clock, CheckCircle2, FileText, Handshake, Receipt } from "lucide-react";
+import { ArrowLeft, MapPin, Truck, User as UserIcon, Package, Clock, CheckCircle2, FileText, Handshake, Receipt, AlertTriangle, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useTripStore, useDriverStore, useFleetStore, useClientStore, usePodStore, usePartnerStore } from "@/lib/store";
+import { useTripStore, useDriverStore, useFleetStore, useClientStore, usePodStore, usePartnerStore, useHelperStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { toast } from "sonner";
@@ -30,6 +30,7 @@ export default function TripDetailPage() {
   const clients = useClientStore((s) => s.clients);
   const partners = usePartnerStore((s) => s.partners);
   const pods = usePodStore((s) => s.pods);
+  const helpers = useHelperStore((s) => s.helpers);
 
   if (!trip) {
     return (
@@ -45,6 +46,7 @@ export default function TripDetailPage() {
   const client = clients.find((c) => c.id === trip.clientId);
   const partner = partners.find((p) => p.id === trip.partnerId);
   const pod = pods.find((p) => p.tripId === trip.id);
+  const helper = helpers.find((h) => h.id === trip.helperId);
   const next = NEXT_STATUS[trip.status];
   const otherFeesTotal = trip.otherFees?.reduce((a, f) => a + f.amount, 0) ?? 0;
   const grandTotal = trip.fare + otherFeesTotal;
@@ -57,6 +59,12 @@ export default function TripDetailPage() {
 
   return (
     <div className="space-y-6">
+      {trip.approvalStatus === "pending_rate_approval" && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl px-5 py-3 text-sm font-medium">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <span>This trip is <strong>awaiting Super Admin rate approval</strong> before it can be dispatched.</span>
+        </div>
+      )}
       <PageHeader
         title={trip.id}
         subtitle={`${trip.pickup.address} → ${trip.dropoff.address}`}
@@ -76,7 +84,7 @@ export default function TripDetailPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <Detail icon={MapPin} label="Warehouse / Pickup" value={trip.pickup.address} sub={`Load: ${new Date(trip.pickup.scheduledAt).toLocaleString()}`} />
-              <Detail icon={MapPin} label="Deliver Address" value={trip.dropoff.address} sub={`Unload: ${new Date(trip.dropoff.scheduledAt).toLocaleString()}`} />
+              <Detail icon={MapPin} label="Delivery Address" value={trip.dropoff.address} sub={`Unload: ${new Date(trip.dropoff.scheduledAt).toLocaleString()}`} />
               {partner ? (
                 <Detail icon={Handshake} label="Subcon Partner" value={partner.name} sub={partner.contactPerson} />
               ) : (
@@ -105,23 +113,49 @@ export default function TripDetailPage() {
                 <Badge variant={trip.partnerPayoutStatus === "paid" ? "success" : "warning"}>{trip.partnerPayoutStatus}</Badge>
               </div>
             )}
+            {/* Rates breakdown */}
+            <div className="pt-2 border-t border-brand-border/60 space-y-1 text-xs">
+              <div className="font-semibold text-brand-navy text-sm mb-1">Trip Rates</div>
+              {partner ? (
+                <>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Subcon Payout</span><span className="font-medium">{trip.partnerRate ? formatCurrency(trip.partnerRate) : "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Commission</span><span className="font-medium">{trip.commissionPct ? `${trip.commissionPct}%` : "—"}</span></div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Driver Rate</span><span className="font-medium">{trip.driverRate ? formatCurrency(trip.driverRate) : "—"}</span></div>
+                  {helper && (
+                    <>
+                      <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Users className="w-3 h-3" /> Helper</span><span className="font-medium">{helper.name}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Helper Rate</span><span className="font-medium">{trip.helperRate ? formatCurrency(trip.helperRate) : "—"}</span></div>
+                    </>
+                  )}
+                </>
+              )}
+              {trip.approvalStatus === "approved" && trip.rateApprovedBy && (
+                <div className="flex items-center gap-1 text-emerald-600 pt-1"><CheckCircle2 className="w-3 h-3" /> Rates approved by {trip.rateApprovedBy}</div>
+              )}
+              {trip.approvalStatus === "pending_rate_approval" && (
+                <div className="flex items-center gap-1 text-amber-600 pt-1"><AlertTriangle className="w-3 h-3" /> Pending rate confirmation</div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Document & Consignee */}
-      {(trip.documentNo || trip.consigneeName || trip.notes) && (
+      {/* Document & Customer Info */}
+      {(trip.documentNo || trip.customerName || trip.consigneeName || trip.notes) && (
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-4 h-4 text-brand-teal" /> Document & Consignee</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-4 h-4 text-brand-teal" /> Document & Customer Info</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
               <div className="text-xs text-muted-foreground">DR# / Document #</div>
               <div className="font-mono font-medium text-brand-navy">{trip.documentNo || "—"}</div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">Deliver To (Consignee)</div>
-              <div className="font-medium text-brand-navy">{trip.consigneeName || "—"}</div>
-              {trip.consigneeContact && <div className="text-xs text-muted-foreground">{trip.consigneeContact}</div>}
+              <div className="text-xs text-muted-foreground">Customer / Client (Deliver To)</div>
+              <div className="font-medium text-brand-navy">{trip.customerName ?? trip.consigneeName ?? "—"}</div>
+              {(trip.customerContact ?? trip.consigneeContact) && <div className="text-xs text-muted-foreground">{trip.customerContact ?? trip.consigneeContact}</div>}
             </div>
             {trip.notes && (
               <div className="md:col-span-3">

@@ -42,6 +42,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Driver mobile app — full-screen, no sidebar or topbar
+  // NOTE: must match /driver exactly or /driver/ sub-paths, NOT /drivers (management page)
+  const isDriverApp =
+    pathname === "/driver" ||
+    (pathname?.startsWith("/driver/") && !pathname.startsWith("/drivers")) ||
+    (user.role === "driver" && pathname?.startsWith("/pod"));
+  if (isDriverApp) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="min-h-screen bg-brand-bg dark:bg-background">
       <Sidebar />

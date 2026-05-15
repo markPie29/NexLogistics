@@ -27,6 +27,8 @@ export type VehicleStatus =
   | "maintenance"
   | "inactive";
 
+export type VehicleOwnership = "company" | "subcon";
+
 export interface Vehicle {
   id: string;
   plate: string;
@@ -44,10 +46,14 @@ export interface Vehicle {
   insuranceExpiry: string;
   permitExpiry: string;
   status: VehicleStatus;
+  ownership?: VehicleOwnership;  // "company" (default) | "subcon" (registered to a partner)
+  partnerId?: string;            // when ownership="subcon", links to Partner
   imageUrl?: string;
   notes?: string;
   createdAt: string;
 }
+
+export type EmploymentType = "per_trip" | "monthly" | "hybrid";
 
 export interface Driver {
   id: string;
@@ -66,6 +72,34 @@ export interface Driver {
   assignedVehicleId?: string;
   emergencyContact?: string;
   address?: string;
+  // Payroll basis (Phase 1: monthly employees)
+  employmentType?: EmploymentType;   // default "per_trip"
+  monthlyBaseSalary?: number;        // when employmentType is "monthly" or "hybrid"
+  baseRatePerTrip?: number;          // suggested per-trip rate
+  ratePerKm?: number;                // alternative km-based rate
+  commissionPercent?: number;        // % of fare
+}
+
+// ── Helper (driver's assistant / loader) ──
+export interface Helper {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  status: "active" | "off_duty" | "on_leave";
+  assignedDriverId?: string;
+  hireDate?: string;
+  address?: string;
+  emergencyContact?: string;
+  photoUrl?: string;
+  // Payroll basis
+  employmentType?: EmploymentType;   // default "per_trip"
+  monthlyBaseSalary?: number;
+  baseRatePerTrip?: number;          // ₱ per trip
+  ratePerKm?: number;                // ₱ per km
+  commissionPercent?: number;        // % of fare
+  notes?: string;
+  createdAt: string;
 }
 
 export interface Client {
@@ -97,7 +131,11 @@ export interface TripStatusLog {
   note?: string;
 }
 
-export type TripApprovalStatus = "pending" | "approved" | "rejected";
+export type TripApprovalStatus =
+  | "pending"
+  | "pending_rate_approval"   // Phase 5: awaiting Super Admin rate confirmation at trip creation
+  | "approved"
+  | "rejected";
 
 // One-off pass-through cost on a trip (toll, parking, helper fee, etc.)
 export interface TripFee {
@@ -131,18 +169,37 @@ export interface Trip {
   // ── Operational extensions (client requirement) ──
   // Plate number is NOT duplicated here — derive from vehicleId → Vehicle.plate.
   documentNo?: string;          // DR# / waybill / document number
-  consigneeName?: string;       // Deliver-to person/business
-  consigneeContact?: string;    // Receiver phone/contact
+  // Customer / Client fields (renamed from "consignee" — boss request May 14, 2026)
+  customerName?: string;        // Deliver-to person/business
+  customerContact?: string;     // Receiver phone/contact
+  /** @deprecated Use customerName. Kept for backward-compat with persisted data. */
+  consigneeName?: string;
+  /** @deprecated Use customerContact. Kept for backward-compat with persisted data. */
+  consigneeContact?: string;
   notes?: string;               // Free-text trip note (distinct from statusLogs)
-  otherFees?: TripFee[];        // Toll, parking, helper fee, etc.
+  otherFees?: TripFee[];        // Toll, parking, etc.
+  // ── Helper assignment (Phase 1) ──
+  helperId?: string;            // optional assistant assigned to trip
+  helperName?: string;          // snapshot at creation (optional override)
+  helperContact?: string;
+  helperFee?: number;           // ₱ paid to helper for this trip
+  // ── Rate snapshots (locked at trip creation, used by approvals + payroll) ──
+  driverRate?: number;          // ₱ driver earns for this trip
+  helperRate?: number;          // ₱ helper earns for this trip
+  commissionPct?: number;       // 0-100 — employee/subcon commission on this trip
   // ── Subcon assignment ──
   partnerId?: string;                    // Subcontractor handling the trip
   partnerPayoutStatus?: PartnerPayoutStatus;
   partnerPayoutAt?: string;
-  // Payroll-eligibility (Philippine logistics dispatch workflow)
+  partnerRate?: number;                  // ₱ paid to partner for this trip
+  // ── Approval workflow ──
   approvalStatus?: TripApprovalStatus;
   approvedBy?: string;
   approvedAt?: string;
+  // Phase 5: separate rate-approval audit (Super Admin gate at creation)
+  rateApprovedBy?: string;
+  rateApprovedAt?: string;
+  rateApprovalNotes?: string;
   payrollProcessed?: boolean; // true once a payroll period locks the earnings
   payrollPeriodId?: string;
 }
@@ -166,6 +223,22 @@ export interface Partner {
   status: PartnerStatus;
   createdAt: string;
   notes?: string;
+}
+
+export type PartnerRequestType = "diesel" | "cash_advance" | "other";
+export type PartnerRequestStatus = "pending" | "approved" | "rejected" | "released";
+
+export interface PartnerRequest {
+  id: string;
+  partnerId: string;
+  type: PartnerRequestType;
+  amount: number;
+  reason?: string;
+  requestedAt: string;
+  status: PartnerRequestStatus;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  releaseReference?: string;
 }
 
 export type MaintenanceStatus = "upcoming" | "due_soon" | "overdue" | "completed";
@@ -533,3 +606,63 @@ export interface PayrollSummary {
   paidAt?: string;
   notes?: string;
 }
+
+// ─── Helper Payroll Profile (mirror of DriverPayrollProfile) ─
+
+export interface HelperPayrollProfile {
+  id: string;
+  helperId: string;
+  payrollMode: PayrollMode;
+  baseSalary: number;
+  perTripFlatRate?: number;
+  perDeliveryRate?: number;
+  commissionPercent?: number;
+  sssEnabled: boolean;
+  philhealthEnabled: boolean;
+  pagibigEnabled: boolean;
+  taxEnabled: boolean;
+  active: boolean;
+}
+
+// ─── Department Calendar (Phase 6) ───────────────────────────
+
+export type CalendarDepartment =
+  | "admin"
+  | "hr"
+  | "operation"
+  | "accounting"
+  | "sales"
+  | "subcon";
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string;          // ISO datetime
+  end: string;            // ISO datetime
+  allDay?: boolean;
+  department: CalendarDepartment;
+  color?: string;         // hex; if omitted, derived from department
+  location?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export const CALENDAR_DEPARTMENT_COLORS: Record<CalendarDepartment, string> = {
+  admin:      "#0F172A", // brand-navy
+  hr:         "#0EA5E9",
+  operation:  "#10B981",
+  accounting: "#F59E0B",
+  sales:      "#8B5CF6",
+  subcon:     "#EF4444",
+};
+
+export const CALENDAR_DEPARTMENT_LABELS: Record<CalendarDepartment, string> = {
+  admin:      "Admin",
+  hr:         "HR",
+  operation:  "Operation",
+  accounting: "Accounting",
+  sales:      "Sales",
+  subcon:     "Subcon / Partners",
+};
+

@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 import {
   Handshake, Plus, Search, Pencil, Trash2, Phone, Mail, MapPin,
-  Truck, CheckCircle2, Clock, Building2,
+  Truck, CheckCircle2, Clock, Building2, CircleDollarSign,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,17 +11,29 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { usePartnerStore, useTripStore } from "@/lib/store";
+import { usePartnerStore, usePartnerRequestStore, useTripStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { toast } from "sonner";
-import type { Partner, PartnerStatus } from "@/lib/types";
+import type { Partner, PartnerRequestType, PartnerStatus } from "@/lib/types";
 
 const STATUS_VARIANT: Record<PartnerStatus, any> = {
   active: "success",
   suspended: "warning",
   inactive: "neutral",
+};
+
+const REQUEST_LABEL: Record<PartnerRequestType, string> = {
+  diesel: "Diesel",
+  cash_advance: "Cash Advance",
+  other: "Others",
+};
+
+const REQUEST_VARIANT: Record<PartnerRequestType, "warning" | "info" | "neutral"> = {
+  diesel: "warning",
+  cash_advance: "info",
+  other: "neutral",
 };
 
 const EMPTY: Omit<Partner, "id" | "createdAt"> = {
@@ -31,11 +43,21 @@ const EMPTY: Omit<Partner, "id" | "createdAt"> = {
   defaultRate: 0, ratePerKm: 0, notes: "",
 };
 
+const EMPTY_REQUEST = {
+  partnerId: "",
+  type: "diesel" as PartnerRequestType,
+  amount: 0,
+  reason: "",
+};
+
 export default function PartnersPage() {
   const partners = usePartnerStore((s) => s.partners);
   const addPartner = usePartnerStore((s) => s.addPartner);
   const updatePartner = usePartnerStore((s) => s.updatePartner);
   const deletePartner = usePartnerStore((s) => s.deletePartner);
+  const requests = usePartnerRequestStore((s) => s.requests);
+  const addRequest = usePartnerRequestStore((s) => s.addRequest);
+  const setRequestStatus = usePartnerRequestStore((s) => s.setRequestStatus);
   const trips = useTripStore((s) => s.trips);
 
   const [search, setSearch] = useState("");
@@ -43,6 +65,8 @@ export default function PartnersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Partner | null>(null);
   const [form, setForm] = useState<Omit<Partner, "id" | "createdAt">>(EMPTY);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [requestForm, setRequestForm] = useState(EMPTY_REQUEST);
 
   const filtered = useMemo(() => partners.filter((p) => {
     if (statusFilter !== "all" && p.status !== statusFilter) return false;
@@ -66,6 +90,17 @@ export default function PartnersPage() {
       }, 0);
     return { total: partners.length, active, totalTrips: partnerTrips.length, pending, pendingAmt };
   }, [partners, trips]);
+
+  const requestSummary = useMemo(() => {
+    const pending = requests.filter((r) => r.status === "pending");
+    const approved = requests.filter((r) => r.status === "approved");
+    return {
+      total: requests.length,
+      pendingCount: pending.length,
+      pendingAmount: pending.reduce((a, b) => a + b.amount, 0),
+      approvedCount: approved.length,
+    };
+  }, [requests]);
 
   const openAdd = () => {
     setEditing(null);
@@ -117,6 +152,31 @@ export default function PartnersPage() {
     toast.success(`Deleted ${p.name}`);
   };
 
+  const submitRequest = () => {
+    if (!requestForm.partnerId) {
+      toast.error("Select a partner");
+      return;
+    }
+    if (requestForm.amount <= 0) {
+      toast.error("Amount must be greater than zero");
+      return;
+    }
+    addRequest({
+      partnerId: requestForm.partnerId,
+      type: requestForm.type,
+      amount: requestForm.amount,
+      reason: requestForm.reason.trim() || undefined,
+    });
+    toast.success("Partner request submitted");
+    setRequestForm(EMPTY_REQUEST);
+    setRequestOpen(false);
+  };
+
+  const reviewRequest = (id: string, status: "approved" | "rejected" | "released") => {
+    setRequestStatus(id, status, "Super Admin");
+    toast.success(`Request marked as ${status}`);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -124,9 +184,14 @@ export default function PartnersPage() {
         subtitle="Manage subcontractor trucking partners and haulers"
         breadcrumbs={[{ label: "Operations" }, { label: "Subcon Partners" }]}
         actions={
-          <Button size="sm" onClick={openAdd}>
-            <Plus className="w-4 h-4" /> Add Partner
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => setRequestOpen(true)}>
+              <CircleDollarSign className="w-4 h-4" /> New Request
+            </Button>
+            <Button size="sm" onClick={openAdd}>
+              <Plus className="w-4 h-4" /> Add Partner
+            </Button>
+          </div>
         }
       />
 
@@ -137,6 +202,74 @@ export default function PartnersPage() {
         <KpiCard label="Total Trips Handled" value={kpi.totalTrips} icon={Truck} iconColor="text-sky-600" iconBg="bg-sky-50" />
         <KpiCard label="Pending Payables" value={formatCurrency(kpi.pendingAmt)} icon={Clock} iconColor="text-amber-600" iconBg="bg-amber-50" footerLabel={`${kpi.pending} trip(s) unpaid`} />
       </div>
+
+      {/* Partner Requests */}
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold text-brand-navy">Partner Requests (Diesel / Cash Advance / Others)</h3>
+              <p className="text-xs text-muted-foreground">Track and approve partner funding requests before release.</p>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Pending: <span className="font-semibold text-brand-navy">{requestSummary.pendingCount}</span> ·
+              Amount: <span className="font-semibold text-brand-navy"> {formatCurrency(requestSummary.pendingAmount)}</span>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px] text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
+                  <th className="py-3 px-3">Date</th>
+                  <th className="py-3 px-3">Partner</th>
+                  <th className="py-3 px-3">Type</th>
+                  <th className="py-3 px-3">Amount</th>
+                  <th className="py-3 px-3">Reason</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((r) => {
+                  const partner = partners.find((p) => p.id === r.partnerId);
+                  return (
+                    <tr key={r.id} className="border-b border-brand-border/60">
+                      <td className="py-2.5 px-3 text-xs text-muted-foreground">{new Date(r.requestedAt).toLocaleDateString()}</td>
+                      <td className="py-2.5 px-3 font-medium">{partner?.name ?? r.partnerId}</td>
+                      <td className="py-2.5 px-3"><Badge variant={REQUEST_VARIANT[r.type]}>{REQUEST_LABEL[r.type]}</Badge></td>
+                      <td className="py-2.5 px-3 font-semibold">{formatCurrency(r.amount)}</td>
+                      <td className="py-2.5 px-3 text-xs text-muted-foreground max-w-[260px] truncate">{r.reason ?? "—"}</td>
+                      <td className="py-2.5 px-3">
+                        <Badge variant={r.status === "pending" ? "warning" : r.status === "rejected" ? "danger" : r.status === "approved" ? "info" : "success"}>
+                          {r.status}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {r.status === "pending" ? (
+                          <div className="flex justify-end gap-1.5">
+                            <Button size="sm" variant="outline" className="h-8" onClick={() => reviewRequest(r.id, "rejected")}>Reject</Button>
+                            <Button size="sm" className="h-8" onClick={() => reviewRequest(r.id, "approved")}>Approve</Button>
+                          </div>
+                        ) : r.status === "approved" ? (
+                          <div className="flex justify-end">
+                            <Button size="sm" variant="outline" className="h-8" onClick={() => reviewRequest(r.id, "released")}>Mark Released</Button>
+                          </div>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {requests.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-muted-foreground">No partner requests yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Card>
@@ -216,6 +349,55 @@ export default function PartnersPage() {
           </div>
         )}
       </div>
+
+      {/* New Partner Request Dialog */}
+      <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Partner Request</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Field label="Partner">
+              <Select value={requestForm.partnerId} onValueChange={(v) => setRequestForm({ ...requestForm, partnerId: v })}>
+                <SelectTrigger><SelectValue placeholder="Select partner" /></SelectTrigger>
+                <SelectContent>
+                  {partners.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Request Type">
+                <Select value={requestForm.type} onValueChange={(v: PartnerRequestType) => setRequestForm({ ...requestForm, type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="diesel">Diesel</SelectItem>
+                    <SelectItem value="cash_advance">Cash Advance</SelectItem>
+                    <SelectItem value="other">Others</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Amount (₱)">
+                <Input type="number" value={requestForm.amount} onChange={(e) => setRequestForm({ ...requestForm, amount: +e.target.value })} />
+              </Field>
+            </div>
+            <Field label="Reason / Notes">
+              <textarea
+                value={requestForm.reason}
+                onChange={(e) => setRequestForm({ ...requestForm, reason: e.target.value })}
+                className="w-full border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                rows={3}
+                placeholder="Explain why this request is needed..."
+              />
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestOpen(false)}>Cancel</Button>
+            <Button onClick={submitRequest}>Submit Request</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
