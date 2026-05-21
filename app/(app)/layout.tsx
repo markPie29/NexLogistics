@@ -20,12 +20,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [darkMode]);
 
   useEffect(() => {
+    // Platform-admin has its own login gate — skip the main-app auth redirect
+    if (pathname === "/platform-admin") return;
     // small delay so persisted store hydrates
     const t = setTimeout(() => {
       if (!useAuthStore.getState().user) router.replace("/login");
     }, 50);
     return () => clearTimeout(t);
-  }, [router]);
+  }, [router, pathname]);
 
   useEffect(() => {
     if (!user || user.role !== "client") return;
@@ -33,6 +35,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace("/client-portal/overview");
     }
   }, [pathname, router, user]);
+
+  // Platform-admin is fully self-contained — render with no auth check or chrome
+  if (pathname === "/platform-admin") {
+    return (
+      <div className="min-h-screen bg-brand-bg">
+        <main className="p-6">{children}</main>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
