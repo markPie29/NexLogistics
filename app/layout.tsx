@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import { BRAND } from "@/lib/config/brand";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 
@@ -21,16 +22,15 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Nex Logistics — Enterprise Fleet & Trip Management",
-  description:
-    "Premium logistics, fleet, dispatch, GPS tracking, payroll and analytics platform by NexVision Innovations.",
+  title: `${BRAND.title} — ${BRAND.tagline}`,
+  description: BRAND.description,
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
   },
   openGraph: {
-    title: "Nex Logistics",
-    description: "Enterprise Fleet & Trip Management by NexVision Innovations",
+    title: BRAND.title,
+    description: `${BRAND.tagline} by ${BRAND.vendor}`,
     type: "website",
   },
 };
@@ -40,19 +40,17 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Pre-hydration theme detection — runs before React mounts to prevent FOUC.
+  // Inline script with no user input; safe by construction. Errors are caught
+  // because localStorage may be unavailable (private browsing) or contain
+  // invalid JSON; in either case we fall back to light mode silently.
+  const themeKey = `${BRAND.storeKey}-ui`;
+  const themeScript = `try{var u=JSON.parse(localStorage.getItem(${JSON.stringify(themeKey)})||'{}');if(u&&u.state&&u.state.darkMode){document.documentElement.classList.add('dark')}}catch(_){}`;
+
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                const ui = JSON.parse(localStorage.getItem('nex-ui') || '{}');
-                if (ui?.state?.darkMode) document.documentElement.classList.add('dark');
-              } catch(e) {}
-            `,
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="font-sans">
         {children}
