@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useRouter } from "next/navigation";
 import {
   Shield,
@@ -27,7 +27,7 @@ interface RoleCard {
   subtitle: string;
   description: string;
   email: string;
-  password: string;
+  demoPassword: string;
   icon: React.ComponentType<{ className?: string }>;
   accent: string;
   iconBg: string;
@@ -41,7 +41,7 @@ const ROLE_CARDS: RoleCard[] = [
     subtitle: "Full system access",
     description: "Complete access to all companies, settings, users, reports and system management.",
     email: "admin@nexlogistics.demo",
-    password: "Admin123!",
+    demoPassword: "Admin123!",
     icon: Shield,
     accent: "text-emerald-700",
     iconBg: "bg-emerald-50 ring-1 ring-emerald-200",
@@ -53,7 +53,7 @@ const ROLE_CARDS: RoleCard[] = [
     subtitle: "Company management",
     description: "Manage fleet, drivers, trips, maintenance, expenses, payroll and reports.",
     email: "operations@nexlogistics.demo",
-    password: "Ops123!",
+    demoPassword: "Ops123!",
     icon: Building2,
     accent: "text-blue-700",
     iconBg: "bg-blue-50 ring-1 ring-blue-200",
@@ -65,7 +65,7 @@ const ROLE_CARDS: RoleCard[] = [
     subtitle: "Trip & dispatch management",
     description: "Create trips, assign drivers and vehicles, monitor deliveries and track in real-time.",
     email: "dispatcher@nexlogistics.demo",
-    password: "Dispatch123!",
+    demoPassword: "Dispatch123!",
     icon: Headphones,
     accent: "text-violet-700",
     iconBg: "bg-violet-50 ring-1 ring-violet-200",
@@ -77,7 +77,7 @@ const ROLE_CARDS: RoleCard[] = [
     subtitle: "Driver mobile access",
     description: "View assigned trips, update status, upload proof of delivery and manage expenses.",
     email: "driver.mark@nexlogistics.demo",
-    password: "Driver123!",
+    demoPassword: "Driver123!",
     icon: TruckIcon,
     accent: "text-emerald-700",
     iconBg: "bg-emerald-50 ring-1 ring-emerald-200",
@@ -89,7 +89,7 @@ const ROLE_CARDS: RoleCard[] = [
     subtitle: "Payroll & financial management",
     description: "Manage payroll, attendance, expenses, deductions and financial reports.",
     email: "finance@nexlogistics.demo",
-    password: "Finance123!",
+    demoPassword: "Finance123!",
     icon: Calculator,
     accent: "text-orange-700",
     iconBg: "bg-orange-50 ring-1 ring-orange-200",
@@ -101,7 +101,7 @@ const ROLE_CARDS: RoleCard[] = [
     subtitle: "Client shipment visibility",
     description: "Track deliveries, view proof of delivery, invoices and shipment history.",
     email: "client@abcconstruction.demo",
-    password: "Client123!",
+    demoPassword: "Client123!",
     icon: UsersIcon,
     accent: "text-teal-700",
     iconBg: "bg-brand-teal-light ring-1 ring-brand-teal/40",
@@ -203,7 +203,7 @@ export default function LoginPage() {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                   <Lock className="w-3.5 h-3.5" /> Password
                 </div>
-                <div className="text-sm font-medium text-brand-navy">{c.password}</div>
+                <div className="text-sm font-medium text-brand-navy">{c.demoPassword}</div>
               </div>
 
               <Button

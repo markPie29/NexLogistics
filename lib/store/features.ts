@@ -1,6 +1,6 @@
-"use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { BRAND } from "@/lib/config/brand";
 
 // ─── Feature Keys ───────────────────────────────────────────────────────────
 export type FeatureKey =
@@ -99,6 +99,6 @@ export const useFeatureStore = create<FeatureState>()(
       enableAll: () => set({ flags: { ...DEFAULT_FLAGS } }),
       resetAll: () => set({ flags: { ...DEFAULT_FLAGS } }),
     }),
-    { name: "nex-feature-flags" }
+    { name: `${BRAND.storeKey}-feature-flags` }
   )
 );

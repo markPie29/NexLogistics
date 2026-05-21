@@ -1,6 +1,6 @@
-"use client";
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { BRAND } from "@/lib/config/brand";
 
 export type PortalShipmentStatus = "in_transit" | "delivered" | "pending" | "exception";
 export type PortalInvoiceStatus = "paid" | "unpaid" | "overdue";
@@ -379,6 +379,6 @@ export const useClientPortalStore = create<ClientPortalState>()(
           preferences: SEEDED_PREFERENCES,
         }),
     }),
-    { name: "nex-client-portal" }
+    { name: `${BRAND.storeKey}-client-portal` }
   )
 );

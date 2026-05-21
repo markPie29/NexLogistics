@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Clock3, Download, FileBarChart2, Filter, Truck, Wallet, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,7 +74,7 @@ export default function ClientPortalReportsPage() {
         <KpiCard title="Delivered Shipments" value={totals.delivered} trend="+22.1%" icon={Truck} iconColor="text-emerald-600" />
         <KpiCard title="On-Time Delivery" value={`${totals.onTimeRate.toFixed(1)}%`} trend="+4.7%" icon={Clock3} iconColor="text-violet-600" />
         <KpiCard title="Exception Shipments" value={totals.exception} trend="0%" icon={AlertTriangle} iconColor="text-amber-600" />
-        <KpiCard title="Total Spend" value={formatCurrency(totals.totalSpend, "PHP")} trend="+15.8%" icon={Wallet} iconColor="text-cyan-600" />
+        <KpiCard title="Total Spend" value={formatCurrency(totals.totalSpend)} trend="+15.8%" icon={Wallet} iconColor="text-cyan-600" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[2fr_1.2fr_1.2fr] gap-4">

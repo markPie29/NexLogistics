@@ -1,6 +1,6 @@
-"use client";
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { BRAND } from "@/lib/config/brand";
 import type {
   TripRate,
   DriverPayrollProfile,
@@ -22,9 +22,9 @@ import {
   seedTripPayroll,
 } from "@/lib/data/payroll-config";
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Trip Rates
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface TripRateState {
   rates: TripRate[];
   addRate: (r: Omit<TripRate, "id">) => TripRate;
@@ -46,13 +46,13 @@ export const useTripRateStore = create<TripRateState>()(
       deleteRate: (id) => set((s) => ({ rates: s.rates.filter((x) => x.id !== id) })),
       reset: () => set({ rates: seedTripRates }),
     }),
-    { name: "nex-trip-rates" }
+    { name: `${BRAND.storeKey}-trip-rates` }
   )
 );
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Driver Payroll Profiles
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface DriverPayrollProfileState {
   profiles: DriverPayrollProfile[];
   addProfile: (p: Omit<DriverPayrollProfile, "id">) => DriverPayrollProfile;
@@ -91,13 +91,13 @@ export const useDriverPayrollProfileStore = create<DriverPayrollProfileState>()(
       },
       reset: () => set({ profiles: seedDriverPayrollProfiles }),
     }),
-    { name: "nex-driver-payroll-profiles" }
+    { name: `${BRAND.storeKey}-driver-payroll-profiles` }
   )
 );
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Incentives
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface IncentiveState {
   incentives: Incentive[];
   addIncentive: (i: Omit<Incentive, "id" | "createdAt"> & { createdAt?: string }) => Incentive;
@@ -119,13 +119,13 @@ export const useIncentiveStore = create<IncentiveState>()(
         set((s) => ({ incentives: s.incentives.map((x) => (ids.includes(x.id) ? { ...x, payrollPeriodId } : x)) })),
       reset: () => set({ incentives: seedIncentives }),
     }),
-    { name: "nex-incentives" }
+    { name: `${BRAND.storeKey}-incentives` }
   )
 );
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Deductions
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface DeductionState {
   deductions: Deduction[];
   addDeduction: (d: Omit<Deduction, "id" | "createdAt">) => Deduction;
@@ -150,13 +150,13 @@ export const useDeductionStore = create<DeductionState>()(
         set((s) => ({ deductions: s.deductions.map((x) => (ids.includes(x.id) ? { ...x, payrollPeriodId, status: "applied" as const } : x)) })),
       reset: () => set({ deductions: seedDeductions }),
     }),
-    { name: "nex-deductions" }
+    { name: `${BRAND.storeKey}-deductions` }
   )
 );
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Payroll Periods + Summaries + TripPayroll (combined for atomic ops)
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface PayrollPeriodState {
   periods: PayrollPeriod[];
   summaries: PayrollSummary[];
@@ -217,13 +217,13 @@ export const usePayrollPeriodStore = create<PayrollPeriodState>()(
       reset: () =>
         set({ periods: seedPayrollPeriods, summaries: seedPayrollSummaries, tripPayrolls: seedTripPayroll }),
     }),
-    { name: "nex-payroll-periods" }
+    { name: `${BRAND.storeKey}-payroll-periods` }
   )
 );
 
-// ─────────────────────────────────────────────────────────────
-// Computation Engine — Pure functions
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Computation Engine â€” Pure functions
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Match best trip rate for a given trip + driver profile. */
 export function findBestRate(
@@ -506,7 +506,7 @@ export function buildDriverSummary(opts: {
   return { summary, tripPayrolls };
 }
 
-// ─── Reset key list (extend the global reset helper) ─────────
+// â”€â”€â”€ Reset key list (extend the global reset helper) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const PAYROLL_STORAGE_KEYS = [
   "nex-trip-rates",
   "nex-driver-payroll-profiles",

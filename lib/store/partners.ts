@@ -1,6 +1,6 @@
-"use client";
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { BRAND } from "@/lib/config/brand";
 import type { Partner, PartnerRequest, PartnerRequestStatus } from "@/lib/types";
 import { seedPartners, seedPartnerRequests } from "@/lib/data/partners";
 
@@ -33,7 +33,7 @@ export const usePartnerStore = create<PartnerState>()(
         set((s) => ({ partners: s.partners.filter((x) => x.id !== id) })),
       reset: () => set({ partners: seedPartners }),
     }),
-    { name: "nex-partners" }
+    { name: `${BRAND.storeKey}-partners` }
   )
 );
 
@@ -78,6 +78,6 @@ export const usePartnerRequestStore = create<PartnerRequestState>()(
       deleteRequest: (id) => set((s) => ({ requests: s.requests.filter((x) => x.id !== id) })),
       reset: () => set({ requests: seedPartnerRequests }),
     }),
-    { name: "nex-partner-requests" }
+    { name: `${BRAND.storeKey}-partner-requests` }
   )
 );

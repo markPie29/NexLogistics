@@ -1,6 +1,6 @@
-"use client";
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { BRAND } from "@/lib/config/brand";
 import type { CalendarEvent, CalendarDepartment } from "@/lib/types";
 import { seedCalendarEvents } from "@/lib/data/calendar";
 
@@ -48,6 +48,6 @@ export const useCalendarStore = create<CalendarState>()(
       reset: () =>
         set({ events: seedCalendarEvents, visibleDepartments: ALL_DEPS }),
     }),
-    { name: "nex-calendar" }
+    { name: `${BRAND.storeKey}-calendar` }
   )
 );

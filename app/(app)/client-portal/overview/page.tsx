@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useMemo, useState } from "react";
 import { ArrowRight, Eye, FileText, LifeBuoy, Receipt, Truck, X, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +38,7 @@ export default function ClientPortalOverviewPage() {
         <Kpi title="In Transit" value={stats.inTransit} color="text-emerald-600" />
         <Kpi title="Delivered" value={stats.delivered} color="text-amber-600" />
         <Kpi title="Pending" value={stats.pending} color="text-violet-600" />
-        <Kpi title="Outstanding" value={formatCurrency(stats.outstanding, "PHP")} color="text-[#0B1220]" />
+        <Kpi title="Outstanding" value={formatCurrency(stats.outstanding)} color="text-[#0B1220]" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

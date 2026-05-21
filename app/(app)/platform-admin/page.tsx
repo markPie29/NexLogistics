@@ -9,10 +9,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { BRAND } from "@/lib/config/brand";
+
 // ── Platform-owner credentials (checked client-side only, never sent to a server) ──
 const PLATFORM_EMAIL    = "platform@nex.internal";
 const PLATFORM_PASSWORD = "NexPlatform@2025!";
-const SESSION_KEY       = "nex-platform-session";
+const SESSION_KEY       = `${BRAND.storeKey}-platform-session`;
 
 const GROUP_ORDER = [
   "Operations",

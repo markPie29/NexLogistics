@@ -8,6 +8,7 @@ import { useUiStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/store/auth";
 import { useFeatureStore } from "@/lib/store/features";
 import { navForRole, ROLE_LABEL } from "@/lib/auth/roles";
+import { BRAND } from "@/lib/config/brand";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -62,10 +63,10 @@ export function Sidebar() {
           {!collapsed && (
             <div className="leading-none">
               <div className="text-lg font-extrabold tracking-tight">
-                NE<span className="text-brand-teal">X</span>
+                {BRAND.name.slice(0, -1)}<span className="text-brand-teal">{BRAND.name.slice(-1)}</span>
               </div>
               <div className="text-[9px] tracking-[0.3em] text-brand-teal/90 font-semibold mt-0.5">
-                LOGISTICS
+                {BRAND.tagline.split(" ")[0].toUpperCase()}
               </div>
             </div>
           )}

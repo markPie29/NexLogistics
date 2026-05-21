@@ -1,5 +1,6 @@
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { BRAND } from "@/lib/config/brand";
 
 export type AccessLevel = "public" | "internal" | "private";
 export type DocumentStatus = "active" | "archived" | "deleted";
@@ -176,6 +177,6 @@ export const useDocumentStore = create<DocumentStore>()(
       })),
       reset: () => set({ documents: DUMMY_DOCUMENTS, categories: DUMMY_CATEGORIES, requests: DUMMY_REQUESTS }),
     }),
-    { name: "nex-documents" }
+    { name: `${BRAND.storeKey}-documents` }
   )
 );

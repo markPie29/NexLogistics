@@ -1,6 +1,6 @@
-"use client";
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { BRAND } from "@/lib/config/brand";
 import type { Helper } from "@/lib/types";
 import { seedHelpers } from "@/lib/data/helpers";
 
@@ -33,6 +33,6 @@ export const useHelperStore = create<HelperState>()(
         set((s) => ({ helpers: s.helpers.filter((x) => x.id !== id) })),
       reset: () => set({ helpers: seedHelpers }),
     }),
-    { name: "nex-helpers" }
+    { name: `${BRAND.storeKey}-helpers` }
   )
 );

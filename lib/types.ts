@@ -14,7 +14,8 @@ export interface User {
   email: string;
   role: Role;
   avatarUrl?: string;
-  password: string; // demo only
+  /** @internal demo only — never persisted to a real store or sent over network */
+  _demoPassword?: string;
   phone?: string;
   companyId?: string;
   driverId?: string; // when role is driver

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useMemo, useState } from "react";
 import { Search, Download, Receipt, CreditCard, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,9 +50,9 @@ export default function ClientPortalInvoicesPage() {
 	return (
 		<div className="space-y-4">
 			<div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-				<StatCard label="Total Outstanding" value={formatCurrency(stats.outstanding, "PHP")} color="text-blue-600" />
-				<StatCard label="Paid (This Period)" value={formatCurrency(stats.paid, "PHP")} color="text-emerald-600" />
-				<StatCard label="Overdue" value={formatCurrency(stats.overdue, "PHP")} color="text-red-600" />
+				<StatCard label="Total Outstanding" value={formatCurrency(stats.outstanding)} color="text-blue-600" />
+				<StatCard label="Paid (This Period)" value={formatCurrency(stats.paid)} color="text-emerald-600" />
+				<StatCard label="Overdue" value={formatCurrency(stats.overdue)} color="text-red-600" />
 				<StatCard label="Unpaid Invoices" value={stats.draft} color="text-violet-600" />
 			</div>
 
@@ -110,7 +110,7 @@ export default function ClientPortalInvoicesPage() {
 											<td className="py-3 px-2 font-semibold text-[#0B1220]">{invoice.invoiceNumber}</td>
 											<td className="py-3 px-2 text-gray-600">{new Date(invoice.issueDate).toLocaleDateString()}</td>
 											<td className="py-3 px-2 text-gray-600">{new Date(invoice.dueDate).toLocaleDateString()}</td>
-											<td className="py-3 px-2 text-gray-700 font-semibold">{formatCurrency(invoice.amount, "PHP")}</td>
+											<td className="py-3 px-2 text-gray-700 font-semibold">{formatCurrency(invoice.amount)}</td>
 											<td className="py-3 px-2"><StatusBadge status={invoice.status} /></td>
 											<td className="py-3 px-2 text-right">
 												<div className="inline-flex items-center gap-1">
@@ -155,8 +155,8 @@ export default function ClientPortalInvoicesPage() {
 									<div className="text-lg font-bold text-[#0B1220]">{selected.invoiceNumber}</div>
 									<StatusBadge status={selected.status} />
 								</div>
-								<DetailRow label="Amount" value={formatCurrency(selected.amount, "PHP")} />
-								<DetailRow label="Balance" value={formatCurrency(selected.balance, "PHP")} />
+								<DetailRow label="Amount" value={formatCurrency(selected.amount)} />
+								<DetailRow label="Balance" value={formatCurrency(selected.balance)} />
 								<DetailRow label="Issue Date" value={new Date(selected.issueDate).toLocaleDateString()} />
 								<DetailRow label="Due Date" value={new Date(selected.dueDate).toLocaleDateString()} />
 								<DetailRow label="Shipment" value={`NEX-TRK-00012${selected.id.replace("inv-", "")}`} />
@@ -199,7 +199,7 @@ export default function ClientPortalInvoicesPage() {
 							</button>
 						</div>
 						<div className="p-4 text-xs text-gray-600">
-							Confirm payment of <span className="font-semibold text-[#0B1220]">{formatCurrency(paying.balance, "PHP")}</span> for
+							Confirm payment of <span className="font-semibold text-[#0B1220]">{formatCurrency(paying.balance)}</span> for
 							<span className="font-semibold text-[#0B1220]"> {paying.invoiceNumber}</span>?
 						</div>
 						<div className="p-4 pt-0 flex gap-2">

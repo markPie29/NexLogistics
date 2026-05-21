@@ -1,6 +1,6 @@
-"use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { BRAND } from "@/lib/config/brand";
 import type {
   Vehicle,
   Driver,
@@ -56,7 +56,7 @@ export const useFleetStore = create<FleetState>()(
       deleteVehicle: (id) => set((s) => ({ vehicles: s.vehicles.filter((v) => v.id !== id) })),
       reset: () => set({ vehicles: seedVehicles }),
     }),
-    { name: "nex-fleet" }
+    { name: `${BRAND.storeKey}-fleet` }
   )
 );
 
@@ -81,7 +81,7 @@ export const useDriverStore = create<DriverState>()(
       deleteDriver: (id) => set((s) => ({ drivers: s.drivers.filter((x) => x.id !== id) })),
       reset: () => set({ drivers: seedDrivers }),
     }),
-    { name: "nex-drivers" }
+    { name: `${BRAND.storeKey}-drivers` }
   )
 );
 
@@ -108,7 +108,7 @@ export const useClientStore = create<ClientState>()(
       deleteClient: (id) => set((s) => ({ clients: s.clients.filter((x) => x.id !== id) })),
       reset: () => set({ clients: seedClients }),
     }),
-    { name: "nex-clients" }
+    { name: `${BRAND.storeKey}-clients` }
   )
 );
 
@@ -223,7 +223,7 @@ export const useTripStore = create<TripState>()(
       deleteTrip: (id) => set((s) => ({ trips: s.trips.filter((t) => t.id !== id) })),
       reset: () => set({ trips: seedTrips }),
     }),
-    { name: "nex-trips" }
+    { name: `${BRAND.storeKey}-trips` }
   )
 );
 
@@ -248,7 +248,7 @@ export const useMaintenanceStore = create<MaintenanceState>()(
       deleteRecord: (id) => set((s) => ({ records: s.records.filter((x) => x.id !== id) })),
       reset: () => set({ records: seedMaintenance }),
     }),
-    { name: "nex-maintenance" }
+    { name: `${BRAND.storeKey}-maintenance` }
   )
 );
 
@@ -270,7 +270,7 @@ export const useExpenseStore = create<ExpenseState>()(
       deleteExpense: (id) => set((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) })),
       reset: () => set({ expenses: seedExpenses }),
     }),
-    { name: "nex-expenses" }
+    { name: `${BRAND.storeKey}-expenses` }
   )
 );
 
@@ -293,7 +293,7 @@ export const usePayrollStore = create<PayrollState>()(
         set((s) => ({ records: s.records.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
       reset: () => set({ records: seedPayroll }),
     }),
-    { name: "nex-payroll" }
+    { name: `${BRAND.storeKey}-payroll` }
   )
 );
 
@@ -317,7 +317,7 @@ export const usePodStore = create<PodState>()(
       },
       reset: () => set({ pods: [] }),
     }),
-    { name: "nex-pods" }
+    { name: `${BRAND.storeKey}-pods` }
   )
 );
 
@@ -351,7 +351,7 @@ export const useUiStore = create<UiState>()(
         set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
       insights: seedAiInsights,
     }),
-    { name: "nex-ui" }
+    { name: `${BRAND.storeKey}-ui` }
   )
 );
 // ─── Billing Stores ──────────────────────────────────────────
@@ -377,7 +377,7 @@ export const useInvoiceStore = create<InvoiceState>()(
       deleteInvoice: (id) => set((s) => ({ invoices: s.invoices.filter((x) => x.id !== id) })),
       reset: () => set({ invoices: seedInvoices }),
     }),
-    { name: "nex-invoices" }
+    { name: `${BRAND.storeKey}-invoices` }
   )
 );
 
@@ -402,7 +402,7 @@ export const useBillingPaymentStore = create<BillingPaymentState>()(
       deletePayment: (id) => set((s) => ({ payments: s.payments.filter((x) => x.id !== id) })),
       reset: () => set({ payments: seedBillingPayments }),
     }),
-    { name: "nex-billing-payments" }
+    { name: `${BRAND.storeKey}-billing-payments` }
   )
 );
 
@@ -427,7 +427,7 @@ export const useCreditNoteStore = create<CreditNoteState>()(
       deleteCreditNote: (id) => set((s) => ({ creditNotes: s.creditNotes.filter((x) => x.id !== id) })),
       reset: () => set({ creditNotes: seedCreditNotes }),
     }),
-    { name: "nex-credit-notes" }
+    { name: `${BRAND.storeKey}-credit-notes` }
   )
 );
 
@@ -452,35 +452,21 @@ export const useRecurringInvoiceStore = create<RecurringInvoiceState>()(
       deleteRecurring: (id) => set((s) => ({ recurring: s.recurring.filter((x) => x.id !== id) })),
       reset: () => set({ recurring: seedRecurringInvoices }),
     }),
-    { name: "nex-recurring" }
+    { name: `${BRAND.storeKey}-recurring` }
   )
 );
 
 export function resetAllDemoData() {
   if (typeof window === "undefined") return;
+  const p = BRAND.storeKey;
   [
-    "nex-fleet",
-    "nex-drivers",
-    "nex-clients",
-    "nex-trips",
-    "nex-maintenance",
-    "nex-expenses",
-    "nex-payroll",
-    "nex-pods",
-    "nex-ui",
-    "nex-auth",
-    "nex-invoices",
-    "nex-billing-payments",
-    "nex-credit-notes",
-    "nex-recurring",
-    "nex-trip-rates",
-    "nex-driver-payroll-profiles",
-    "nex-incentives",
-    "nex-deductions",
-    "nex-payroll-periods",
-    "nex-partners",
-    "nex-helpers",
-    "nex-calendar",
+    `${p}-fleet`, `${p}-drivers`, `${p}-clients`, `${p}-trips`,
+    `${p}-maintenance`, `${p}-expenses`, `${p}-payroll`, `${p}-pods`,
+    `${p}-ui`, `${p}-auth`, `${p}-invoices`, `${p}-billing-payments`,
+    `${p}-credit-notes`, `${p}-recurring`, `${p}-trip-rates`,
+    `${p}-driver-payroll-profiles`, `${p}-incentives`, `${p}-deductions`,
+    `${p}-payroll-periods`, `${p}-partners`, `${p}-helpers`, `${p}-calendar`,
+    `${p}-feature-flags`,
   ].forEach((k) => localStorage.removeItem(k));
   window.location.reload();
 }

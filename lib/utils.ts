@@ -5,13 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(value: number, currency = "PHP") {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+// Re-exported from brand config so all callers get the locale-aware version.
+export { formatCurrency } from "@/lib/config/brand";
 
 export function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US").format(value);

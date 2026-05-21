@@ -1,7 +1,7 @@
-"use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User, Role } from "@/lib/types";
+import { BRAND } from "@/lib/config/brand";
 import { seedUsers, demoCompany } from "@/lib/data/users";
 
 interface AuthState {
@@ -26,7 +26,7 @@ export const useAuthStore = create<AuthState>()(
       },
       loginWithEmail: (email, password) => {
         const u =
-          seedUsers.find((x) => x.email.toLowerCase() === email.toLowerCase() && x.password === password) || null;
+          seedUsers.find((x) => x.email.toLowerCase() === email.toLowerCase() && x._demoPassword === password) || null;
         if (u) set({ user: u });
         return u;
       },
@@ -34,6 +34,6 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: () => !!get().user,
       hasRole: (...roles) => !!get().user && roles.includes(get().user!.role),
     }),
-    { name: "nex-auth" }
+    { name: `${BRAND.storeKey}-auth` }
   )
 );
