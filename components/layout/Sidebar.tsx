@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown, Building2, FileText, CloudUpload, FolderTree, Share2, FileQuestion, Trash2 } from "lucide-react";
 import { useUiStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/store/auth";
+import { useFeatureStore } from "@/lib/store/features";
 import { navForRole, ROLE_LABEL } from "@/lib/auth/roles";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -38,7 +39,12 @@ export function Sidebar() {
   const toggle = useUiStore((s) => s.toggleSidebar);
   const user = useAuthStore((s) => s.user);
   const company = useAuthStore((s) => s.company);
-  const items = navForRole(user?.role);
+  const { isEnabled } = useFeatureStore();
+
+  // Filter by role then by feature flags (platform owner sees all regardless)
+  const items = navForRole(user?.role).filter(
+    (item) => !item.featureKey || user?.isPlatformOwner || isEnabled(item.featureKey)
+  );
 
   return (
     <aside

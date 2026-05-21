@@ -19,6 +19,7 @@ export interface User {
   companyId?: string;
   driverId?: string; // when role is driver
   clientId?: string; // when role is client
+  isPlatformOwner?: boolean; // hidden: platform-level feature toggle access
 }
 
 export type VehicleStatus =

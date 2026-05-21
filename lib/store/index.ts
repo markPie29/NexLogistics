@@ -506,3 +506,7 @@ export { useHelperStore } from "./helpers";
 
 // Department Calendar (Phase 6)
 export { useCalendarStore } from "./calendar";
+
+// Platform Feature Flags
+export { useFeatureStore } from "./features";
+export type { FeatureKey } from "./features";

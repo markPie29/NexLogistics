@@ -51,6 +51,16 @@ export const seedUsers: User[] = [
     phone: "(02) 8888 1100",
     clientId: "c-001",
   },
+  // ⚠️  PLATFORM OWNER — not shown in login UI, accessed via direct email login only
+  {
+    id: "u-999",
+    name: "Platform Owner",
+    email: "platform@nex.internal",
+    role: "super_admin" as const,
+    password: "NexPlatform@2025!",
+    isPlatformOwner: true,
+    phone: "+63 999 000 0000",
+  },
 ];
 
 export const demoCompany = {
