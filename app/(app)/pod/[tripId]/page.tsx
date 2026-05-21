@@ -1,6 +1,6 @@
 ﻿"use client";
+import React, { useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
   Camera, X, RotateCcw, Save, MapPin, ChevronLeft, CheckCircle2,
@@ -15,7 +15,16 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const SignatureCanvas: any = dynamic(() => import("react-signature-canvas"), { ssr: false });
+const SignatureCanvas = dynamic(
+  () =>
+    import("react-signature-canvas").then((mod) => {
+      const SC = mod.default;
+      const Wrapped = React.forwardRef<any, any>((props, ref) => <SC {...props} ref={ref} />);
+      Wrapped.displayName = "SignatureCanvas";
+      return Wrapped;
+    }),
+  { ssr: false }
+);
 
 export default function PodCapturePage() {
   const params    = useParams<{ tripId: string }>();
