@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronDown, Building2, FileText, CloudUpload, FolderTree, Share2, FileQuestion, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronDown, Building2, FileText, CloudUpload, FolderTree, Share2, FileQuestion, Trash2, SlidersHorizontal } from "lucide-react";
 import { useUiStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/store/auth";
 import { useFeatureStore } from "@/lib/store/features";
@@ -145,6 +145,29 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Platform Owner — Feature Flag Manager */}
+      {user?.isPlatformOwner && (
+        <div className="px-3 pb-2">
+          {!collapsed && (
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-400/50 px-3 py-2">
+              Platform
+            </div>
+          )}
+          <Link
+            href="/platform-admin"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+              pathname === "/platform-admin"
+                ? "bg-amber-500/20 text-amber-300"
+                : "text-white/50 hover:text-white hover:bg-white/5"
+            )}
+          >
+            <SlidersHorizontal className="w-[18px] h-[18px] shrink-0" />
+            {!collapsed && <span className="flex-1 truncate">Feature Flags</span>}
+          </Link>
+        </div>
+      )}
 
       {/* Company Card */}
       <AnimatePresence initial={false}>

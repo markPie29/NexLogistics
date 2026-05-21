@@ -36,8 +36,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router, user]);
 
-  // Platform-admin is fully self-contained — render with no auth check or chrome
-  if (pathname === "/platform-admin") {
+  // Platform-admin with no session: render bare so the login gate shows without sidebar
+  if (pathname === "/platform-admin" && !user) {
     return (
       <div className="min-h-screen bg-brand-bg">
         <main className="p-6">{children}</main>

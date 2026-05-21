@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useFeatureStore, FEATURE_META } from "@/lib/store/features";
+import { useAuthStore } from "@/lib/store/auth";
 import { cn } from "@/lib/utils";
 import {
   Shield, RotateCcw, CheckCheck, EyeOff, AlertTriangle,
@@ -282,18 +283,25 @@ function ToggleDashboard({ onLock }: { onLock: () => void }) {
 
 // ─────────────────────────── Page Orchestrator ───────────────────────────
 export default function PlatformAdminPage() {
+  const mainUser = useAuthStore((s) => s.user);
   const [unlocked, setUnlocked] = useState(false);
 
-  // Restore session within the same browser tab/session
+  // Auto-unlock if the main-app session is already the platform owner,
+  // or if a tab-level session cookie was set from the login gate
   useEffect(() => {
-    if (sessionStorage.getItem(SESSION_KEY) === "1") {
+    if (mainUser?.isPlatformOwner || sessionStorage.getItem(SESSION_KEY) === "1") {
       setUnlocked(true);
     }
-  }, []);
+  }, [mainUser]);
 
   const handleLock = () => {
     sessionStorage.removeItem(SESSION_KEY);
-    setUnlocked(false);
+    // Only redirect to main login if we're NOT already logged in as platform owner
+    if (!mainUser?.isPlatformOwner) {
+      setUnlocked(false);
+    } else {
+      setUnlocked(false);
+    }
     toast("Session locked");
   };
 
