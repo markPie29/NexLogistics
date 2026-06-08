@@ -3,17 +3,17 @@ import { useRouter } from "next/navigation";
 import { LayoutGrid, ClipboardList, Camera, MessageSquare, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type DriverTab = "dashboard" | "trips" | "pod" | "messages" | "settings";
+export type HelperTab = "dashboard" | "trips" | "pod" | "messages" | "settings";
 
 const TABS = [
-  { id: "dashboard" as DriverTab, label: "Home",      icon: LayoutGrid,    href: "/driver" },
-  { id: "trips"     as DriverTab, label: "Trips",     icon: ClipboardList, href: "/driver?view=trips" },
-  { id: "pod"       as DriverTab, label: "POD",       icon: Camera,        href: "/pod" },
-  { id: "messages"  as DriverTab, label: "Messages",  icon: MessageSquare, href: "/driver?view=messages" },
-  { id: "settings"  as DriverTab, label: "Settings",  icon: Settings,      href: "/driver/settings" },
+  { id: "dashboard" as HelperTab, label: "Home",      icon: LayoutGrid,    href: "/helper" },
+  { id: "trips"     as HelperTab, label: "Trips",     icon: ClipboardList, href: "/helper?view=trips" },
+  { id: "pod"       as HelperTab, label: "POD",       icon: Camera,        href: "/pod" },
+  { id: "messages"  as HelperTab, label: "Messages",  icon: MessageSquare, href: "/helper?view=messages" },
+  { id: "settings"  as HelperTab, label: "Settings",  icon: Settings,      href: "/driver/settings" },
 ] as const;
 
-export function DriverNav({ active }: { active: DriverTab }) {
+export function HelperNav({ active }: { active: HelperTab }) {
   const router = useRouter();
   return (
     <nav

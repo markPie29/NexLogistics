@@ -52,6 +52,9 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "My Trip", href: "/driver", icon: Truck, group: "operations", roles: ["driver"] },
   { label: "My Earnings", href: "/driver/earnings", icon: Wallet, group: "finance", roles: ["driver"] },
 
+  // === Helper-specific ===
+  { label: "My Trip", href: "/helper", icon: Truck, group: "operations", roles: ["helper"] },
+
   // === Client-specific ===
   { label: "Client Portal", href: "/client-portal", icon: Briefcase, group: "customer", roles: ["client"], featureKey: "client_portal" },
 
@@ -65,9 +68,9 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Trip & Dispatch", href: "/trips", icon: Route, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"], featureKey: "trip_dispatch" },
   { label: "Trip Approvals", href: "/approvals", icon: CheckCircle2, group: "operations", roles: ["super_admin"], featureKey: "trip_approvals" },
   { label: "Subcon Partners", href: "/partners", icon: Handshake, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "accounting"], featureKey: "subcon_partners" },
-  { label: "Live GPS Tracking", href: "/gps", icon: MapPinned, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "driver"], featureKey: "gps_tracking" },
+  { label: "Live GPS Tracking", href: "/gps", icon: MapPinned, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "driver", "helper"], featureKey: "gps_tracking" },
   { label: "PMS / Maintenance", href: "/pms", icon: Wrench, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"], featureKey: "pms_maintenance" },
-  { label: "Proof of Delivery", href: "/pod", icon: PackageCheck, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "driver"], featureKey: "proof_of_delivery" },
+  { label: "Proof of Delivery", href: "/pod", icon: PackageCheck, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "driver", "helper"], featureKey: "proof_of_delivery" },
 
   // === Finance ===
   { label: "Fuel & Expenses", href: "/expenses", icon: Fuel, group: "finance", roles: ["super_admin", "company_admin", "accounting"], featureKey: "fuel_expenses" },
@@ -92,6 +95,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   company_admin: "Company Admin",
   dispatcher: "Dispatcher",
   driver: "Driver",
+  helper: "Helper",
   accounting: "Accounting / HR",
   client: "Client / Customer",
 };
@@ -107,6 +111,7 @@ export const DEFAULT_LANDING: Record<Role, string> = {
   company_admin: "/dashboard",
   dispatcher: "/dispatcher",
   driver: "/driver",
+  helper: "/helper",
   accounting: "/accounting",
   client: "/client-portal/overview",
 };

@@ -5,6 +5,7 @@ export type Role =
   | "company_admin"
   | "dispatcher"
   | "driver"
+  | "helper"
   | "accounting"
   | "client";
 
@@ -19,6 +20,7 @@ export interface User {
   phone?: string;
   companyId?: string;
   driverId?: string; // when role is driver
+  helperId?: string; // when role is helper
   clientId?: string; // when role is client
   isPlatformOwner?: boolean; // hidden: platform-level feature toggle access
 }
@@ -667,4 +669,35 @@ export const CALENDAR_DEPARTMENT_LABELS: Record<CalendarDepartment, string> = {
   sales:      "Sales",
   subcon:     "Subcon / Partners",
 };
+
+// ─── Office Staff Payroll ────────────────────────────────────
+
+export type OfficeDepartment =
+  | "admin"
+  | "hr"
+  | "operations"
+  | "accounting"
+  | "sales"
+  | "it"
+  | "maintenance";
+
+export interface OfficeEmployee {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  department: OfficeDepartment;
+  position: string;              // e.g. "HR Manager", "Accounting Clerk"
+  monthlySalary: number;         // gross monthly
+  // PH government deductions
+  sssEnabled: boolean;
+  philhealthEnabled: boolean;
+  pagibigEnabled: boolean;
+  taxEnabled: boolean;
+  // Optional benefits
+  monthlyAllowance?: number;
+  status: "active" | "resigned" | "on_leave";
+  hireDate: string;
+  notes?: string;
+}
 

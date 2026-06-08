@@ -104,6 +104,7 @@ interface IncentiveState {
   deleteIncentive: (id: string) => void;
   lockToPeriod: (ids: string[], payrollPeriodId: string) => void;
   reset: () => void;
+  clearAll: () => void;
 }
 export const useIncentiveStore = create<IncentiveState>()(
   persist(
@@ -118,6 +119,7 @@ export const useIncentiveStore = create<IncentiveState>()(
       lockToPeriod: (ids, payrollPeriodId) =>
         set((s) => ({ incentives: s.incentives.map((x) => (ids.includes(x.id) ? { ...x, payrollPeriodId } : x)) })),
       reset: () => set({ incentives: seedIncentives }),
+      clearAll: () => set({ incentives: [] }),
     }),
     { name: `${BRAND.storeKey}-incentives` }
   )
@@ -133,6 +135,7 @@ interface DeductionState {
   deleteDeduction: (id: string) => void;
   lockToPeriod: (ids: string[], payrollPeriodId: string) => void;
   reset: () => void;
+  clearAll: () => void;
 }
 export const useDeductionStore = create<DeductionState>()(
   persist(
@@ -149,6 +152,7 @@ export const useDeductionStore = create<DeductionState>()(
       lockToPeriod: (ids, payrollPeriodId) =>
         set((s) => ({ deductions: s.deductions.map((x) => (ids.includes(x.id) ? { ...x, payrollPeriodId, status: "applied" as const } : x)) })),
       reset: () => set({ deductions: seedDeductions }),
+      clearAll: () => set({ deductions: [] }),
     }),
     { name: `${BRAND.storeKey}-deductions` }
   )
@@ -169,6 +173,7 @@ interface PayrollPeriodState {
   payPeriod: (id: string, by: string, paymentMethod?: string, paymentRef?: string, actualPayDate?: string, notes?: string) => void;
   closePeriod: (id: string, by: string) => void;
   reset: () => void;
+  clearAll: () => void;
 }
 export const usePayrollPeriodStore = create<PayrollPeriodState>()(
   persist(
@@ -216,6 +221,8 @@ export const usePayrollPeriodStore = create<PayrollPeriodState>()(
         })),
       reset: () =>
         set({ periods: seedPayrollPeriods, summaries: seedPayrollSummaries, tripPayrolls: seedTripPayroll }),
+      clearAll: () =>
+        set({ periods: [], summaries: [], tripPayrolls: [] }),
     }),
     { name: `${BRAND.storeKey}-payroll-periods` }
   )
@@ -387,17 +394,46 @@ export function computeTripPayroll(
   };
 }
 
-/** Standard PH government deduction estimates (simplified for MVP). */
+/** 
+ * Philippine Government Deductions — BIR 2026 Compliant (TRAIN Law)
+ * 
+ * SSS 2024 Schedule: Employee share = 4.5% of Monthly Salary Credit, max ₱1,350
+ * PhilHealth 2025-2026: 5% total premium rate, employee share = 2.5%, max contribution ₱2,500/employee
+ * Pag-IBIG: 2% for salary > ₱1,500, max employee contribution ₱200
+ * 
+ * Withholding Tax (BIR TRAIN Law, monthly):
+ *   ₱0 – ₱20,833          → 0%
+ *   ₱20,833 – ₱33,333     → 15% of excess over ₱20,833
+ *   ₱33,333 – ₱66,667     → ₱1,875 + 20% of excess over ₱33,333
+ *   ₱66,667 – ₱166,667    → ₱8,542 + 25% of excess over ₱66,667
+ *   ₱166,667 – ₱666,667   → ₱33,542 + 30% of excess over ₱166,667
+ *   Over ₱666,667          → ₱183,542 + 35% of excess over ₱666,667
+ */
 export function computeGovernmentDeductions(grossPay: number, profile: DriverPayrollProfile) {
+  // SSS: 4.5% employee share, max ₱1,350
   const sss = profile.sssEnabled ? Math.min(1350, Math.round(grossPay * 0.045)) : 0;
-  const philhealth = profile.philhealthEnabled ? Math.round(grossPay * 0.025) : 0;
-  const pagibig = profile.pagibigEnabled ? 100 : 0;
-  // Very simplified withholding tax for MVP demo
+
+  // PhilHealth: 2.5% employee share (half of 5% total), max ₱2,500
+  const philhealth = profile.philhealthEnabled ? Math.min(2500, Math.round(grossPay * 0.025)) : 0;
+
+  // Pag-IBIG: 2% for salary > ₱1,500, max ₱200
+  const pagibig = profile.pagibigEnabled ? (grossPay > 1500 ? Math.min(200, Math.round(grossPay * 0.02)) : 0) : 0;
+
+  // Withholding Tax (TRAIN Law 2026 monthly brackets)
   let tax = 0;
   if (profile.taxEnabled) {
     const taxable = grossPay - sss - philhealth - pagibig;
-    if (taxable > 33333) tax = Math.round((taxable - 33333) * 0.25 + 2500);
-    else if (taxable > 20833) tax = Math.round((taxable - 20833) * 0.2);
+    if (taxable > 666667) {
+      tax = Math.round(183542 + (taxable - 666667) * 0.35);
+    } else if (taxable > 166667) {
+      tax = Math.round(33542 + (taxable - 166667) * 0.30);
+    } else if (taxable > 66667) {
+      tax = Math.round(8542 + (taxable - 66667) * 0.25);
+    } else if (taxable > 33333) {
+      tax = Math.round(1875 + (taxable - 33333) * 0.20);
+    } else if (taxable > 20833) {
+      tax = Math.round((taxable - 20833) * 0.15);
+    }
   }
   return { sss, philhealth, pagibig, tax };
 }

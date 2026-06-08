@@ -47,6 +47,7 @@ export const seedTrips: Trip[] = [
     clientId: "c-002",
     driverId: "d-001",
     vehicleId: "v-101",
+    helperId: "h-001",
     pickup: { ...coords.manila, address: "Manila Port Area", scheduledAt: "2026-05-09T06:00:00Z" },
     dropoff: { ...coords.pampanga, address: "San Fernando, Pampanga", scheduledAt: "2026-05-09T10:30:00Z" },
     cargo: { type: "Frozen Goods", weightKg: 2400, units: 120 },
@@ -282,6 +283,8 @@ export const seedTrips: Trip[] = [
       approvedBy: "dispatcher",
       approvedAt: `2026-05-${String(day).padStart(2, "0")}T18:00:00Z`,
       payrollProcessed: false,
+      // Assign helper h-001 to trips with driver d-001
+      ...(driverId === "d-001" ? { helperId: "h-001" } : {}),
     } satisfies Trip;
   }),
   // ── Subcon partner trips (no in-house driver/vehicle) ──

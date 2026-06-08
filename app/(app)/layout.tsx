@@ -63,6 +63,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // Helper mobile app — full-screen, no sidebar or topbar
+  const isHelperApp =
+    pathname === "/helper" ||
+    pathname?.startsWith("/helper/") ||
+    (user.role === "helper" && pathname?.startsWith("/pod"));
+  if (isHelperApp) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="min-h-screen bg-brand-bg dark:bg-background">
       <Sidebar />

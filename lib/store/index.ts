@@ -124,6 +124,7 @@ interface TripState {
   approveRates: (id: string, by: string, notes?: string) => void;
   rejectRates: (id: string, by: string, reason?: string) => void;
   lockTripsToPeriod: (ids: string[], periodId: string) => void;
+  unlockAllPayroll: () => void;
   deleteTrip: (id: string) => void;
   reset: () => void;
 }
@@ -219,6 +220,10 @@ export const useTripStore = create<TripState>()(
       lockTripsToPeriod: (ids, periodId) =>
         set((s) => ({
           trips: s.trips.map((t) => (ids.includes(t.id) ? { ...t, payrollProcessed: true, payrollPeriodId: periodId } : t)),
+        })),
+      unlockAllPayroll: () =>
+        set((s) => ({
+          trips: s.trips.map((t) => t.payrollProcessed ? { ...t, payrollProcessed: false, payrollPeriodId: undefined } : t),
         })),
       deleteTrip: (id) => set((s) => ({ trips: s.trips.filter((t) => t.id !== id) })),
       reset: () => set({ trips: seedTrips }),
@@ -466,7 +471,7 @@ export function resetAllDemoData() {
     `${p}-credit-notes`, `${p}-recurring`, `${p}-trip-rates`,
     `${p}-driver-payroll-profiles`, `${p}-incentives`, `${p}-deductions`,
     `${p}-payroll-periods`, `${p}-partners`, `${p}-helpers`, `${p}-calendar`,
-    `${p}-feature-flags`,
+    `${p}-feature-flags`, `${p}-office-staff`,
   ].forEach((k) => localStorage.removeItem(k));
   window.location.reload();
 }
@@ -484,6 +489,15 @@ export {
   getEligibleTripsForDriver,
 } from "./payroll";
 
+// Helper, Office, Partner payroll builders
+export {
+  buildHelperSummary,
+  getEligibleTripsForHelper,
+  computeOfficeStaffPayroll,
+  computePartnerPayouts,
+} from "./payroll-helpers";
+export type { OfficePayrollResult, PartnerPayoutResult } from "./payroll-helpers";
+
 // Subcon partners
 export { usePartnerStore, usePartnerRequestStore } from "./partners";
 
@@ -492,6 +506,9 @@ export { useHelperStore } from "./helpers";
 
 // Department Calendar (Phase 6)
 export { useCalendarStore } from "./calendar";
+
+// Office Staff Payroll
+export { useOfficeStaffStore, computeOfficeDeductions } from "./office-staff";
 
 // Platform Feature Flags
 export { useFeatureStore } from "./features";

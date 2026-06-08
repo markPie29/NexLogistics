@@ -83,8 +83,20 @@ const ROLE_CARDS: RoleCard[] = [
     iconBg: "bg-emerald-50 ring-1 ring-emerald-200",
   },
   {
-    role: "accounting",
+    role: "helper",
     number: 5,
+    title: "HELPER",
+    subtitle: "Helper / loader mobile access",
+    description: "View assigned trips, assist with deliveries, upload proof of delivery photos.",
+    email: "helper.roberto@nexlogistics.demo",
+    demoPassword: "Helper123!",
+    icon: UsersIcon,
+    accent: "text-cyan-700",
+    iconBg: "bg-cyan-50 ring-1 ring-cyan-200",
+  },
+  {
+    role: "accounting",
+    number: 6,
     title: "ACCOUNTING / HR",
     subtitle: "Payroll & financial management",
     description: "Manage payroll, attendance, expenses, deductions and financial reports.",
@@ -96,7 +108,7 @@ const ROLE_CARDS: RoleCard[] = [
   },
   {
     role: "client",
-    number: 6,
+    number: 7,
     title: "CLIENT PORTAL",
     subtitle: "Client shipment visibility",
     description: "Track deliveries, view proof of delivery, invoices and shipment history.",
@@ -113,6 +125,7 @@ const QUICK_ACCESS = [
   { role: "company_admin", label: "Company Admin", code: "Ops123!", icon: Building2, color: "bg-blue-500/15 text-blue-300" },
   { role: "dispatcher", label: "Dispatcher", code: "Dispatch123!", icon: Headphones, color: "bg-violet-500/15 text-violet-300" },
   { role: "driver", label: "Driver", code: "Driver123!", icon: TruckIcon, color: "bg-emerald-500/15 text-emerald-300" },
+  { role: "helper", label: "Helper", code: "Helper123!", icon: UsersIcon, color: "bg-cyan-500/15 text-cyan-300" },
   { role: "accounting", label: "Accounting / HR", code: "Finance123!", icon: Calculator, color: "bg-orange-500/15 text-orange-300" },
   { role: "client", label: "Client Portal", code: "Client123!", icon: UsersIcon, color: "bg-brand-teal/20 text-brand-teal" },
 ] as const;

@@ -73,13 +73,13 @@ export default function PodCapturePage() {
       notes: notes || undefined,
       gps: { lat: trip.dropoff.lat, lng: trip.dropoff.lng },
     });
-    if (trip.status !== "completed") setStatus(trip.id, "completed", "driver", "POD captured");
+    if (trip.status !== "completed") setStatus(trip.id, "completed", user?.name ?? "driver", "POD captured");
     toast.success("Proof of delivery captured!");
-    router.push(user?.role === "driver" ? "/pod" : `/trips/${trip.id}`);
+    router.push(user?.role === "driver" || user?.role === "helper" ? "/pod" : `/trips/${trip.id}`);
   };
 
-  // ── Driver mobile view ── full DVH, safe areas, brand tokens
-  if (user?.role === "driver") {
+  // ── Driver / Helper mobile view ── full DVH, safe areas, brand tokens
+  if (user?.role === "driver" || user?.role === "helper") {
     return (
       <div className="min-h-[100dvh] w-full flex flex-col bg-gray-50 overscroll-none">
 

@@ -17,7 +17,10 @@ import {
   useTripRateStore, useDriverPayrollProfileStore,
   useIncentiveStore, useDeductionStore, usePayrollPeriodStore,
   buildDriverSummary, getEligibleTripsForDriver,
+  useHelperStore, useOfficeStaffStore, usePartnerStore,
+  buildHelperSummary, computeOfficeStaffPayroll, computePartnerPayouts,
 } from "@/lib/store";
+import type { OfficePayrollResult, PartnerPayoutResult } from "@/lib/store";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -67,6 +70,10 @@ export default function PayrollRunWizard() {
   const lockTripsToPeriod = useTripStore((s) => s.lockTripsToPeriod);
   const fleet = useFleetStore((s) => s.vehicles);
 
+  const helpers = useHelperStore((s) => s.helpers);
+  const officeStaff = useOfficeStaffStore((s) => s.employees);
+  const partners = usePartnerStore((s) => s.partners);
+
   const rates = useTripRateStore((s) => s.rates);
   const profiles = useDriverPayrollProfileStore((s) => s.profiles);
   const incentives = useIncentiveStore((s) => s.incentives);
@@ -88,6 +95,9 @@ export default function PayrollRunWizard() {
   const [step, setStep] = useState(1);
   const [period, setPeriod] = useState(defaultPeriod());
   const [computed, setComputed] = useState<{ summary: PayrollSummary; tripPayrolls: TripPayroll[]; driver: Driver }[]>([]);
+  const [helperComputed, setHelperComputed] = useState<{ summary: PayrollSummary; tripPayrolls: TripPayroll[]; helperName: string }[]>([]);
+  const [officeComputed, setOfficeComputed] = useState<OfficePayrollResult[]>([]);
+  const [partnerComputed, setPartnerComputed] = useState<PartnerPayoutResult[]>([]);
   const [showIncentiveDialog, setShowIncentiveDialog] = useState(false);
   const [showDeductionDialog, setShowDeductionDialog] = useState(false);
   const [incentiveForm, setIncentiveForm] = useState({ driverId: "", type: "on_time_delivery" as IncentiveType, amount: 0, notes: "" });
@@ -120,6 +130,8 @@ export default function PayrollRunWizard() {
   // ── Step 3: compute earnings ──
   const computeAll = () => {
     const tempPeriod = { id: "tmp", ...period, status: "draft" as const };
+
+    // Drivers
     const results = driversWithProfilesAndWork.map(({ driver, profile }) => {
       const r = buildDriverSummary({
         driver,
@@ -134,6 +146,24 @@ export default function PayrollRunWizard() {
       return { ...r, driver };
     });
     setComputed(results);
+
+    // Helpers
+    const helperResults = helpers
+      .filter((h) => h.status === "active")
+      .map((h) => {
+        const r = buildHelperSummary({ helper: h, trips: allTrips, period: tempPeriod as any });
+        return { ...r, helperName: h.name };
+      })
+      .filter((r) => r.summary.tripsCount > 0 || (r.summary.baseSalary > 0));
+    setHelperComputed(helperResults);
+
+    // Office Staff
+    const officeResults = computeOfficeStaffPayroll(officeStaff);
+    setOfficeComputed(officeResults);
+
+    // Partner Payouts
+    const partnerResults = computePartnerPayouts(allTrips, partners, period.startDate, period.endDate);
+    setPartnerComputed(partnerResults);
   };
 
   // ── Step 5: generate payroll ──
@@ -150,7 +180,7 @@ export default function PayrollRunWizard() {
         generatedAt: new Date().toISOString(),
       });
 
-      // Re-compute against the real period id so all references are correct
+      // Re-compute drivers against the real period id
       const realResults = driversWithProfilesAndWork.map(({ driver, profile }) => {
         const r = buildDriverSummary({
           driver, profile: profile!, trips: allTrips, rates, incentives, deductions,
@@ -159,8 +189,43 @@ export default function PayrollRunWizard() {
         return { ...r, driver };
       });
 
-      const allSummaries = realResults.map((r) => r.summary);
-      const allTripPayrolls = realResults.flatMap((r) => r.tripPayrolls);
+      // Re-compute helpers against the real period id
+      const realHelperResults = helpers
+        .filter((h) => h.status === "active")
+        .map((h) => buildHelperSummary({ helper: h, trips: allTrips, period: newPeriod }))
+        .filter((r) => r.summary.tripsCount > 0 || r.summary.baseSalary > 0);
+
+      const allSummaries = [
+        ...realResults.map((r) => r.summary),
+        ...realHelperResults.map((r) => r.summary),
+        // Office staff as PayrollSummary records (fixed monthly)
+        ...officeComputed.map((oc): PayrollSummary => ({
+          id: `ps-oe-${oc.employee.id}-${newPeriod.id}`,
+          driverId: oc.employee.id, // reuse field for office employee ID
+          payrollPeriodId: newPeriod.id,
+          payrollMode: "fixed_salary",
+          tripsCount: 0,
+          baseSalary: oc.grossPay,
+          tripEarnings: 0,
+          incentives: 0,
+          allowances: oc.allowances,
+          overtimeAmount: 0,
+          sssDeduction: oc.sss,
+          philhealthDeduction: oc.philhealth,
+          pagibigDeduction: oc.pagibig,
+          taxDeduction: oc.tax,
+          cashAdvanceDeduction: 0,
+          otherDeductions: 0,
+          totalDeductions: oc.totalDeductions,
+          grossPay: oc.grossPay,
+          netPay: oc.netPay,
+          status: "draft",
+        })),
+      ];
+      const allTripPayrolls = [
+        ...realResults.flatMap((r) => r.tripPayrolls),
+        ...realHelperResults.flatMap((r) => r.tripPayrolls),
+      ];
       setSummariesForPeriod(newPeriod.id, allSummaries, allTripPayrolls);
 
       // Lock trips
@@ -182,7 +247,11 @@ export default function PayrollRunWizard() {
       ).map((d) => d.id);
       if (activeDeductionIds.length) lockDeductionsToPeriod(activeDeductionIds, newPeriod.id);
 
-      toast.success(`Payroll generated for ${realResults.length} driver(s) — ₱${realResults.reduce((a, b) => a + b.summary.netPay, 0).toLocaleString()}`);
+      const totalNet = allSummaries.reduce((a, b) => a + b.netPay, 0) +
+        officeComputed.reduce((a, b) => a + b.netPay, 0) +
+        partnerComputed.reduce((a, b) => a + b.totalPayout, 0);
+
+      toast.success(`Payroll generated — ${realResults.length} drivers, ${realHelperResults.length} helpers, ${officeComputed.length} office, ${partnerComputed.length} partners — ₱${totalNet.toLocaleString()}`);
       router.push(`/payroll/${newPeriod.id}`);
     } catch (e) {
       toast.error("Failed to generate payroll");
@@ -322,37 +391,193 @@ export default function PayrollRunWizard() {
             </div>
 
             {computed.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[700px]">
-                  <thead>
-                    <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border">
-                      <th className="py-2 px-3 font-medium">Driver</th>
-                      <th className="py-2 px-3 font-medium text-right">Trips</th>
-                      <th className="py-2 px-3 font-medium text-right">Base</th>
-                      <th className="py-2 px-3 font-medium text-right">Trip Earnings</th>
-                      <th className="py-2 px-3 font-medium text-right">Gross</th>
-                      <th className="py-2 px-3 font-medium text-right">Deductions</th>
-                      <th className="py-2 px-3 font-medium text-right">Net Pay</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {computed.map(({ driver, summary }) => (
-                      <tr key={driver.id} className="border-b border-brand-border/60">
-                        <td className="py-2 px-3 font-medium">{driver.name}</td>
-                        <td className="py-2 px-3 text-right">{summary.tripsCount}</td>
-                        <td className="py-2 px-3 text-right">{formatCurrency(summary.baseSalary)}</td>
-                        <td className="py-2 px-3 text-right">{formatCurrency(summary.tripEarnings)}</td>
-                        <td className="py-2 px-3 text-right font-bold">{formatCurrency(summary.grossPay)}</td>
-                        <td className="py-2 px-3 text-right text-red-600">−{formatCurrency(summary.totalDeductions)}</td>
-                        <td className="py-2 px-3 text-right font-bold text-brand-teal">{formatCurrency(summary.netPay)}</td>
-                      </tr>
-                    ))}
-                    <tr className="bg-gray-50 font-bold">
-                      <td className="py-2 px-3" colSpan={6}>TOTAL NET</td>
-                      <td className="py-2 px-3 text-right text-brand-teal text-lg">{formatCurrency(computed.reduce((a, b) => a + b.summary.netPay, 0))}</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="space-y-6">
+                {/* Drivers */}
+                <div>
+                  <h4 className="font-bold text-brand-navy mb-2 flex items-center gap-2"><Truck className="w-4 h-4" /> Drivers ({computed.length})</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm min-w-[700px]">
+                      <thead>
+                        <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border">
+                          <th className="py-2 px-3 font-medium">Driver</th>
+                          <th className="py-2 px-3 font-medium text-right">Trips</th>
+                          <th className="py-2 px-3 font-medium text-right">Base</th>
+                          <th className="py-2 px-3 font-medium text-right">Trip Earnings</th>
+                          <th className="py-2 px-3 font-medium text-right">Gross</th>
+                          <th className="py-2 px-3 font-medium text-right">Deductions</th>
+                          <th className="py-2 px-3 font-medium text-right">Net Pay</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {computed.map(({ driver, summary }) => (
+                          <tr key={driver.id} className="border-b border-brand-border/60">
+                            <td className="py-2 px-3 font-medium">{driver.name}</td>
+                            <td className="py-2 px-3 text-right">{summary.tripsCount}</td>
+                            <td className="py-2 px-3 text-right">{formatCurrency(summary.baseSalary)}</td>
+                            <td className="py-2 px-3 text-right">{formatCurrency(summary.tripEarnings)}</td>
+                            <td className="py-2 px-3 text-right font-bold">{formatCurrency(summary.grossPay)}</td>
+                            <td className="py-2 px-3 text-right text-red-600">{summary.totalDeductions > 0 ? `−${formatCurrency(summary.totalDeductions)}` : "—"}</td>
+                            <td className="py-2 px-3 text-right font-bold text-brand-teal">{formatCurrency(summary.netPay)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Helpers */}
+                {helperComputed.length > 0 && (
+                  <div>
+                    <h4 className="font-bold text-brand-navy mb-2 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Helpers ({helperComputed.length})</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm min-w-[600px]">
+                        <thead>
+                          <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border">
+                            <th className="py-2 px-3 font-medium">Helper</th>
+                            <th className="py-2 px-3 font-medium text-right">Trips</th>
+                            <th className="py-2 px-3 font-medium text-right">Base</th>
+                            <th className="py-2 px-3 font-medium text-right">Trip Earnings</th>
+                            <th className="py-2 px-3 font-medium text-right">Net Pay</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {helperComputed.map(({ helperName, summary }) => (
+                            <tr key={summary.id} className="border-b border-brand-border/60">
+                              <td className="py-2 px-3 font-medium">{helperName}</td>
+                              <td className="py-2 px-3 text-right">{summary.tripsCount}</td>
+                              <td className="py-2 px-3 text-right">{formatCurrency(summary.baseSalary)}</td>
+                              <td className="py-2 px-3 text-right">{formatCurrency(summary.tripEarnings)}</td>
+                              <td className="py-2 px-3 text-right font-bold text-brand-teal">{formatCurrency(summary.netPay)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Office Staff */}
+                {officeComputed.length > 0 && (
+                  <div>
+                    <h4 className="font-bold text-brand-navy mb-2 flex items-center gap-2"><Wallet className="w-4 h-4" /> Office Staff ({officeComputed.length})</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm min-w-[600px]">
+                        <thead>
+                          <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border">
+                            <th className="py-2 px-3 font-medium">Employee</th>
+                            <th className="py-2 px-3 font-medium">Position</th>
+                            <th className="py-2 px-3 font-medium text-right">Gross</th>
+                            <th className="py-2 px-3 font-medium text-right">Deductions</th>
+                            <th className="py-2 px-3 font-medium text-right">Net Pay</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {officeComputed.map((r) => (
+                            <tr key={r.employee.id} className="border-b border-brand-border/60">
+                              <td className="py-2 px-3 font-medium">{r.employee.name}</td>
+                              <td className="py-2 px-3 text-xs text-muted-foreground">{r.employee.position}</td>
+                              <td className="py-2 px-3 text-right">{formatCurrency(r.grossPay)}</td>
+                              <td className="py-2 px-3 text-right text-red-600">{r.totalDeductions > 0 ? `−${formatCurrency(r.totalDeductions)}` : "—"}</td>
+                              <td className="py-2 px-3 text-right font-bold text-brand-teal">{formatCurrency(r.netPay)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Partner Payouts */}
+                {partnerComputed.length > 0 && (
+                  <div>
+                    <h4 className="font-bold text-brand-navy mb-2 flex items-center gap-2"><Truck className="w-4 h-4" /> Subcon Partner Payouts ({partnerComputed.length})</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm min-w-[500px]">
+                        <thead>
+                          <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border">
+                            <th className="py-2 px-3 font-medium">Partner</th>
+                            <th className="py-2 px-3 font-medium text-right">Trips</th>
+                            <th className="py-2 px-3 font-medium text-right">Total Payout</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {partnerComputed.map((r) => (
+                            <tr key={r.partnerId} className="border-b border-brand-border/60">
+                              <td className="py-2 px-3 font-medium">{r.partnerName}</td>
+                              <td className="py-2 px-3 text-right">{r.trips.length}</td>
+                              <td className="py-2 px-3 text-right font-bold text-brand-teal">{formatCurrency(r.totalPayout)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Grand Total */}
+                <div className="bg-brand-teal/5 border border-brand-teal/30 rounded-lg p-4 flex items-center justify-between">
+                  <span className="font-bold text-brand-navy">GRAND TOTAL (All Categories)</span>
+                  <span className="font-bold text-brand-teal text-xl">
+                    {formatCurrency(
+                      computed.reduce((a, b) => a + b.summary.netPay, 0) +
+                      helperComputed.reduce((a, b) => a + b.summary.netPay, 0) +
+                      officeComputed.reduce((a, b) => a + b.netPay, 0) +
+                      partnerComputed.reduce((a, b) => a + b.totalPayout, 0)
+                    )}
+                  </span>
+                </div>
+
+                {/* ── Smart Payroll Warnings ── */}
+                {(() => {
+                  const warnings: { type: "error" | "warning" | "info"; msg: string }[] = [];
+                  // Zero net pay
+                  computed.filter((c) => c.summary.netPay <= 0).forEach((c) =>
+                    warnings.push({ type: "error", msg: `${c.driver.name}: Net pay is ₱0 or negative (₱${c.summary.netPay.toLocaleString()})` })
+                  );
+                  // Zero gross pay (driver has profile but no earnings)
+                  computed.filter((c) => c.summary.grossPay === 0).forEach((c) =>
+                    warnings.push({ type: "warning", msg: `${c.driver.name}: Zero gross pay — no trips and no base salary in this period` })
+                  );
+                  // Duplicate entries (same driverId appearing more than once)
+                  const driverIds = computed.map((c) => c.driver.id);
+                  const dupes = driverIds.filter((id, i) => driverIds.indexOf(id) !== i);
+                  dupes.forEach((id) => {
+                    const name = computed.find((c) => c.driver.id === id)?.driver.name;
+                    warnings.push({ type: "error", msg: `Duplicate entry detected: ${name} appears more than once` });
+                  });
+                  // Drivers with no payroll profile
+                  const driversWithoutProfile = allTrips
+                    .filter((t) => t.status === "completed" && t.driverId && !profiles.find((p) => p.driverId === t.driverId))
+                    .map((t) => t.driverId)
+                    .filter((id, i, arr) => arr.indexOf(id) === i);
+                  driversWithoutProfile.forEach((id) => {
+                    const d = drivers.find((x) => x.id === id);
+                    if (d) warnings.push({ type: "info", msg: `${d.name}: Has completed trips but no payroll profile configured` });
+                  });
+                  // BIR compliance note
+                  if (computed.some((c) => c.summary.taxDeduction > 0)) {
+                    warnings.push({ type: "info", msg: "BIR 2026: Withholding tax computed per TRAIN Law monthly brackets. Ensure BIR Form 1601-C is filed." });
+                  }
+
+                  if (warnings.length === 0) return null;
+                  return (
+                    <div className="space-y-2 mt-4">
+                      <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5" /> Smart Payroll Checks ({warnings.length})
+                      </h4>
+                      {warnings.map((w, i) => (
+                        <div key={i} className={`flex items-start gap-2 p-2.5 rounded-lg border text-xs ${
+                          w.type === "error" ? "bg-red-50 border-red-200 text-red-800" :
+                          w.type === "warning" ? "bg-amber-50 border-amber-200 text-amber-800" :
+                          "bg-sky-50 border-sky-200 text-sky-800"
+                        }`}>
+                          <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                          <span>{w.msg}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <div className="text-center py-12 border-2 border-dashed border-brand-border rounded-lg">
@@ -426,22 +651,39 @@ export default function PayrollRunWizard() {
               <h3 className="font-bold text-brand-navy text-lg flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-emerald-600" /> Final Review</h3>
               <p className="text-sm text-muted-foreground">Once generated, trips will be locked to this period and payslips become available.</p>
             </div>
+
+            {/* BIR Compliance Badge */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+              <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-emerald-800">BIR 2026 Compliant</p>
+                <p className="text-[10px] text-emerald-700">SSS (4.5%, max ₱1,350) · PhilHealth (2.5%, max ₱2,500) · Pag-IBIG (2%, max ₱200) · TRAIN Law Tax Brackets</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-gray-50 border border-brand-border rounded-lg p-3">
                 <div className="text-xs uppercase text-muted-foreground">Period</div>
                 <div className="font-bold text-brand-navy">{period.name}</div>
               </div>
               <div className="bg-gray-50 border border-brand-border rounded-lg p-3">
-                <div className="text-xs uppercase text-muted-foreground">Date Range</div>
-                <div className="font-bold text-brand-navy text-sm">{new Date(period.startDate).toLocaleDateString()} - {new Date(period.endDate).toLocaleDateString()}</div>
+                <div className="text-xs uppercase text-muted-foreground">Drivers / Helpers</div>
+                <div className="font-bold text-brand-navy">{computed.length} / {helperComputed.length}</div>
               </div>
               <div className="bg-gray-50 border border-brand-border rounded-lg p-3">
-                <div className="text-xs uppercase text-muted-foreground">Drivers</div>
-                <div className="font-bold text-brand-navy">{computed.length}</div>
+                <div className="text-xs uppercase text-muted-foreground">Office / Partners</div>
+                <div className="font-bold text-brand-navy">{officeComputed.length} / {partnerComputed.length}</div>
               </div>
               <div className="bg-brand-teal/10 border border-brand-teal/40 rounded-lg p-3">
-                <div className="text-xs uppercase text-brand-teal">Total Net Pay</div>
-                <div className="font-bold text-brand-teal text-xl">{formatCurrency(computed.reduce((a, b) => a + b.summary.netPay, 0))}</div>
+                <div className="text-xs uppercase text-brand-teal">Grand Total</div>
+                <div className="font-bold text-brand-teal text-xl">{formatCurrency(
+                  computed.reduce((a, b) => a + b.summary.netPay, 0) +
+                  helperComputed.reduce((a, b) => a + b.summary.netPay, 0) +
+                  officeComputed.reduce((a, b) => a + b.netPay, 0) +
+                  partnerComputed.reduce((a, b) => a + b.totalPayout, 0)
+                )}</div>
               </div>
             </div>
             {computed.length === 0 ? (
@@ -451,7 +693,7 @@ export default function PayrollRunWizard() {
             ) : (
               <Button onClick={generate} disabled={generating} className="w-full" size="lg">
                 <Wallet className="w-5 h-5" />
-                {generating ? "Generating..." : `Approve & Generate ${computed.length} Payslip${computed.length === 1 ? "" : "s"}`}
+                {generating ? "Generating..." : `Approve & Generate Payroll (${computed.length + helperComputed.length + officeComputed.length} employees + ${partnerComputed.length} partners)`}
               </Button>
             )}
           </CardContent>
@@ -469,6 +711,16 @@ export default function PayrollRunWizard() {
             onClick={() => {
               if (step === 1 && !canProceedStep1) { toast.error("Set a valid period"); return; }
               if (step === 3 && computed.length === 0) { toast.error("Compute earnings first"); return; }
+              if (step === 3) {
+                // Smart payroll check — block if critical issues found
+                const hasZeroNet = computed.some((c) => c.summary.netPay <= 0);
+                const hasZeroGross = computed.some((c) => c.summary.grossPay === 0 && c.summary.baseSalary === 0 && c.summary.tripEarnings === 0);
+                const driverIds = computed.map((c) => c.driver.id);
+                const hasDuplicates = driverIds.some((id, i) => driverIds.indexOf(id) !== i);
+                if (hasDuplicates) { toast.error("Duplicate employees detected — cannot proceed. Fix payroll profiles first."); return; }
+                if (hasZeroNet) { toast.error("One or more employees have zero or negative net pay. Review the Smart Payroll Checks above before proceeding."); return; }
+                if (hasZeroGross) { toast.warning("Warning: Some employees have zero gross pay. Check their payroll profiles."); }
+              }
               setStep(step + 1);
             }}
             disabled={step === 1 && !canProceedStep1}

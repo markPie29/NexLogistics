@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useDriverStore, useTripStore, usePayrollPeriodStore } from "@/lib/store";
+import { useDriverStore, useHelperStore, useOfficeStaffStore, useTripStore, usePayrollPeriodStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -86,6 +86,8 @@ export default function PayrollPeriodDetailPage() {
   const payPeriod = usePayrollPeriodStore((s) => s.payPeriod);
   const closePeriod = usePayrollPeriodStore((s) => s.closePeriod);
   const drivers = useDriverStore((s) => s.drivers);
+  const helpers = useHelperStore((s) => s.helpers);
+  const officeStaff = useOfficeStaffStore((s) => s.employees);
   const trips = useTripStore((s) => s.trips);
   const user = useAuthStore((s) => s.user);
 
@@ -94,6 +96,7 @@ export default function PayrollPeriodDetailPage() {
   const periodTripPayrolls = tripPayrolls.filter((tp) => tp.payrollPeriodId === params.periodId);
 
   const [openPayslip, setOpenPayslip] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState<"all" | "driver" | "helper" | "office">("all");
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showPayDialog, setShowPayDialog] = useState(false);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
@@ -337,11 +340,28 @@ export default function PayrollPeriodDetailPage() {
 
       {/* ── Payroll Table ─────────────────────────────────── */}
       <Card>
+        <CardContent className="p-4 pb-0">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-brand-navy">Employee Payslips</p>
+            <div className="flex items-center gap-2">
+              <Select value={roleFilter} onValueChange={(v: any) => setRoleFilter(v)}>
+                <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  <SelectItem value="driver">Drivers Only</SelectItem>
+                  <SelectItem value="helper">Helpers Only</SelectItem>
+                  <SelectItem value="office">Office Staff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
               <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
                 <th className="py-3 px-4 font-medium">Employee</th>
+                <th className="py-3 px-4 font-medium">Role</th>
                 <th className="py-3 px-4 font-medium">Mode</th>
                 <th className="py-3 px-4 font-medium text-right">Trips</th>
                 <th className="py-3 px-4 font-medium text-right">Trip Earnings</th>
@@ -354,22 +374,44 @@ export default function PayrollPeriodDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {periodSummaries.map((s) => {
+              {periodSummaries
+                .filter((s) => {
+                  if (roleFilter === "all") return true;
+                  const isHelper = s.driverId.startsWith("h-");
+                  const isOffice = s.driverId.startsWith("oe-");
+                  if (roleFilter === "office") return isOffice;
+                  if (roleFilter === "helper") return isHelper;
+                  return !isHelper && !isOffice; // driver
+                })
+                .map((s) => {
+                const isHelper = s.driverId.startsWith("h-");
+                const isOffice = s.driverId.startsWith("oe-");
                 const driver = drivers.find((d) => d.id === s.driverId);
+                const helper = helpers.find((h) => h.id === s.driverId);
+                const office = officeStaff.find((e) => e.id === s.driverId);
+                const empName = driver?.name ?? helper?.name ?? office?.name ?? s.driverId;
+                const empSub = driver?.licenseNumber ?? helper?.phone ?? office?.position ?? "";
+                const roleBadge = isOffice ? "Office" : isHelper ? "Helper" : "Driver";
+                const roleVariant = isOffice ? "neutral" : isHelper ? "purple" : "info";
                 return (
                   <tr key={s.id} className="border-b border-brand-border/60 hover:bg-gray-50 group">
                     <td className="py-3 px-4">
-                      <div className="font-medium text-brand-navy">{driver?.name ?? s.driverId}</div>
-                      <div className="text-[10px] text-muted-foreground">{driver?.licenseNumber ?? ""}</div>
+                      <div className="font-medium text-brand-navy">{empName}</div>
+                      <div className="text-[10px] text-muted-foreground">{empSub}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <Badge variant="info" className="text-[10px]">{s.payrollMode.replace(/_/g, " ")}</Badge>
+                      <Badge variant={roleVariant as any} className="text-[10px]">
+                        {roleBadge}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge variant="neutral" className="text-[10px]">{s.payrollMode.replace(/_/g, " ")}</Badge>
                     </td>
                     <td className="py-3 px-4 text-right">{s.tripsCount}</td>
                     <td className="py-3 px-4 text-right font-mono">{formatCurrency(s.tripEarnings)}</td>
                     <td className="py-3 px-4 text-right font-mono">{formatCurrency(s.baseSalary)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600">+{formatCurrency(s.incentives)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-red-600">−{formatCurrency(s.totalDeductions)}</td>
+                    <td className="py-3 px-4 text-right font-mono text-emerald-600">{s.incentives > 0 ? `+${formatCurrency(s.incentives)}` : "—"}</td>
+                    <td className="py-3 px-4 text-right font-mono text-red-600">{s.totalDeductions > 0 ? `−${formatCurrency(s.totalDeductions)}` : "—"}</td>
                     <td className="py-3 px-4 text-right font-bold font-mono text-brand-teal">{formatCurrency(s.netPay)}</td>
                     <td className="py-3 px-4">
                       <Badge variant={STATUS_VARIANT[s.status] ?? "neutral"}>
@@ -386,7 +428,7 @@ export default function PayrollPeriodDetailPage() {
                 );
               })}
               {periodSummaries.length === 0 && (
-                <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">
+                <tr><td colSpan={11} className="text-center py-12 text-muted-foreground">
                   No payroll summaries for this period. Run computation first.
                 </td></tr>
               )}
@@ -394,7 +436,7 @@ export default function PayrollPeriodDetailPage() {
             {periodSummaries.length > 0 && (
               <tfoot>
                 <tr className="bg-brand-navy/5 border-t-2 border-brand-border font-semibold">
-                  <td className="py-3 px-4" colSpan={3}>Totals ({periodSummaries.length} employees)</td>
+                  <td className="py-3 px-4" colSpan={4}>Totals ({periodSummaries.length} employees)</td>
                   <td className="py-3 px-4 text-right font-mono">{formatCurrency(totals.tripEarnings)}</td>
                   <td className="py-3 px-4 text-right font-mono">{formatCurrency(periodSummaries.reduce((a, b) => a + b.baseSalary, 0))}</td>
                   <td className="py-3 px-4 text-right font-mono text-emerald-600">+{formatCurrency(totals.incentives)}</td>
@@ -536,22 +578,30 @@ export default function PayrollPeriodDetailPage() {
           {(() => {
             const s = periodSummaries.find((x) => x.id === openPayslip);
             if (!s) return null;
+            const isHelper = s.driverId.startsWith("h-");
+            const isOffice = s.driverId.startsWith("oe-");
             const driver = drivers.find((d) => d.id === s.driverId);
+            const helper = helpers.find((h) => h.id === s.driverId);
+            const office = officeStaff.find((e) => e.id === s.driverId);
+            const empName = driver?.name ?? helper?.name ?? office?.name ?? s.driverId;
+            const empId = driver?.licenseNumber ?? helper?.phone ?? office?.position ?? s.driverId;
+            const empRole = isOffice ? "Office" : isHelper ? "Helper" : "Driver";
             const driverTripPayrolls = periodTripPayrolls.filter((tp) => tp.driverId === s.driverId);
             return (
               <>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-brand-teal" />
-                    Payslip · {driver?.name}
+                    Payslip · {empName}
+                    <Badge variant={isOffice ? "neutral" : isHelper ? "purple" : "info"} className="text-[10px] ml-1">{empRole}</Badge>
                     {isLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground ml-1" />}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="border border-brand-border rounded-lg p-4 bg-gray-50">
                     <div className="grid grid-cols-2 gap-3 text-sm">
-                      <SlipRow label="Employee" value={driver?.name ?? s.driverId} />
-                      <SlipRow label="License No." value={driver?.licenseNumber ?? "—"} />
+                      <SlipRow label="Employee" value={empName} />
+                      <SlipRow label={isOffice ? "Position" : isHelper ? "Phone" : "License No."} value={empId} />
                       <SlipRow label="Period" value={period.name} />
                       <SlipRow label="Pay Date" value={period.payDate ? new Date(period.payDate).toLocaleDateString("en-PH", { dateStyle: "medium" }) : "TBD"} />
                       <SlipRow label="Mode" value={s.payrollMode.replace(/_/g, " ")} badge="info" />

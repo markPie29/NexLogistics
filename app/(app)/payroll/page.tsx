@@ -2,8 +2,10 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  Wallet, AlertCircle, CheckCircle2, Plus, Plug, Users, Receipt,
-  PiggyBank, BadgePercent, Truck, ArrowRight, Eye, Trash2, Pencil,
+  Plus, RotateCcw, Settings, FileText, Receipt, Wallet, Search,
+  CheckCircle2, Clock, ShieldCheck, Archive, Eye, ChevronRight,
+  Truck, HardHat, Building2, AlertCircle, DollarSign, Lock,
+  Plug, BadgePercent, PiggyBank, Users, Pencil, Trash2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,483 +16,642 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  useDriverStore,
-  useTripStore,
-  useTripRateStore,
-  useDriverPayrollProfileStore,
-  useIncentiveStore,
-  useDeductionStore,
-  usePayrollPeriodStore,
-  useHelperStore,
+  useDriverStore, useTripStore, useTripRateStore,
+  useDriverPayrollProfileStore, useIncentiveStore, useDeductionStore,
+  usePayrollPeriodStore, useHelperStore, useOfficeStaffStore,
+  computeOfficeDeductions,
 } from "@/lib/store";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { KpiCard } from "@/components/dashboard/KpiCard";
 import { toast } from "sonner";
-import type { PayrollMode, RateType, IncentiveType, DeductionType, DistanceTier } from "@/lib/types";
+import type {
+  PayrollMode, RateType, IncentiveType, DeductionType, DistanceTier,
+  OfficeEmployee, OfficeDepartment, PayrollPeriodStatus,
+} from "@/lib/types";
+
+// ─── Constants ───────────────────────────────────────────────
+const STATUS_VARIANT: Record<string, any> = {
+  draft: "neutral", computing: "info", ready_for_review: "warning",
+  approved: "info", paid: "success", closed: "neutral",
+};
+
+const WORKFLOW_STEPS = [
+  { key: "run", label: "Run Payroll", desc: "Compute earnings for the cutoff period", icon: DollarSign, color: "text-brand-teal" },
+  { key: "review", label: "Review & Lock", desc: "Verify payslips and lock the run", icon: Lock, color: "text-amber-600" },
+  { key: "approve", label: "Approve", desc: "Super Admin confirms amounts", icon: ShieldCheck, color: "text-blue-600" },
+  { key: "pay", label: "Record Payment", desc: "Mark as paid with reference", icon: Wallet, color: "text-emerald-600" },
+  { key: "close", label: "Close & Archive", desc: "Finalize for compliance", icon: Archive, color: "text-gray-500" },
+];
 
 const PAYROLL_MODE_LABEL: Record<PayrollMode, string> = {
-  fixed_salary: "Fixed Salary",
-  fixed_plus_trip: "Hybrid (Base + Trip)",
-  per_trip: "Per Trip Only",
-  per_delivery: "Per Delivery",
-  percentage: "Commission %",
-};
-const RATE_TYPE_LABEL: Record<RateType, string> = {
-  fixed: "Fixed Route Rate",
-  per_km: "Per Kilometer",
-  per_delivery: "Per Delivery",
-  percentage: "Commission %",
-  per_ton: "Per Ton",
-  per_unit: "Per Unit",
-};
-const INCENTIVE_LABEL: Record<IncentiveType, string> = {
-  on_time_delivery: "On-Time Delivery",
-  fuel_efficiency: "Fuel Efficiency",
-  extra_stop: "Extra Stop",
-  holiday_trip: "Holiday Trip",
-  excellent_rating: "Excellent Rating",
-  safety_bonus: "Safety Bonus",
-  other: "Other",
-};
-const DEDUCTION_LABEL: Record<DeductionType, string> = {
-  cash_advance: "Cash Advance",
-  fuel_shortage: "Fuel Shortage",
-  late_delivery: "Late Delivery",
-  vehicle_damage: "Vehicle Damage",
-  violation: "Violation",
-  uniform: "Uniform",
-  sss: "SSS",
-  philhealth: "PhilHealth",
-  pagibig: "Pag-IBIG",
-  tax: "Withholding Tax",
-  other: "Other",
-};
-const PERIOD_STATUS_VARIANT: Record<string, any> = {
-  draft: "neutral",
-  computing: "info",
-  ready_for_review: "warning",
-  approved: "info",
-  paid: "success",
-  closed: "neutral",
+  fixed_salary: "Fixed Salary", fixed_plus_trip: "Hybrid (Base + Trip)",
+  per_trip: "Per Trip Only", per_delivery: "Per Delivery", percentage: "Commission %",
 };
 
+const RATE_TYPE_LABEL: Record<RateType, string> = {
+  fixed: "Fixed Route Rate", per_km: "Per Kilometer", per_delivery: "Per Delivery",
+  percentage: "Commission %", per_ton: "Per Ton", per_unit: "Per Unit",
+};
+
+const INCENTIVE_LABEL: Record<IncentiveType, string> = {
+  on_time_delivery: "On-Time Delivery", fuel_efficiency: "Fuel Efficiency",
+  extra_stop: "Extra Stop", holiday_trip: "Holiday Trip",
+  excellent_rating: "Excellent Rating", safety_bonus: "Safety Bonus", other: "Other",
+};
+
+const DEDUCTION_LABEL: Record<DeductionType, string> = {
+  cash_advance: "Cash Advance", fuel_shortage: "Fuel Shortage",
+  late_delivery: "Late Delivery", vehicle_damage: "Vehicle Damage",
+  violation: "Violation", uniform: "Uniform", sss: "SSS",
+  philhealth: "PhilHealth", pagibig: "Pag-IBIG", tax: "Withholding Tax", other: "Other",
+};
+
+const DEPT_LABEL: Record<OfficeDepartment, string> = {
+  admin: "Admin", hr: "HR", operations: "Operations",
+  accounting: "Accounting", sales: "Sales", it: "IT", maintenance: "Maintenance",
+};
+
+// ─── Main Page ───────────────────────────────────────────────
 export default function PayrollHubPage() {
   const trips = useTripStore((s) => s.trips);
+  const resetTripsPayroll = useTripStore((s) => s.unlockAllPayroll);
   const periods = usePayrollPeriodStore((s) => s.periods);
   const summaries = usePayrollPeriodStore((s) => s.summaries);
   const deletePeriod = usePayrollPeriodStore((s) => s.deletePeriod);
+  const resetPayrollPeriods = usePayrollPeriodStore((s) => s.clearAll);
   const incentives = useIncentiveStore((s) => s.incentives);
+  const resetIncentives = useIncentiveStore((s) => s.clearAll);
   const deductions = useDeductionStore((s) => s.deductions);
+  const resetDeductions = useDeductionStore((s) => s.clearAll);
+  const resetTripRates = useTripRateStore((s) => s.reset);
+  const resetDriverProfiles = useDriverPayrollProfileStore((s) => s.reset);
   const allDrivers = useDriverStore((s) => s.drivers);
+  const allHelpers = useHelperStore((s) => s.helpers);
+  const officeStaff = useOfficeStaffStore((s) => s.employees);
+  const resetOfficeStaff = useOfficeStaffStore((s) => s.reset);
 
-  const kpi = useMemo(() => {
-    const paid = summaries.filter((s) => s.status === "paid").reduce((a, b) => a + b.netPay, 0);
-    const pendingApproval = trips.filter((t) => (t.status === "completed" || t.status === "delivered") && (!t.approvalStatus || t.approvalStatus === "pending")).length;
-    const activePeriod = periods.find((p) => p.status === "draft" || p.status === "ready_for_review");
-    const driversPaid = new Set(summaries.filter((s) => s.status === "paid").map((s) => s.driverId)).size;
-    const tripEarnings = summaries.reduce((a, b) => a + b.tripEarnings, 0);
-    const totalIncentives = incentives.reduce((a, b) => a + b.amount, 0);
-    const totalDeductions = deductions.filter((d) => d.status === "applied").reduce((a, b) => a + b.amount, 0);
-    return { paid, pendingApproval, activePeriod, driversPaid, tripEarnings, totalIncentives, totalDeductions };
-  }, [summaries, trips, periods, incentives, deductions]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | PayrollPeriodStatus>("all");
+  const [showSettings, setShowSettings] = useState(false);
+  const [payFrequency, setPayFrequency] = useState<"semi_monthly" | "monthly" | "weekly">("semi_monthly");
+  const [cutoffDay1, setCutoffDay1] = useState("15");
+  const [cutoffDay2, setCutoffDay2] = useState("30");
 
-  // Top earners from paid summaries
-  const topEarners = useMemo(() => {
-    const byDriver: Record<string, number> = {};
-    summaries.filter((s) => s.status === "paid").forEach((s) => {
-      byDriver[s.driverId] = (byDriver[s.driverId] ?? 0) + s.netPay;
-    });
-    return Object.entries(byDriver)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([driverId, total]) => ({ driver: allDrivers.find((d) => d.id === driverId), total }));
-  }, [summaries, allDrivers]);
+  // ─── Computed KPIs ─────────────────────────────────────────
+  const stats = useMemo(() => {
+    const draft = periods.filter((p) => p.status === "draft" || p.status === "computing" || p.status === "ready_for_review").length;
+    const approved = periods.filter((p) => p.status === "approved").length;
+    const paid = periods.filter((p) => p.status === "paid").length;
+    const closed = periods.filter((p) => p.status === "closed").length;
+    const totalNet = summaries.reduce((a, b) => a + b.netPay, 0);
+    const totalPayslips = summaries.length;
+    return { draft, approved, paid, closed, totalNet, totalPayslips };
+  }, [periods, summaries]);
 
-  const maxEarning = topEarners[0]?.total ?? 1;
+  // ─── Filtered periods ──────────────────────────────────────
+  const filteredPeriods = useMemo(() => {
+    let result = periods;
+    if (statusFilter !== "all") {
+      result = result.filter((p) => p.status === statusFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((p) => p.name.toLowerCase().includes(q));
+    }
+    return result;
+  }, [periods, statusFilter, searchQuery]);
 
-  // Incentive distribution by type
-  const incentiveDistro = useMemo(() => {
-    const byType: Record<string, number> = {};
-    incentives.forEach((i) => { byType[i.type] = (byType[i.type] ?? 0) + i.amount; });
-    const sorted = Object.entries(byType).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    const maxAmt = sorted[0]?.[1] ?? 1;
-    return sorted.map(([type, amount]) => ({ type, amount, pct: (amount / maxAmt) * 100 }));
-  }, [incentives]);
+  // ─── Current workflow step ─────────────────────────────────
+  const currentWorkflowStep = useMemo(() => {
+    if (periods.length === 0) return 0;
+    const latest = periods[0];
+    if (!latest) return 0;
+    if (latest.status === "draft" || latest.status === "computing") return 0;
+    if (latest.status === "ready_for_review") return 1;
+    if (latest.status === "approved") return 2;
+    if (latest.status === "paid") return 3;
+    if (latest.status === "closed") return 4;
+    return 0;
+  }, [periods]);
 
-  // Most expensive routes from trip payrolls
-  const tripPayrolls = usePayrollPeriodStore((s) => s.tripPayrolls);
-  const expensiveRoutes = useMemo(() => {
-    const byRoute: Record<string, { total: number; count: number }> = {};
-    tripPayrolls.forEach((tp) => {
-      const t = trips.find((x) => x.id === tp.tripId);
-      if (!t) return;
-      const key = `${t.pickup.address.split(",")[0]} → ${t.dropoff.address.split(",")[0]}`;
-      byRoute[key] = { total: (byRoute[key]?.total ?? 0) + tp.finalAmount, count: (byRoute[key]?.count ?? 0) + 1 };
-    });
-    const sorted = Object.entries(byRoute).sort((a, b) => b[1].total - a[1].total).slice(0, 5);
-    const maxAmt = sorted[0]?.[1].total ?? 1;
-    return sorted.map(([route, { total, count }]) => ({ route, total, count, pct: (total / maxAmt) * 100 }));
-  }, [tripPayrolls, trips]);
+  // ─── Monthly payroll status ────────────────────────────────
+  const monthlyStatus = useMemo(() => {
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const thisMonthPeriods = periods.filter((p) => p.startDate.startsWith(currentMonth));
+    const completedThisMonth = thisMonthPeriods.filter((p) => ["paid", "closed"].includes(p.status)).length;
+    const expectedCutoffs = payFrequency === "semi_monthly" ? 2 : payFrequency === "weekly" ? 4 : 1;
+    const allDone = completedThisMonth >= expectedCutoffs;
+    const nextCutoff = completedThisMonth === 0 ? "1st" : completedThisMonth === 1 ? "2nd" : null;
+    return { completedThisMonth, expectedCutoffs, allDone, nextCutoff, currentMonth };
+  }, [periods, payFrequency]);
+
+  function handleResetPayroll() {
+    if (!confirm("Reset ALL payroll data?\n\nThis will:\n• Delete all payroll periods & summaries\n• Clear all incentives & deductions\n• Unlock all trips\n• Reset configurations to defaults\n\nThis cannot be undone.")) return;
+    resetPayrollPeriods();
+    resetTripRates();
+    resetDriverProfiles();
+    resetIncentives();
+    resetDeductions();
+    resetOfficeStaff();
+    resetTripsPayroll();
+    toast.success("Payroll data reset — reloading...");
+    setTimeout(() => window.location.reload(), 500);
+  }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Payroll"
-        subtitle="Philippine logistics per-trip payroll · trips · incentives · deductions · payslips"
-        breadcrumbs={[{ label: "Finance" }, { label: "Payroll" }]}
-        actions={
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/payroll/run"><Plus className="w-4 h-4" /> New Payroll Run</Link>
+    <div className="space-y-5">
+      {/* ═══ HEADER ═══ */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-brand-navy tracking-tight">Payroll Management</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{stats.totalPayslips} payslips · {periods.length} periods</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleResetPayroll} className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200">
+            <RotateCcw className="w-3.5 h-3.5" /> Reset
           </Button>
-        }
-      />
-
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        <KpiCard label="Total Payroll" value={formatCurrency(kpi.paid)} icon={CheckCircle2} iconColor="text-emerald-600" iconBg="bg-emerald-50" sparklineColor="#10B981" sparklineData={[8, 10, 12, 14, 16, 18, 20, 22]} />
-        <KpiCard label="Pending Approval" value={kpi.pendingApproval} icon={AlertCircle} iconColor="text-amber-600" iconBg="bg-amber-50" sparklineColor="#F59E0B" sparklineData={[2, 3, 3, 4, 5, 6, 7, kpi.pendingApproval]} />
-        <KpiCard label="Drivers Paid" value={kpi.driversPaid} icon={Users} iconColor="text-violet-600" iconBg="bg-violet-50" sparklineColor="#7C3AED" sparklineData={[2, 3, 4, 4, 5, 5, 6, kpi.driversPaid]} />
-        <KpiCard label="Trip Earnings" value={formatCurrency(kpi.tripEarnings)} icon={Truck} iconColor="text-sky-600" iconBg="bg-sky-50" sparklineColor="#0EA5E9" sparklineData={[3, 5, 6, 8, 10, 11, 12, 14]} />
-        <KpiCard label="Total Incentives" value={formatCurrency(kpi.totalIncentives)} icon={BadgePercent} iconColor="text-teal-600" iconBg="bg-teal-50" sparklineColor="#0D9488" sparklineData={[1, 2, 2, 3, 4, 4, 5, 6]} />
-        <KpiCard label="Total Deductions" value={formatCurrency(kpi.totalDeductions)} icon={PiggyBank} iconColor="text-rose-600" iconBg="bg-rose-50" sparklineColor="#F43F5E" sparklineData={[1, 2, 2, 3, 3, 4, 4, 5]} />
+          <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
+            <Settings className="w-3.5 h-3.5" /> Payroll Settings
+          </Button>
+          <Button size="sm" asChild>
+            <Link href="/payroll/run"><Plus className="w-3.5 h-3.5" /> Run Payroll</Link>
+          </Button>
+        </div>
       </div>
 
-      {kpi.activePeriod && (
-        <Card className="border-brand-teal/40 bg-gradient-to-r from-brand-teal-light/40 to-transparent">
-          <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-brand-teal/10 flex items-center justify-center">
-              <Wallet className="w-5 h-5 text-brand-teal" />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs uppercase tracking-wide text-brand-teal font-bold">Active Payroll Period</div>
-              <div className="font-bold text-brand-navy">{kpi.activePeriod.name}</div>
-              <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-                Pay Date: {kpi.activePeriod.payDate ? new Date(kpi.activePeriod.payDate).toLocaleDateString() : "TBD"} ·
-                <Badge variant={PERIOD_STATUS_VARIANT[kpi.activePeriod.status]}>{kpi.activePeriod.status.replace("_", " ")}</Badge>
-              </div>
-            </div>
-            <Button asChild size="sm">
-              <Link href={`/payroll/${kpi.activePeriod.id}`}>Open Period <ArrowRight className="w-4 h-4" /></Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Analytics: 4 Charts per spec ── */}
-      {(topEarners.length > 0 || incentiveDistro.length > 0 || expensiveRoutes.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Chart 1: Highest Earning Drivers */}
-          <Card>
-            <CardContent className="p-5">
-              <h3 className="text-sm font-bold text-brand-navy mb-4">Highest Earning Drivers</h3>
-              {topEarners.length > 0 ? (
-                <div className="space-y-3">
-                  {topEarners.map(({ driver, total }, idx) => (
-                    <div key={driver?.id ?? idx} className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-brand-navy text-white text-xs font-bold flex items-center justify-center shrink-0">{idx + 1}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="font-medium truncate">{driver?.name ?? "Unknown"}</span>
-                          <span className="font-bold text-brand-navy">{formatCurrency(total)}</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-brand-teal rounded-full" style={{ width: `${(total / maxEarning) * 100}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-xs text-muted-foreground py-4 text-center">No paid payroll yet.</p>}
-            </CardContent>
-          </Card>
-
-          {/* Chart 2: Payroll Trend */}
-          <Card>
-            <CardContent className="p-5">
-              <h3 className="text-sm font-bold text-brand-navy mb-4">Payroll Trend</h3>
-              <div className="space-y-2">
-                {periods.slice(0, 5).map((p) => {
-                  const ps = summaries.filter((s) => s.payrollPeriodId === p.id);
-                  const net = ps.reduce((a, b) => a + b.netPay, 0);
-                  return (
-                    <div key={p.id} className="flex items-center justify-between py-2 border-b border-brand-border/60 last:border-0">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">{p.name}</div>
-                        <div className="text-xs text-muted-foreground">{ps.length} driver{ps.length !== 1 ? "s" : ""}</div>
-                      </div>
-                      <div className="text-right shrink-0 ml-3">
-                        <div className="font-bold text-brand-navy text-sm">{formatCurrency(net)}</div>
-                        <Badge variant={PERIOD_STATUS_VARIANT[p.status]} className="text-[10px]">{p.status.replace("_", " ")}</Badge>
-                      </div>
-                    </div>
-                  );
-                })}
-                {periods.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No periods yet.</p>}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Chart 3: Most Expensive Routes */}
-          <Card>
-            <CardContent className="p-5">
-              <h3 className="text-sm font-bold text-brand-navy mb-4">Most Expensive Routes</h3>
-              {expensiveRoutes.length > 0 ? (
-                <div className="space-y-3">
-                  {expensiveRoutes.map(({ route, total, count, pct }, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-sky-100 text-sky-700 text-xs font-bold flex items-center justify-center shrink-0">{idx + 1}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="font-medium truncate text-xs">{route}</span>
-                          <span className="font-bold text-brand-navy shrink-0 ml-2">{formatCurrency(total)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-sky-500 rounded-full" style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-[10px] text-muted-foreground shrink-0">{count} trip{count !== 1 ? "s" : ""}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-xs text-muted-foreground py-4 text-center">No trip payroll data yet.</p>}
-            </CardContent>
-          </Card>
-
-          {/* Chart 4: Incentive Distribution */}
-          <Card>
-            <CardContent className="p-5">
-              <h3 className="text-sm font-bold text-brand-navy mb-4">Incentive Distribution</h3>
-              {incentiveDistro.length > 0 ? (
-                <div className="space-y-3">
-                  {incentiveDistro.map(({ type, amount, pct }) => (
-                    <div key={type} className="flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="font-medium text-xs capitalize">{type.replace(/_/g, " ")}</span>
-                          <span className="font-bold text-emerald-700">{formatCurrency(amount)}</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-xs text-muted-foreground py-4 text-center">No incentives recorded yet.</p>}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      <Tabs defaultValue="periods">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="periods"><Receipt className="w-4 h-4 mr-1.5" />Periods</TabsTrigger>
-          <TabsTrigger value="rates"><Plug className="w-4 h-4 mr-1.5" />Trip Rates</TabsTrigger>
-          <TabsTrigger value="profiles"><Users className="w-4 h-4 mr-1.5" />Driver Profiles</TabsTrigger>
-          <TabsTrigger value="monthly"><Users className="w-4 h-4 mr-1.5" />Monthly Employees</TabsTrigger>
-          <TabsTrigger value="incentives"><BadgePercent className="w-4 h-4 mr-1.5" />Incentives</TabsTrigger>
-          <TabsTrigger value="deductions"><PiggyBank className="w-4 h-4 mr-1.5" />Deductions</TabsTrigger>
+      {/* ═══ TABBED NAVIGATION ═══ */}
+      <Tabs defaultValue="payslips">
+        <TabsList className="h-10 bg-white border border-brand-border shadow-sm">
+          <TabsTrigger value="payslips" className="gap-1.5"><FileText className="w-3.5 h-3.5" />Payslips</TabsTrigger>
+          <TabsTrigger value="deductions" className="gap-1.5"><PiggyBank className="w-3.5 h-3.5" />Deductions</TabsTrigger>
+          <TabsTrigger value="rates" className="gap-1.5"><Plug className="w-3.5 h-3.5" />Trip Rates</TabsTrigger>
+          <TabsTrigger value="profiles" className="gap-1.5"><Users className="w-3.5 h-3.5" />Pay Profiles</TabsTrigger>
+          <TabsTrigger value="office" className="gap-1.5"><Building2 className="w-3.5 h-3.5" />Office Staff</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="periods" className="mt-4">
-          <Card>
-            <CardContent className="p-0 overflow-x-auto">
-              <table className="w-full text-sm min-w-[800px]">
-                <thead>
-                  <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
-                    <th className="py-3 px-4 font-medium">Period</th>
-                    <th className="py-3 px-4 font-medium">Range</th>
-                    <th className="py-3 px-4 font-medium text-right">Drivers</th>
-                    <th className="py-3 px-4 font-medium text-right">Net Total</th>
-                    <th className="py-3 px-4 font-medium">Status</th>
-                    <th className="py-3 px-4 font-medium w-32"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {periods.map((p) => {
-                    const ps = summaries.filter((x) => x.payrollPeriodId === p.id);
-                    return (
-                      <tr key={p.id} className="border-b border-brand-border/60 hover:bg-gray-50">
-                        <td className="py-3 px-4 font-bold text-brand-navy">{p.name}</td>
-                        <td className="py-3 px-4 text-xs text-muted-foreground">{new Date(p.startDate).toLocaleDateString()} – {new Date(p.endDate).toLocaleDateString()}</td>
-                        <td className="py-3 px-4 text-right">{ps.length}</td>
-                        <td className="py-3 px-4 text-right font-bold">{formatCurrency(ps.reduce((a, b) => a + b.netPay, 0))}</td>
-                        <td className="py-3 px-4"><Badge variant={PERIOD_STATUS_VARIANT[p.status]}>{p.status.replace("_", " ")}</Badge></td>
-                        <td className="py-3 px-4 flex gap-1.5">
-                          <Button size="sm" variant="ghost" asChild><Link href={`/payroll/${p.id}`}><Eye className="w-4 h-4" /></Link></Button>
-                          {p.status === "draft" && (
-                            <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Delete period "${p.name}"?`)) deletePeriod(p.id); }}>
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          )}
-                        </td>
+        {/* ━━━ TAB: PAYSLIPS (PRIMARY) ━━━ */}
+        <TabsContent value="payslips" className="mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
+            {/* LEFT: Main content */}
+            <div className="space-y-4">
+              {/* Status Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <StatusCard label="DRAFT / REVIEW" value={stats.draft} color="text-amber-600" bg="bg-amber-50" />
+                <StatusCard label="APPROVED" value={stats.approved} color="text-blue-600" bg="bg-blue-50" />
+                <StatusCard label="PAID" value={stats.paid} color="text-emerald-600" bg="bg-emerald-50" />
+                <StatusCard label="CLOSED" value={stats.closed} color="text-gray-500" bg="bg-gray-50" />
+              </div>
+
+              {/* Search + Filter Bar */}
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="Search period name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                  <SelectTrigger className="w-[150px] h-9"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="ready_for_review">Ready for Review</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">{filteredPeriods.length} results</span>
+              </div>
+
+              {/* Periods Table */}
+              <Card>
+                <CardContent className="p-0 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/60">
+                        <th className="py-3 px-4 font-medium">Period</th>
+                        <th className="py-3 px-4 font-medium">Date Range</th>
+                        <th className="py-3 px-4 font-medium text-right">Employees</th>
+                        <th className="py-3 px-4 font-medium text-right">Net Total</th>
+                        <th className="py-3 px-4 font-medium">Status</th>
+                        <th className="py-3 px-4 font-medium w-20"></th>
                       </tr>
-                    );
-                  })}
-                  {periods.length === 0 && (
-                    <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No payroll periods. Click "New Payroll Run" to start.</td></tr>
+                    </thead>
+                    <tbody>
+                      {filteredPeriods.map((p) => {
+                        const ps = summaries.filter((x) => x.payrollPeriodId === p.id);
+                        const net = ps.reduce((a, b) => a + b.netPay, 0);
+                        return (
+                          <tr key={p.id} className="border-b border-brand-border/50 hover:bg-gray-50/80 transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="font-semibold text-brand-navy">{p.name}</div>
+                              <div className="text-[10px] text-muted-foreground">Pay: {p.payDate ? new Date(p.payDate).toLocaleDateString() : "TBD"}</div>
+                            </td>
+                            <td className="py-3 px-4 text-xs text-muted-foreground">
+                              {new Date(p.startDate).toLocaleDateString("en-PH", { month: "short", day: "numeric" })} – {new Date(p.endDate).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+                            </td>
+                            <td className="py-3 px-4 text-right font-medium">{ps.length}</td>
+                            <td className="py-3 px-4 text-right font-bold text-brand-navy">{formatCurrency(net)}</td>
+                            <td className="py-3 px-4">
+                              <Badge variant={STATUS_VARIANT[p.status]}>{p.status.replace(/_/g, " ")}</Badge>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex gap-1">
+                                <Button size="sm" variant="ghost" asChild className="h-7 w-7 p-0">
+                                  <Link href={`/payroll/${p.id}`}><Eye className="w-3.5 h-3.5" /></Link>
+                                </Button>
+                                {p.status === "draft" && (
+                                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if (confirm(`Delete "${p.name}"?`)) deletePeriod(p.id); }}>
+                                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredPeriods.length === 0 && (
+                        <tr><td colSpan={6} className="text-center py-16 text-muted-foreground">
+                          <Receipt className="w-10 h-10 mx-auto text-gray-200 mb-3" />
+                          <p className="font-medium">No payroll periods</p>
+                          <p className="text-xs mt-1">Click "Run Payroll" to create your first payroll run.</p>
+                        </td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* RIGHT: Workflow Panel */}
+            <div className="space-y-4">
+              {/* Monthly Progress */}
+              <Card className={monthlyStatus.allDone ? "border-emerald-200 bg-emerald-50/50" : "border-brand-teal/30"}>
+                <CardContent className="p-4">
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+                    {new Date().toLocaleString("en-US", { month: "long", year: "numeric" })} Payroll
+                  </h3>
+                  {monthlyStatus.allDone ? (
+                    <div className="text-center py-3">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                      <p className="text-sm font-bold text-emerald-700">All Cutoffs Complete</p>
+                      <p className="text-[11px] text-emerald-600 mt-1">
+                        {monthlyStatus.completedThisMonth}/{monthlyStatus.expectedCutoffs} periods processed. Wait for next month.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-bold text-brand-navy">{monthlyStatus.completedThisMonth}/{monthlyStatus.expectedCutoffs}</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-brand-teal rounded-full transition-all" style={{ width: `${(monthlyStatus.completedThisMonth / monthlyStatus.expectedCutoffs) * 100}%` }} />
+                      </div>
+                      {monthlyStatus.nextCutoff && (
+                        <p className="text-[11px] text-brand-teal font-medium">
+                          → {monthlyStatus.nextCutoff} cutoff {monthlyStatus.completedThisMonth > 0 ? "pending" : "ready to run"}
+                        </p>
+                      )}
+                    </div>
                   )}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+
+              {/* Workflow Steps */}
+              <Card>
+                <CardContent className="p-4">
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">Payroll Workflow</h3>
+                  <div className="space-y-1">
+                    {WORKFLOW_STEPS.map((step, i) => {
+                      const isActive = i === currentWorkflowStep && periods.length > 0;
+                      const isDone = i < currentWorkflowStep && periods.length > 0;
+                      const Icon = step.icon;
+                      return (
+                        <div key={step.key} className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+                          isActive ? "bg-brand-teal/5 ring-1 ring-brand-teal/30" : isDone ? "bg-gray-50" : ""
+                        }`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                            isDone ? "bg-emerald-100" : isActive ? "bg-brand-teal/10" : "bg-gray-100"
+                          }`}>
+                            {isDone ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            ) : (
+                              <Icon className={`w-4 h-4 ${isActive ? step.color : "text-gray-400"}`} />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm font-semibold ${isActive ? "text-brand-navy" : isDone ? "text-emerald-700" : "text-gray-400"}`}>
+                                {step.label}
+                              </span>
+                              {isActive && <Badge variant="info" className="text-[9px] px-1.5 py-0">NOW</Badge>}
+                              {isDone && <Badge variant="success" className="text-[9px] px-1.5 py-0">DONE</Badge>}
+                            </div>
+                            <p className={`text-[11px] leading-relaxed mt-0.5 ${isActive || isDone ? "text-muted-foreground" : "text-gray-300"}`}>
+                              {step.desc}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Stats */}
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Quick Summary</h3>
+                  <div className="space-y-2">
+                    <QuickStat label="Total Payslips" value={String(stats.totalPayslips)} />
+                    <QuickStat label="Total Net Released" value={formatCurrency(stats.totalNet)} highlight />
+                    <QuickStat label="Active Drivers" value={String(allDrivers.filter((d) => d.status === "active").length)} />
+                    <QuickStat label="Active Helpers" value={String(allHelpers.filter((h) => h.status === "active").length)} />
+                    <QuickStat label="Office Staff" value={String(officeStaff.filter((e) => e.status === "active").length)} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
 
-        <TabsContent value="rates" className="mt-4"><TripRatesPanel /></TabsContent>
-        <TabsContent value="profiles" className="mt-4"><DriverProfilesPanel /></TabsContent>
-        <TabsContent value="monthly" className="mt-4"><MonthlyEmployeesPanel /></TabsContent>
-        <TabsContent value="incentives" className="mt-4"><IncentivesPanel /></TabsContent>
-        <TabsContent value="deductions" className="mt-4"><DeductionsPanel /></TabsContent>
+        {/* ━━━ TAB: DEDUCTIONS ━━━ */}
+        <TabsContent value="deductions" className="mt-4"><DeductionsTab /></TabsContent>
+
+        {/* ━━━ TAB: TRIP RATES ━━━ */}
+        <TabsContent value="rates" className="mt-4"><TripRatesTab /></TabsContent>
+
+        {/* ━━━ TAB: PAY PROFILES ━━━ */}
+        <TabsContent value="profiles" className="mt-4"><PayProfilesTab /></TabsContent>
+
+        {/* ━━━ TAB: OFFICE STAFF ━━━ */}
+        <TabsContent value="office" className="mt-4"><OfficeStaffTab /></TabsContent>
       </Tabs>
+
+      {/* ═══ PAYROLL SETTINGS MODAL ═══ */}
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-brand-teal" /> Payroll Settings
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Pay Frequency</Label>
+              <Select value={payFrequency} onValueChange={(v: any) => setPayFrequency(v)}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="semi_monthly">Semi-Monthly (1st-15th & 16th-end)</SelectItem>
+                  <SelectItem value="monthly">Monthly (1st-end)</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground mt-1">Philippine standard: Semi-monthly (PH Labor Code Art. 103)</p>
+            </div>
+            {payFrequency === "semi_monthly" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>1st Cutoff Day</Label>
+                  <Input type="number" min="1" max="15" value={cutoffDay1} onChange={(e) => setCutoffDay1(e.target.value)} className="mt-1" />
+                </div>
+                <div>
+                  <Label>2nd Cutoff Day</Label>
+                  <Input type="number" min="16" max="31" value={cutoffDay2} onChange={(e) => setCutoffDay2(e.target.value)} className="mt-1" />
+                </div>
+              </div>
+            )}
+            <div className="border-t border-brand-border pt-3 space-y-3">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase">Government Contribution Rates (BIR 2026)</h4>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-gray-50 rounded-lg p-2.5 border">
+                  <div className="font-bold text-brand-navy">SSS</div>
+                  <div className="text-muted-foreground">4.5% employee share</div>
+                  <div className="text-muted-foreground">Max ₱1,350/mo</div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2.5 border">
+                  <div className="font-bold text-brand-navy">PhilHealth</div>
+                  <div className="text-muted-foreground">2.5% employee share</div>
+                  <div className="text-muted-foreground">Max ₱2,500/mo</div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2.5 border">
+                  <div className="font-bold text-brand-navy">Pag-IBIG</div>
+                  <div className="text-muted-foreground">2% for salary &gt;₱1,500</div>
+                  <div className="text-muted-foreground">Max ₱200/mo</div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2.5 border">
+                  <div className="font-bold text-brand-navy">Withholding Tax</div>
+                  <div className="text-muted-foreground">TRAIN Law brackets</div>
+                  <div className="text-muted-foreground">0-35% progressive</div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-brand-border pt-3">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Pay Schedule</h4>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>• Cutoff A: Day 1 – Day {cutoffDay1} → Pay on Day {parseInt(cutoffDay1) + 5}</p>
+                <p>• Cutoff B: Day {parseInt(cutoffDay1) + 1} – Day {cutoffDay2} → Pay on Day 5 (next month)</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSettings(false)}>Close</Button>
+            <Button onClick={() => { toast.success("Settings saved"); setShowSettings(false); }}>Save Settings</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Monthly Employees Panel — drivers + helpers paid monthly/hybrid
-// ─────────────────────────────────────────────────────────────
-function MonthlyEmployeesPanel() {
+// ─── Sub-Components ──────────────────────────────────────────
+
+function StatusCard({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
+  return (
+    <Card className="border-brand-border/60">
+      <CardContent className="p-4 text-center">
+        <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">{label}</p>
+        <p className={`text-3xl font-bold mt-1 ${value > 0 ? color : "text-gray-300"}`}>{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function QuickStat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className={`text-sm font-bold ${highlight ? "text-brand-teal" : "text-brand-navy"}`}>{value}</span>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// DEDUCTIONS TAB
+// ═══════════════════════════════════════════════════════════════
+function DeductionsTab() {
+  const deductions = useDeductionStore((s) => s.deductions);
+  const addDeduction = useDeductionStore((s) => s.addDeduction);
+  const deleteDeduction = useDeductionStore((s) => s.deleteDeduction);
+  const incentives = useIncentiveStore((s) => s.incentives);
+  const addIncentive = useIncentiveStore((s) => s.addIncentive);
+  const deleteIncentive = useIncentiveStore((s) => s.deleteIncentive);
   const drivers = useDriverStore((s) => s.drivers);
-  const helpers = useHelperStore((s) => s.helpers);
+  const user = useAuthStore((s) => s.user);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addType, setAddType] = useState<"incentive" | "deduction">("deduction");
+  const [form, setForm] = useState({ driverId: "", type: "cash_advance", amount: 0, reason: "" });
 
-  const monthlyDrivers = drivers.filter((d) => d.employmentType === "monthly" || d.employmentType === "hybrid");
-  const monthlyHelpers = helpers.filter((h) => h.employmentType === "monthly" || h.employmentType === "hybrid");
-
-  const totalMonthly =
-    monthlyDrivers.reduce((a, d) => a + (d.monthlyBaseSalary || 0), 0) +
-    monthlyHelpers.reduce((a, h) => a + (h.monthlyBaseSalary || 0), 0);
+  function save() {
+    if (!form.driverId || form.amount <= 0) { toast.error("Driver and amount required"); return; }
+    if (addType === "deduction") {
+      if (!form.reason.trim()) { toast.error("Reason is legally required"); return; }
+      addDeduction({ driverId: form.driverId, type: form.type as any, amount: form.amount, reason: form.reason, status: "pending", createdBy: user?.name ?? "admin" });
+    } else {
+      addIncentive({ driverId: form.driverId, type: form.type as any, amount: form.amount, notes: form.reason, createdBy: user?.name ?? "admin" });
+    }
+    toast.success(`${addType === "deduction" ? "Deduction" : "Incentive"} added`);
+    setShowAdd(false);
+    setForm({ driverId: "", type: "cash_advance", amount: 0, reason: "" });
+  }
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <KpiCard label="Monthly Drivers"  value={monthlyDrivers.length} icon={Users} iconColor="text-brand-teal"   iconBg="bg-brand-teal-light" />
-        <KpiCard label="Monthly Helpers"  value={monthlyHelpers.length} icon={Users} iconColor="text-violet-600"   iconBg="bg-violet-50" />
-        <KpiCard label="Total Monthly Payroll" value={formatCurrency(totalMonthly)} icon={Wallet} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-brand-navy">Deductions & Incentives</h3>
+          <p className="text-xs text-muted-foreground">Track cash advances, penalties, bonuses, and rewards.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setAddType("incentive"); setForm({ ...form, type: "on_time_delivery" }); setShowAdd(true); }}>
+            <Plus className="w-3.5 h-3.5" /> Incentive
+          </Button>
+          <Button size="sm" onClick={() => { setAddType("deduction"); setForm({ ...form, type: "cash_advance" }); setShowAdd(true); }}>
+            <Plus className="w-3.5 h-3.5" /> Deduction
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
-            <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
-                <th className="py-3 px-4 font-medium">Employee</th>
-                <th className="py-3 px-4 font-medium">Role</th>
-                <th className="py-3 px-4 font-medium">Employment</th>
-                <th className="py-3 px-4 font-medium text-right">Monthly Salary</th>
-                <th className="py-3 px-4 font-medium text-right">Per Trip</th>
-                <th className="py-3 px-4 font-medium text-right">Commission %</th>
-                <th className="py-3 px-4 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {monthlyDrivers.map((d) => (
-                <tr key={`d-${d.id}`} className="border-b border-brand-border/60 hover:bg-gray-50">
-                  <td className="py-3 px-4 font-medium text-brand-navy">{d.name}</td>
-                  <td className="py-3 px-4"><Badge variant="info">Driver</Badge></td>
-                  <td className="py-3 px-4 capitalize">{(d.employmentType || "").replace("_", " ")}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(d.monthlyBaseSalary || 0)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{d.baseRatePerTrip ? formatCurrency(d.baseRatePerTrip) : "—"}</td>
-                  <td className="py-3 px-4 text-right">{d.commissionPercent ? `${d.commissionPercent}%` : "—"}</td>
-                  <td className="py-3 px-4"><Badge variant={d.status === "active" ? "success" : "neutral"}>{d.status.replace("_", " ")}</Badge></td>
-                </tr>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Deductions */}
+        <Card>
+          <CardContent className="p-4">
+            <h4 className="text-sm font-bold text-red-700 mb-3">Deductions ({deductions.length})</h4>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {deductions.slice(0, 20).map((d) => (
+                <div key={d.id} className="flex items-center justify-between p-2.5 bg-red-50 rounded-lg border border-red-100 text-xs">
+                  <div>
+                    <div className="font-medium text-brand-navy">{drivers.find((x) => x.id === d.driverId)?.name ?? d.driverId}</div>
+                    <div className="text-muted-foreground">{DEDUCTION_LABEL[d.type] ?? d.type} · {d.reason}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-red-600">−{formatCurrency(d.amount)}</div>
+                    <Badge variant={d.status === "applied" ? "success" : "warning"} className="text-[9px]">{d.status}</Badge>
+                  </div>
+                </div>
               ))}
-              {monthlyHelpers.map((h) => (
-                <tr key={`h-${h.id}`} className="border-b border-brand-border/60 hover:bg-gray-50">
-                  <td className="py-3 px-4 font-medium text-brand-navy">{h.name}</td>
-                  <td className="py-3 px-4"><Badge variant="purple">Helper</Badge></td>
-                  <td className="py-3 px-4 capitalize">{(h.employmentType || "").replace("_", " ")}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(h.monthlyBaseSalary || 0)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{h.baseRatePerTrip ? formatCurrency(h.baseRatePerTrip) : "—"}</td>
-                  <td className="py-3 px-4 text-right">{h.commissionPercent ? `${h.commissionPercent}%` : "—"}</td>
-                  <td className="py-3 px-4"><Badge variant={h.status === "active" ? "success" : "neutral"}>{h.status.replace("_", " ")}</Badge></td>
-                </tr>
+              {deductions.length === 0 && <p className="text-center text-muted-foreground py-6 text-xs">No deductions</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Incentives */}
+        <Card>
+          <CardContent className="p-4">
+            <h4 className="text-sm font-bold text-emerald-700 mb-3">Incentives ({incentives.length})</h4>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {incentives.slice(0, 20).map((i) => (
+                <div key={i.id} className="flex items-center justify-between p-2.5 bg-emerald-50 rounded-lg border border-emerald-100 text-xs">
+                  <div>
+                    <div className="font-medium text-brand-navy">{drivers.find((x) => x.id === i.driverId)?.name ?? i.driverId}</div>
+                    <div className="text-muted-foreground">{INCENTIVE_LABEL[i.type] ?? i.type}{i.notes ? ` · ${i.notes}` : ""}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-emerald-600">+{formatCurrency(i.amount)}</div>
+                    <span className="text-[9px] text-muted-foreground">{i.payrollPeriodId ? "Locked" : "Pending"}</span>
+                  </div>
+                </div>
               ))}
-              {monthlyDrivers.length + monthlyHelpers.length === 0 && (
-                <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">
-                  No monthly-paid employees yet. Set employment type to <span className="font-semibold">Monthly</span> or <span className="font-semibold">Hybrid</span> on a driver or helper to see them here.
-                </td></tr>
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+              {incentives.length === 0 && <p className="text-center text-muted-foreground py-6 text-xs">No incentives</p>}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Add {addType === "deduction" ? "Deduction" : "Incentive"}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Driver</Label>
+              <Select value={form.driverId} onValueChange={(v) => setForm({ ...form, driverId: v })}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>{drivers.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Type</Label>
+              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(addType === "deduction" ? DEDUCTION_LABEL : INCENTIVE_LABEL)
+                    .filter(([k]) => !["sss", "philhealth", "pagibig", "tax"].includes(k))
+                    .map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label>Amount (₱)</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: +e.target.value })} /></div>
+            <div><Label>{addType === "deduction" ? "Reason *" : "Notes"}</Label><Input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button><Button onClick={save}>Add</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function TripRatesPanel() {
+// ═══════════════════════════════════════════════════════════════
+// TRIP RATES TAB
+// ═══════════════════════════════════════════════════════════════
+function TripRatesTab() {
   const rates = useTripRateStore((s) => s.rates);
   const addRate = useTripRateStore((s) => s.addRate);
-  const updateRate = useTripRateStore((s) => s.updateRate);
   const deleteRate = useTripRateStore((s) => s.deleteRate);
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    name: "", vehicleType: "Truck", routeOrigin: "*", routeDestination: "*",
-    rateType: "fixed" as RateType, fixedRate: 2500, ratePerKm: 0, ratePerDelivery: 0, commissionPercent: 0,
-    extraStopFee: 0, nightDifferentialPercent: 0, holidayMultiplier: 1.5,
-    ratePerTon: 0, ratePerUnit: 0, dropoffZone: "", distanceTiers: [] as DistanceTier[],
-  });
-
-  const startNew = () => {
-    setEditing(null);
-    setForm({ name: "", vehicleType: "Truck", routeOrigin: "*", routeDestination: "*", rateType: "fixed", fixedRate: 2500, ratePerKm: 0, ratePerDelivery: 0, commissionPercent: 0, extraStopFee: 0, nightDifferentialPercent: 0, holidayMultiplier: 1.5, ratePerTon: 0, ratePerUnit: 0, dropoffZone: "", distanceTiers: [] });
-    setOpen(true);
-  };
-  const startEdit = (id: string) => {
-    const r = rates.find((x) => x.id === id);
-    if (!r) return;
-    setEditing(id);
-    setForm({
-      name: r.name, vehicleType: r.vehicleType, routeOrigin: r.routeOrigin, routeDestination: r.routeDestination,
-      rateType: r.rateType, fixedRate: r.fixedRate ?? 0, ratePerKm: r.ratePerKm ?? 0, ratePerDelivery: r.ratePerDelivery ?? 0,
-      commissionPercent: r.commissionPercent ?? 0, extraStopFee: r.extraStopFee ?? 0,
-      nightDifferentialPercent: r.nightDifferentialPercent ?? 0, holidayMultiplier: r.holidayMultiplier ?? 1.5,
-      ratePerTon: r.ratePerTon ?? 0, ratePerUnit: r.ratePerUnit ?? 0,
-      dropoffZone: r.dropoffZone ?? "", distanceTiers: r.distanceTiers ?? [],
-    });
-    setOpen(true);
-  };
-  const save = () => {
-    if (!form.name.trim()) { toast.error("Rate name is required"); return; }
-    const payload = { ...form, active: true };
-    const distanceTiers = form.distanceTiers.filter((t: DistanceTier) => t.maxKm > t.minKm);
-    const finalPayload = { ...payload, distanceTiers: distanceTiers.length ? distanceTiers : undefined, dropoffZone: form.dropoffZone.trim() || undefined };
-    if (editing) { updateRate(editing, finalPayload); toast.success("Trip rate updated"); }
-    else { addRate(finalPayload); toast.success("Trip rate added"); }
-    setOpen(false);
-  };
 
   return (
-    <>
-      <div className="flex justify-between items-center mb-3">
-        <p className="text-xs text-muted-foreground">Configure how drivers are paid per route, vehicle, and rate model.</p>
-        <Button size="sm" onClick={startNew}><Plus className="w-4 h-4" /> Add Rate</Button>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-brand-navy">Trip Rate Matrix</h3>
+          <p className="text-xs text-muted-foreground">Configure how drivers/helpers are paid per route, vehicle, and rate model.</p>
+        </div>
       </div>
       <Card>
         <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm min-w-[800px]">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
+              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/60">
                 <th className="py-3 px-4 font-medium">Rate Name</th>
                 <th className="py-3 px-4 font-medium">Vehicle</th>
                 <th className="py-3 px-4 font-medium">Route</th>
                 <th className="py-3 px-4 font-medium">Type</th>
                 <th className="py-3 px-4 font-medium text-right">Amount</th>
-                <th className="py-3 px-4 font-medium w-28"></th>
+                <th className="py-3 px-4 font-medium w-16"></th>
               </tr>
             </thead>
             <tbody>
               {rates.map((r) => (
-                <tr key={r.id} className="border-b border-brand-border/60 hover:bg-gray-50">
-                  <td className="py-3 px-4 font-medium">{r.name}</td>
-                  <td className="py-3 px-4">{r.vehicleType}</td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{r.routeOrigin} → {r.routeDestination}</td>
-                  <td className="py-3 px-4"><Badge variant="info">{RATE_TYPE_LABEL[r.rateType]}</Badge></td>
-                  <td className="py-3 px-4 text-right font-bold">
+                <tr key={r.id} className="border-b border-brand-border/50 hover:bg-gray-50/80">
+                  <td className="py-2.5 px-4 font-medium text-brand-navy">{r.name}</td>
+                  <td className="py-2.5 px-4 text-xs">{r.vehicleType}</td>
+                  <td className="py-2.5 px-4 text-xs text-muted-foreground">{r.routeOrigin} → {r.routeDestination}</td>
+                  <td className="py-2.5 px-4"><Badge variant="info" className="text-[10px]">{RATE_TYPE_LABEL[r.rateType]}</Badge></td>
+                  <td className="py-2.5 px-4 text-right font-bold">
                     {r.rateType === "fixed" && formatCurrency(r.fixedRate ?? 0)}
                     {r.rateType === "per_km" && `${formatCurrency(r.ratePerKm ?? 0)}/km`}
                     {r.rateType === "per_delivery" && `${formatCurrency(r.ratePerDelivery ?? 0)}/drop`}
@@ -498,9 +659,91 @@ function TripRatesPanel() {
                     {r.rateType === "per_ton" && `${formatCurrency(r.ratePerTon ?? 0)}/ton`}
                     {r.rateType === "per_unit" && `${formatCurrency(r.ratePerUnit ?? 0)}/unit`}
                   </td>
-                  <td className="py-3 px-4 flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => startEdit(r.id)}><Pencil className="w-4 h-4" /></Button>
-                    <Button size="sm" variant="ghost" onClick={() => { if (confirm("Delete rate?")) deleteRate(r.id); }}><Trash2 className="w-4 h-4 text-red-500" /></Button>
+                  <td className="py-2.5 px-4">
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if (confirm("Delete?")) deleteRate(r.id); }}>
+                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {rates.length === 0 && <tr><td colSpan={6} className="text-center py-12 text-muted-foreground text-xs">No trip rates configured.</td></tr>}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PAY PROFILES TAB
+// ═══════════════════════════════════════════════════════════════
+function PayProfilesTab() {
+  const drivers = useDriverStore((s) => s.drivers);
+  const helpers = useHelperStore((s) => s.helpers);
+  const profiles = useDriverPayrollProfileStore((s) => s.profiles);
+  const [roleFilter, setRoleFilter] = useState<"all" | "driver" | "helper">("all");
+
+  const items = useMemo(() => {
+    const driverItems = drivers.map((d) => ({
+      id: d.id, name: d.name, role: "Driver" as const,
+      profile: profiles.find((p) => p.driverId === d.id),
+      baseSalary: profiles.find((p) => p.driverId === d.id)?.baseSalary ?? 0,
+    }));
+    const helperItems = helpers.map((h) => ({
+      id: h.id, name: h.name, role: "Helper" as const,
+      profile: null,
+      baseSalary: h.monthlyBaseSalary ?? 0,
+    }));
+    let all = [...driverItems, ...helperItems];
+    if (roleFilter === "driver") all = driverItems;
+    if (roleFilter === "helper") all = helperItems;
+    return all;
+  }, [drivers, helpers, profiles, roleFilter]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-brand-navy">Pay Profiles</h3>
+          <p className="text-xs text-muted-foreground">Payroll mode, base salary, and deduction settings per employee.</p>
+        </div>
+        <Select value={roleFilter} onValueChange={(v: any) => setRoleFilter(v)}>
+          <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="driver">Drivers</SelectItem>
+            <SelectItem value="helper">Helpers</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Card>
+        <CardContent className="p-0 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/60">
+                <th className="py-3 px-4 font-medium">Employee</th>
+                <th className="py-3 px-4 font-medium">Role</th>
+                <th className="py-3 px-4 font-medium">Payroll Mode</th>
+                <th className="py-3 px-4 font-medium text-right">Base Salary</th>
+                <th className="py-3 px-4 font-medium">Gov Deductions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id} className="border-b border-brand-border/50 hover:bg-gray-50/80">
+                  <td className="py-2.5 px-4 font-medium text-brand-navy">{item.name}</td>
+                  <td className="py-2.5 px-4"><Badge variant={item.role === "Helper" ? "purple" : "info"} className="text-[10px]">{item.role}</Badge></td>
+                  <td className="py-2.5 px-4">
+                    {item.profile ? (
+                      <Badge variant="neutral" className="text-[10px]">{PAYROLL_MODE_LABEL[item.profile.payrollMode]}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{item.baseSalary > 0 ? "Monthly + Trip" : "Per Trip"}</span>
+                    )}
+                  </td>
+                  <td className="py-2.5 px-4 text-right font-mono">{item.baseSalary > 0 ? formatCurrency(item.baseSalary) : "—"}</td>
+                  <td className="py-2.5 px-4 text-xs text-muted-foreground">
+                    {item.profile ? [item.profile.sssEnabled && "SSS", item.profile.philhealthEnabled && "PhilHealth", item.profile.pagibigEnabled && "Pag-IBIG"].filter(Boolean).join(" · ") || "None" : "SSS · PhilHealth · Pag-IBIG"}
                   </td>
                 </tr>
               ))}
@@ -508,135 +751,69 @@ function TripRatesPanel() {
           </table>
         </CardContent>
       </Card>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editing ? "Edit" : "New"} Trip Rate</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Rate Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Manila → Cebu · 10W" /></div>
-            <div className="grid grid-cols-3 gap-3">
-              <div><Label>Vehicle Type</Label>
-                <Select value={form.vehicleType} onValueChange={(v) => setForm({ ...form, vehicleType: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Motorcycle">Motorcycle</SelectItem>
-                    <SelectItem value="Van">Van</SelectItem>
-                    <SelectItem value="Pickup">Pickup</SelectItem>
-                    <SelectItem value="Truck">Truck</SelectItem>
-                    <SelectItem value="Trailer">Trailer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>Origin</Label><Input value={form.routeOrigin} onChange={(e) => setForm({ ...form, routeOrigin: e.target.value })} /></div>
-              <div><Label>Destination</Label><Input value={form.routeDestination} onChange={(e) => setForm({ ...form, routeDestination: e.target.value })} /></div>
-            </div>
-            <div><Label>Rate Type</Label>
-              <Select value={form.rateType} onValueChange={(v: any) => setForm({ ...form, rateType: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fixed">Fixed Route Rate</SelectItem>
-                  <SelectItem value="per_km">Per Kilometer</SelectItem>
-                  <SelectItem value="per_delivery">Per Delivery</SelectItem>
-                  <SelectItem value="percentage">Commission % of Fare</SelectItem>                    <SelectItem value="per_ton">Per Ton</SelectItem>
-                    <SelectItem value="per_unit">Per Unit</SelectItem>                </SelectContent>
-              </Select>
-            </div>
-            {form.rateType === "fixed" && <div><Label>Fixed Rate (₱)</Label><Input type="number" value={form.fixedRate} onChange={(e) => setForm({ ...form, fixedRate: +e.target.value })} /></div>}
-            {form.rateType === "per_km" && <div><Label>Rate per KM (₱)</Label><Input type="number" value={form.ratePerKm} onChange={(e) => setForm({ ...form, ratePerKm: +e.target.value })} /></div>}
-            {form.rateType === "per_delivery" && <div><Label>Rate per Delivery (₱)</Label><Input type="number" value={form.ratePerDelivery} onChange={(e) => setForm({ ...form, ratePerDelivery: +e.target.value })} /></div>}
-            {form.rateType === "percentage" && <div><Label>Commission %</Label><Input type="number" value={form.commissionPercent} onChange={(e) => setForm({ ...form, commissionPercent: +e.target.value })} /></div>}
-            {form.rateType === "per_ton" && <div><Label>Rate per Ton (₱)</Label><Input type="number" value={form.ratePerTon} onChange={(e) => setForm({ ...form, ratePerTon: +e.target.value })} /></div>}
-            {form.rateType === "per_unit" && <div><Label>Rate per Unit (₱)</Label><Input type="number" value={form.ratePerUnit} onChange={(e) => setForm({ ...form, ratePerUnit: +e.target.value })} /></div>}
-            <div><Label>Dropoff Zone (optional)</Label><Input value={form.dropoffZone} onChange={(e) => setForm({ ...form, dropoffZone: e.target.value })} placeholder="e.g. Zone A, NCR, Cebu" /></div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label>Distance Tiers</Label>
-                <Button type="button" size="sm" variant="outline" onClick={() => setForm({ ...form, distanceTiers: [...form.distanceTiers, { minKm: 0, maxKm: 0, multiplier: 1 }] })}><Plus className="w-3.5 h-3.5" /> Add Tier</Button>
-              </div>
-              {form.distanceTiers.map((tier: DistanceTier, i: number) => (
-                <div key={i} className="grid grid-cols-4 gap-2 mb-2 items-end">
-                  <div><Label className="text-[10px]">Min km</Label><Input type="number" value={tier.minKm} onChange={(e) => { const t = [...form.distanceTiers]; t[i] = { ...t[i], minKm: +e.target.value }; setForm({ ...form, distanceTiers: t }); }} /></div>
-                  <div><Label className="text-[10px]">Max km</Label><Input type="number" value={tier.maxKm} onChange={(e) => { const t = [...form.distanceTiers]; t[i] = { ...t[i], maxKm: +e.target.value }; setForm({ ...form, distanceTiers: t }); }} /></div>
-                  <div><Label className="text-[10px]">Multiplier</Label><Input type="number" step="0.01" value={tier.multiplier} onChange={(e) => { const t = [...form.distanceTiers]; t[i] = { ...t[i], multiplier: +e.target.value }; setForm({ ...form, distanceTiers: t }); }} /></div>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => { const t = form.distanceTiers.filter((_: any, j: number) => j !== i); setForm({ ...form, distanceTiers: t }); }}><Trash2 className="w-4 h-4 text-red-500" /></Button>
-                </div>
-              ))}
-              {form.distanceTiers.length === 0 && <p className="text-xs text-muted-foreground">No tiers — flat rate applies.</p>}
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div><Label>Extra Stop (₱)</Label><Input type="number" value={form.extraStopFee} onChange={(e) => setForm({ ...form, extraStopFee: +e.target.value })} /></div>
-              <div><Label>Night Diff %</Label><Input type="number" value={form.nightDifferentialPercent} onChange={(e) => setForm({ ...form, nightDifferentialPercent: +e.target.value })} /></div>
-              <div><Label>Holiday ×</Label><Input type="number" step="0.1" value={form.holidayMultiplier} onChange={(e) => setForm({ ...form, holidayMultiplier: +e.target.value })} /></div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={save}>{editing ? "Update" : "Add"} Rate</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }
 
-function DriverProfilesPanel() {
-  const drivers = useDriverStore((s) => s.drivers);
-  const profiles = useDriverPayrollProfileStore((s) => s.profiles);
-  const upsertByDriver = useDriverPayrollProfileStore((s) => s.upsertByDriver);
-  const rates = useTripRateStore((s) => s.rates);
-  const [editingDriver, setEditingDriver] = useState<string | null>(null);
-  const [form, setForm] = useState<any>(null);
+// ═══════════════════════════════════════════════════════════════
+// OFFICE STAFF TAB
+// ═══════════════════════════════════════════════════════════════
+function OfficeStaffTab() {
+  const employees = useOfficeStaffStore((s) => s.employees);
+  const addEmployee = useOfficeStaffStore((s) => s.addEmployee);
+  const deleteEmployee = useOfficeStaffStore((s) => s.deleteEmployee);
 
-  const startEdit = (driverId: string) => {
-    const p = profiles.find((x) => x.driverId === driverId);
-    setEditingDriver(driverId);
-    setForm(p ? { ...p } : {
-      payrollMode: "fixed_plus_trip" as PayrollMode, baseSalary: 10000, monthlyAllowance: 0,
-      perTripFlatRate: 0, perDeliveryRate: 0, commissionPercent: 0, defaultTripRateId: rates[0]?.id ?? "",
-      sssEnabled: true, philhealthEnabled: true, pagibigEnabled: true, taxEnabled: false,
-      overtimeEnabled: true, allowanceEnabled: false, active: true,
-    });
-  };
-  const save = () => {
-    if (!editingDriver || !form) return;
-    upsertByDriver(editingDriver, form);
-    toast.success("Driver payroll profile saved");
-    setEditingDriver(null);
-  };
+  const activeStaff = employees.filter((e) => e.status === "active");
+  const totalGross = activeStaff.reduce((a, e) => a + e.monthlySalary, 0);
+  const totalNet = activeStaff.reduce((a, e) => a + computeOfficeDeductions(e.monthlySalary, e).netPay, 0);
 
   return (
-    <>
-      <p className="text-xs text-muted-foreground mb-3">Each driver's payroll mode, base salary, and government deduction setup.</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-brand-navy">Office Staff Payroll</h3>
+          <p className="text-xs text-muted-foreground">Fixed monthly-salary employees (admin, HR, accounting, etc.)</p>
+        </div>
+        <div className="flex gap-3 text-xs">
+          <div className="text-center px-3 py-1.5 bg-gray-50 rounded-lg border">
+            <div className="font-bold text-brand-navy">{activeStaff.length}</div>
+            <div className="text-muted-foreground">Active</div>
+          </div>
+          <div className="text-center px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200">
+            <div className="font-bold text-emerald-700">{formatCurrency(totalNet)}</div>
+            <div className="text-emerald-600">Monthly Net</div>
+          </div>
+        </div>
+      </div>
       <Card>
         <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm min-w-[800px]">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
-                <th className="py-3 px-4 font-medium">Driver</th>
-                <th className="py-3 px-4 font-medium">Payroll Mode</th>
-                <th className="py-3 px-4 font-medium text-right">Base Salary</th>
-                <th className="py-3 px-4 font-medium text-right">Allowance</th>
-                <th className="py-3 px-4 font-medium">Gov't Deductions</th>
-                <th className="py-3 px-4 font-medium w-20"></th>
+              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/60">
+                <th className="py-3 px-4 font-medium">Employee</th>
+                <th className="py-3 px-4 font-medium">Department</th>
+                <th className="py-3 px-4 font-medium">Position</th>
+                <th className="py-3 px-4 font-medium text-right">Gross</th>
+                <th className="py-3 px-4 font-medium text-right">Deductions</th>
+                <th className="py-3 px-4 font-medium text-right">Net Pay</th>
+                <th className="py-3 px-4 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
-              {drivers.map((d) => {
-                const p = profiles.find((x) => x.driverId === d.id);
+              {employees.map((e) => {
+                const ded = computeOfficeDeductions(e.monthlySalary, e);
                 return (
-                  <tr key={d.id} className="border-b border-brand-border/60 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{d.name}</td>
-                    <td className="py-3 px-4">
-                      {p ? <Badge variant="info">{PAYROLL_MODE_LABEL[p.payrollMode]}</Badge> : <Badge variant="warning">Not configured</Badge>}
+                  <tr key={e.id} className="border-b border-brand-border/50 hover:bg-gray-50/80">
+                    <td className="py-2.5 px-4">
+                      <div className="font-medium text-brand-navy">{e.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{e.email}</div>
                     </td>
-                    <td className="py-3 px-4 text-right">{p ? formatCurrency(p.baseSalary) : "—"}</td>
-                    <td className="py-3 px-4 text-right">{p?.allowanceEnabled ? formatCurrency(p.monthlyAllowance ?? 0) : "—"}</td>
-                    <td className="py-3 px-4 text-xs text-muted-foreground">
-                      {p ? [p.sssEnabled && "SSS", p.philhealthEnabled && "PhilHealth", p.pagibigEnabled && "Pag-IBIG", p.taxEnabled && "Tax"].filter(Boolean).join(" · ") || "None" : "—"}
-                    </td>
-                    <td className="py-3 px-4">
-                      <Button size="sm" variant="ghost" onClick={() => startEdit(d.id)}><Pencil className="w-4 h-4" /></Button>
-                    </td>
+                    <td className="py-2.5 px-4"><Badge variant="info" className="text-[10px]">{DEPT_LABEL[e.department]}</Badge></td>
+                    <td className="py-2.5 px-4 text-xs">{e.position}</td>
+                    <td className="py-2.5 px-4 text-right font-mono">{formatCurrency(e.monthlySalary)}</td>
+                    <td className="py-2.5 px-4 text-right font-mono text-red-600">−{formatCurrency(ded.totalDeductions)}</td>
+                    <td className="py-2.5 px-4 text-right font-bold text-brand-teal">{formatCurrency(ded.netPay)}</td>
+                    <td className="py-2.5 px-4"><Badge variant={e.status === "active" ? "success" : "neutral"} className="text-[10px]">{e.status}</Badge></td>
                   </tr>
                 );
               })}
@@ -644,240 +821,6 @@ function DriverProfilesPanel() {
           </table>
         </CardContent>
       </Card>
-
-      <Sheet open={!!editingDriver} onOpenChange={(o) => !o && setEditingDriver(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader><SheetTitle>Payroll Profile · {drivers.find((d) => d.id === editingDriver)?.name}</SheetTitle></SheetHeader>
-          {form && (
-            <div className="space-y-4 mt-6">
-              <div>
-                <Label>Payroll Mode</Label>
-                <Select value={form.payrollMode} onValueChange={(v) => setForm({ ...form, payrollMode: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PAYROLL_MODE_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              {(form.payrollMode === "fixed_salary" || form.payrollMode === "fixed_plus_trip") && (
-                <div><Label>Monthly Base Salary (₱)</Label><Input type="number" value={form.baseSalary} onChange={(e) => setForm({ ...form, baseSalary: +e.target.value })} /></div>
-              )}
-              {form.payrollMode === "per_trip" && (
-                <div><Label>Default Per-Trip Rate (₱)</Label><Input type="number" value={form.perTripFlatRate ?? 0} onChange={(e) => setForm({ ...form, perTripFlatRate: +e.target.value })} /></div>
-              )}
-              {form.payrollMode === "per_delivery" && (
-                <div><Label>Per-Delivery Rate (₱)</Label><Input type="number" value={form.perDeliveryRate ?? 0} onChange={(e) => setForm({ ...form, perDeliveryRate: +e.target.value })} /></div>
-              )}
-              {form.payrollMode === "percentage" && (
-                <div><Label>Commission %</Label><Input type="number" value={form.commissionPercent ?? 0} onChange={(e) => setForm({ ...form, commissionPercent: +e.target.value })} /></div>
-              )}
-              <div>
-                <Label>Default Trip Rate</Label>
-                <Select value={form.defaultTripRateId ?? ""} onValueChange={(v) => setForm({ ...form, defaultTripRateId: v })}>
-                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                  <SelectContent>{rates.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 pt-2 border-t border-brand-border">
-                <p className="text-xs font-bold text-muted-foreground uppercase">Government Deductions</p>
-                {[["sssEnabled", "SSS"], ["philhealthEnabled", "PhilHealth"], ["pagibigEnabled", "Pag-IBIG"], ["taxEnabled", "Withholding Tax"]].map(([k, label]) => (
-                  <label key={k} className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={!!form[k as string]} onChange={(e) => setForm({ ...form, [k as string]: e.target.checked })} className="w-4 h-4" />
-                    <span className="text-sm">{label}</span>
-                  </label>
-                ))}
-              </div>
-              <div className="space-y-2 pt-2 border-t border-brand-border">
-                <p className="text-xs font-bold text-muted-foreground uppercase">Other</p>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={!!form.overtimeEnabled} onChange={(e) => setForm({ ...form, overtimeEnabled: e.target.checked })} className="w-4 h-4" />
-                  <span className="text-sm">Overtime Enabled</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={!!form.allowanceEnabled} onChange={(e) => setForm({ ...form, allowanceEnabled: e.target.checked })} className="w-4 h-4" />
-                  <span className="text-sm">Monthly Allowance Enabled</span>
-                </label>
-                {form.allowanceEnabled && (
-                  <div><Label>Monthly Allowance (₱)</Label><Input type="number" value={form.monthlyAllowance ?? 0} onChange={(e) => setForm({ ...form, monthlyAllowance: +e.target.value })} /></div>
-                )}
-              </div>
-              <div className="flex justify-end gap-2 pt-3">
-                <Button variant="outline" onClick={() => setEditingDriver(null)}>Cancel</Button>
-                <Button onClick={save}>Save Profile</Button>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
-    </>
-  );
-}
-
-function IncentivesPanel() {
-  const incentives = useIncentiveStore((s) => s.incentives);
-  const addIncentive = useIncentiveStore((s) => s.addIncentive);
-  const deleteIncentive = useIncentiveStore((s) => s.deleteIncentive);
-  const drivers = useDriverStore((s) => s.drivers);
-  const user = useAuthStore((s) => s.user);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ driverId: "", type: "on_time_delivery" as IncentiveType, amount: 0, notes: "" });
-  const save = () => {
-    if (!form.driverId) { toast.error("Select a driver"); return; }
-    if (form.amount <= 0) { toast.error("Amount must be > 0"); return; }
-    addIncentive({ ...form, createdBy: user?.name ?? "admin" });
-    toast.success("Incentive added");
-    setOpen(false);
-    setForm({ driverId: "", type: "on_time_delivery", amount: 0, notes: "" });
-  };
-
-  return (
-    <>
-      <div className="flex justify-between items-center mb-3">
-        <p className="text-xs text-muted-foreground">Reward drivers for on-time delivery, fuel efficiency, and excellent service.</p>
-        <Button size="sm" onClick={() => setOpen(true)}><Plus className="w-4 h-4" /> Add Incentive</Button>
-      </div>
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
-            <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
-                <th className="py-3 px-4 font-medium">Driver</th>
-                <th className="py-3 px-4 font-medium">Type</th>
-                <th className="py-3 px-4 font-medium text-right">Amount</th>
-                <th className="py-3 px-4 font-medium">Notes</th>
-                <th className="py-3 px-4 font-medium">Created</th>
-                <th className="py-3 px-4 font-medium">Status</th>
-                <th className="py-3 px-4 font-medium w-12"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {incentives.map((i) => (
-                <tr key={i.id} className="border-b border-brand-border/60 hover:bg-gray-50">
-                  <td className="py-3 px-4 font-medium">{drivers.find((d) => d.id === i.driverId)?.name ?? i.driverId}</td>
-                  <td className="py-3 px-4"><Badge variant="success">{INCENTIVE_LABEL[i.type]}</Badge></td>
-                  <td className="py-3 px-4 text-right font-bold text-emerald-600">+{formatCurrency(i.amount)}</td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{i.notes ?? "—"}</td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{new Date(i.createdAt).toLocaleDateString()}</td>
-                  <td className="py-3 px-4">{i.payrollPeriodId ? <Badge variant="info">Locked</Badge> : <Badge variant="neutral">Pending</Badge>}</td>
-                  <td className="py-3 px-4">
-                    {!i.payrollPeriodId && <Button size="sm" variant="ghost" onClick={() => deleteIncentive(i.id)}><Trash2 className="w-4 h-4 text-red-500" /></Button>}
-                  </td>
-                </tr>
-              ))}
-              {incentives.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No incentives yet.</td></tr>}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add Incentive</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Driver</Label>
-              <Select value={form.driverId} onValueChange={(v) => setForm({ ...form, driverId: v })}>
-                <SelectTrigger><SelectValue placeholder="Select driver" /></SelectTrigger>
-                <SelectContent>{drivers.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><Label>Type</Label>
-              <Select value={form.type} onValueChange={(v: any) => setForm({ ...form, type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{Object.entries(INCENTIVE_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><Label>Amount (₱)</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: +e.target.value })} /></div>
-            <div><Label>Notes (optional)</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={save}>Add</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-function DeductionsPanel() {
-  const deductions = useDeductionStore((s) => s.deductions);
-  const addDeduction = useDeductionStore((s) => s.addDeduction);
-  const deleteDeduction = useDeductionStore((s) => s.deleteDeduction);
-  const drivers = useDriverStore((s) => s.drivers);
-  const user = useAuthStore((s) => s.user);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ driverId: "", type: "cash_advance" as DeductionType, amount: 0, reason: "" });
-  const save = () => {
-    if (!form.driverId) { toast.error("Select a driver"); return; }
-    if (form.amount <= 0) { toast.error("Amount must be > 0"); return; }
-    if (!form.reason.trim()) { toast.error("Reason is required (legally)"); return; }
-    addDeduction({ ...form, status: "pending", createdBy: user?.name ?? "admin" });
-    toast.success("Deduction recorded");
-    setOpen(false);
-    setForm({ driverId: "", type: "cash_advance", amount: 0, reason: "" });
-  };
-
-  return (
-    <>
-      <div className="flex justify-between items-center mb-3">
-        <p className="text-xs text-muted-foreground">Cash advances, fuel shortages, damages — every deduction must have a reason.</p>
-        <Button size="sm" onClick={() => setOpen(true)}><Plus className="w-4 h-4" /> Add Deduction</Button>
-      </div>
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
-            <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
-                <th className="py-3 px-4 font-medium">Driver</th>
-                <th className="py-3 px-4 font-medium">Type</th>
-                <th className="py-3 px-4 font-medium text-right">Amount</th>
-                <th className="py-3 px-4 font-medium">Reason</th>
-                <th className="py-3 px-4 font-medium">Created</th>
-                <th className="py-3 px-4 font-medium">Status</th>
-                <th className="py-3 px-4 font-medium w-12"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {deductions.map((d) => (
-                <tr key={d.id} className="border-b border-brand-border/60 hover:bg-gray-50">
-                  <td className="py-3 px-4 font-medium">{drivers.find((x) => x.id === d.driverId)?.name ?? d.driverId}</td>
-                  <td className="py-3 px-4"><Badge variant="warning">{DEDUCTION_LABEL[d.type]}</Badge></td>
-                  <td className="py-3 px-4 text-right font-bold text-red-600">−{formatCurrency(d.amount)}</td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground max-w-xs truncate">{d.reason}</td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{new Date(d.createdAt).toLocaleDateString()}</td>
-                  <td className="py-3 px-4"><Badge variant={d.status === "applied" ? "success" : d.status === "waived" ? "neutral" : "warning"}>{d.status}</Badge></td>
-                  <td className="py-3 px-4">
-                    {d.status === "pending" && !d.payrollPeriodId && (
-                      <Button size="sm" variant="ghost" onClick={() => deleteDeduction(d.id)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {deductions.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No deductions yet.</td></tr>}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add Deduction</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Driver</Label>
-              <Select value={form.driverId} onValueChange={(v) => setForm({ ...form, driverId: v })}>
-                <SelectTrigger><SelectValue placeholder="Select driver" /></SelectTrigger>
-                <SelectContent>{drivers.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><Label>Type</Label>
-              <Select value={form.type} onValueChange={(v: any) => setForm({ ...form, type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{Object.entries(DEDUCTION_LABEL).filter(([k]) => !["sss", "philhealth", "pagibig", "tax"].includes(k)).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><Label>Amount (₱)</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: +e.target.value })} /></div>
-            <div><Label>Reason <span className="text-red-500">*</span></Label><Input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Legally required — describe deduction" /></div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={save}>Add</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }

@@ -43,6 +43,15 @@ export const seedUsers: User[] = [
     phone: "+63 917 000 0005",
   },
   {
+    id: "u-007",
+    name: "Roberto Lim",
+    email: "helper.roberto@nexlogistics.demo",
+    role: "helper",
+    _demoPassword: "Helper123!",
+    phone: "0917 555 0101",
+    helperId: "h-001",
+  },
+  {
     id: "u-006",
     name: "ABC Construction",
     email: "client@abcconstruction.demo",

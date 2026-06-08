@@ -25,8 +25,8 @@ export default function PodListPage() {
   const needsPod = trips.filter((t) => (t.status === "delivered" || t.status === "completed") && !pods.find((p) => p.tripId === t.id));
   const captured = trips.filter((t) => pods.find((p) => p.tripId === t.id));
 
-  // ── Driver mobile view ──
-  if (user?.role === "driver") {
+  // ── Driver / Helper mobile view ──
+  if (user?.role === "driver" || user?.role === "helper") {
     return <DriverPodList user={user} trips={trips} pods={pods} drivers={drivers} needsPod={needsPod} captured={captured} />;
   }
 
