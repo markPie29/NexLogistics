@@ -53,8 +53,12 @@ function defaultPeriod() {
   const end = new Date(today.getFullYear(), today.getMonth(), day <= 15 ? 15 : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate());
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   const half = day <= 15 ? "A" : "B";
+  const month = start.toLocaleString("en-US", { month: "long" });
+  const year = start.getFullYear();
+  const startDay = start.getDate();
+  const endDay = end.getDate();
   return {
-    name: `${start.toLocaleString("en-US", { month: "long", year: "numeric" })} · Cut-off ${half}`,
+    name: `${month} ${startDay}-${endDay}, ${year} · Cut-off ${half}`,
     startDate: fmt(start),
     endDate: fmt(end),
     payDate: fmt(new Date(end.getTime() + 5 * 86400000)),
@@ -313,10 +317,30 @@ export default function PayrollRunWizard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <Label>Period Name</Label>
-                <Input value={period.name} onChange={(e) => setPeriod({ ...period, name: e.target.value })} placeholder="e.g. May 2026 · Cut-off A" />
+                <Input value={period.name} onChange={(e) => setPeriod({ ...period, name: e.target.value })} placeholder="e.g. June 1-15, 2026 · Cut-off A" />
+                <p className="text-[10px] text-muted-foreground mt-1">Auto-generated from dates. You can override manually.</p>
               </div>
-              <div><Label>Start Date</Label><Input type="date" value={period.startDate} onChange={(e) => setPeriod({ ...period, startDate: e.target.value })} /></div>
-              <div><Label>End Date</Label><Input type="date" value={period.endDate} onChange={(e) => setPeriod({ ...period, endDate: e.target.value })} /></div>
+              <div><Label>Start Date</Label><Input type="date" value={period.startDate} onChange={(e) => {
+                const newStart = e.target.value;
+                const s = new Date(newStart);
+                const endVal = period.endDate;
+                const eDate = endVal ? new Date(endVal) : s;
+                const month = s.toLocaleString("en-US", { month: "long" });
+                const year = s.getFullYear();
+                const half = s.getDate() <= 15 ? "A" : "B";
+                const autoName = `${month} ${s.getDate()}-${eDate.getDate()}, ${year} · Cut-off ${half}`;
+                setPeriod({ ...period, startDate: newStart, name: autoName });
+              }} /></div>
+              <div><Label>End Date</Label><Input type="date" value={period.endDate} onChange={(e) => {
+                const newEnd = e.target.value;
+                const eDate = new Date(newEnd);
+                const s = period.startDate ? new Date(period.startDate) : eDate;
+                const month = s.toLocaleString("en-US", { month: "long" });
+                const year = s.getFullYear();
+                const half = s.getDate() <= 15 ? "A" : "B";
+                const autoName = `${month} ${s.getDate()}-${eDate.getDate()}, ${year} · Cut-off ${half}`;
+                setPeriod({ ...period, endDate: newEnd, name: autoName });
+              }} /></div>
               <div><Label>Pay Date</Label><Input type="date" value={period.payDate} onChange={(e) => setPeriod({ ...period, payDate: e.target.value })} /></div>
             </div>
             <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 text-xs text-sky-900 flex gap-2">
