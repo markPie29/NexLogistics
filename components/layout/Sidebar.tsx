@@ -22,7 +22,6 @@ import {
   Receipt,
   LifeBuoy,
   BarChart3,
-  Settings,
   Handshake,
 } from "lucide-react";
 
@@ -42,7 +41,6 @@ export function Sidebar() {
   const company = useAuthStore((s) => s.company);
   const { isEnabled } = useFeatureStore();
 
-  // Filter by role then by feature flags (platform owner sees all regardless)
   const items = navForRole(user?.role).filter(
     (item) => !item.featureKey || user?.isPlatformOwner || isEnabled(item.featureKey)
   );
@@ -50,33 +48,34 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-30 flex flex-col bg-brand-navy text-white transition-[width] duration-300 ease-out",
+        "fixed inset-y-0 left-0 z-30 flex flex-col transition-[width] duration-300 ease-out",
+        "bg-white dark:bg-brand-navy border-r border-brand-border dark:border-white/10",
         collapsed ? "w-[78px]" : "w-[260px]"
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-white/5 shrink-0">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-brand-border dark:border-white/10 shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-brand-teal flex items-center justify-center shadow-glow shrink-0">
-            <span className="font-extrabold text-lg text-brand-navy">N</span>
+          <div className="w-9 h-9 rounded-lg bg-brand-teal flex items-center justify-center shrink-0">
+            <span className="font-extrabold text-lg text-white">N</span>
           </div>
           {!collapsed && (
             <div className="leading-none">
-              <div className="text-lg font-extrabold tracking-tight">
+              <div className="text-lg font-extrabold tracking-tight text-brand-navy dark:text-white">
                 {BRAND.name.slice(0, -1)}<span className="text-brand-teal">{BRAND.name.slice(-1)}</span>
               </div>
-              <div className="text-[9px] tracking-[0.3em] text-brand-teal/90 font-semibold mt-0.5">
-                {BRAND.tagline.split(" ")[0].toUpperCase()}
+              <div className="text-[9px] tracking-[0.3em] text-muted-foreground font-semibold mt-0.5">
+                ENTERPRISE
               </div>
             </div>
           )}
         </Link>
         <button
           onClick={toggle}
-          className="p-1.5 rounded-md hover:bg-white/10 transition shrink-0"
+          className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 transition shrink-0"
           aria-label="Toggle sidebar"
         >
-          <ChevronLeft className={cn("w-4 h-4 transition-transform", collapsed && "rotate-180")} />
+          <ChevronLeft className={cn("w-4 h-4 text-gray-500 dark:text-white/60 transition-transform", collapsed && "rotate-180")} />
         </button>
       </div>
 
@@ -88,11 +87,11 @@ export function Sidebar() {
           return (
             <div key={g.key}>
               {!collapsed && (
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40 px-3 py-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400 dark:text-white/40 px-3 py-2">
                   {g.label}
                 </div>
               )}
-              <ul className="space-y-1">
+              <ul className="space-y-0.5">
                 {groupItems.map((item) => {
                   const isBilling = item.href === "/billing";
                   const isDocuments = item.href === "/documents";
@@ -112,25 +111,28 @@ export function Sidebar() {
                         <Link
                           href={item.href}
                           className={cn(
-                            "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all relative",
+                            "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all relative",
                             active
-                              ? "bg-brand-teal text-white shadow-glow"
-                              : "text-white/70 hover:text-white hover:bg-white/5"
+                              ? "bg-brand-teal/10 text-brand-teal dark:bg-brand-teal dark:text-white"
+                              : "text-gray-600 dark:text-white/70 hover:text-brand-navy dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5"
                           )}
                         >
                           {active && !collapsed && (
                             <motion.div
                               layoutId="active-pill"
-                              className="absolute inset-0 rounded-lg bg-brand-teal -z-0"
+                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-brand-teal"
                               transition={{ type: "spring", stiffness: 400, damping: 35 }}
                             />
                           )}
-                          <item.icon className="w-[18px] h-[18px] shrink-0 relative z-10" />
+                          <item.icon className={cn(
+                            "w-[18px] h-[18px] shrink-0",
+                            active ? "text-brand-teal dark:text-white" : "text-gray-400 dark:text-white/50"
+                          )} />
                           {!collapsed && (
                             <>
-                              <span className="flex-1 truncate relative z-10">{item.label}</span>
+                              <span className="flex-1 truncate">{item.label}</span>
                               {item.preview && (
-                                <Badge variant="preview" className="text-[9px] px-1.5 py-0 relative z-10">
+                                <Badge variant="preview" className="text-[9px] px-1.5 py-0">
                                   Preview
                                 </Badge>
                               )}
@@ -151,17 +153,17 @@ export function Sidebar() {
       {user?.isPlatformOwner && (
         <div className="px-3 pb-2">
           {!collapsed && (
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-400/50 px-3 py-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-500/60 dark:text-amber-400/50 px-3 py-2">
               Platform
             </div>
           )}
           <Link
             href="/platform-admin"
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
               pathname === "/platform-admin"
-                ? "bg-amber-500/20 text-amber-300"
-                : "text-white/50 hover:text-white hover:bg-white/5"
+                ? "bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+                : "text-gray-500 dark:text-white/50 hover:text-brand-navy dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5"
             )}
           >
             <SlidersHorizontal className="w-[18px] h-[18px] shrink-0" />
@@ -177,19 +179,19 @@ export function Sidebar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="p-3 border-t border-white/5"
+            className="p-3 border-t border-brand-border dark:border-white/10"
           >
-            <div className="rounded-xl bg-white/5 hover:bg-white/10 transition p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-teal to-brand-teal-dark flex items-center justify-center shrink-0">
+            <div className="rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition p-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-brand-teal flex items-center justify-center shrink-0">
                 <Building2 className="w-4 h-4 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold truncate">{company.name}</div>
-                <div className="text-[10px] text-white/50 truncate">ID: {company.code}</div>
+                <div className="text-sm font-semibold text-brand-navy dark:text-white truncate">{company.name}</div>
+                <div className="text-[10px] text-muted-foreground truncate">ID: {company.code}</div>
               </div>
             </div>
             {user && (
-              <div className="mt-2 px-1 text-[10px] text-white/40 truncate">
+              <div className="mt-2 px-1 text-[10px] text-muted-foreground truncate">
                 {ROLE_LABEL[user.role]} · {user.email}
               </div>
             )}
@@ -238,15 +240,20 @@ function ExpandableNav({ collapsed, pathname, item, childrenItems, basePath }: {
       <button
         onClick={() => setExpanded((v) => !v)}
         className={cn(
-          "w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all relative",
-          isOpen ? "bg-brand-teal/20 text-white" : "text-white/70 hover:text-white hover:bg-white/5"
+          "w-full group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all relative",
+          isOpen
+            ? "bg-brand-teal/10 text-brand-teal dark:bg-brand-teal/20 dark:text-white"
+            : "text-gray-600 dark:text-white/70 hover:text-brand-navy dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5"
         )}
       >
-        <item.icon className="w-[18px] h-[18px] shrink-0" />
+        <item.icon className={cn(
+          "w-[18px] h-[18px] shrink-0",
+          isOpen ? "text-brand-teal dark:text-white" : "text-gray-400 dark:text-white/50"
+        )} />
         {!collapsed && (
           <>
             <span className="flex-1 truncate text-left">{item.label}</span>
-            <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", expanded && "rotate-180")} />
+            <ChevronDown className={cn("w-3.5 h-3.5 text-gray-400 dark:text-white/50 transition-transform", expanded && "rotate-180")} />
           </>
         )}
       </button>
@@ -256,7 +263,7 @@ function ExpandableNav({ collapsed, pathname, item, childrenItems, basePath }: {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden ml-5 border-l border-white/10 pl-2 mt-1 space-y-0.5"
+            className="overflow-hidden ml-5 border-l border-gray-200 dark:border-white/10 pl-2 mt-1 space-y-0.5"
           >
             {childrenItems.map((child) => {
               const active = child.href === basePath ? pathname === basePath : pathname.startsWith(child.href);
@@ -265,13 +272,16 @@ function ExpandableNav({ collapsed, pathname, item, childrenItems, basePath }: {
                   <Link
                     href={child.href}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-all",
+                      "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-all",
                       active
-                        ? "bg-brand-teal text-white shadow-glow"
-                        : "text-white/60 hover:text-white hover:bg-white/5"
+                        ? "bg-brand-teal/10 text-brand-teal dark:bg-brand-teal dark:text-white"
+                        : "text-gray-500 dark:text-white/60 hover:text-brand-navy dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5"
                     )}
                   >
-                    <child.icon className="w-[15px] h-[15px] shrink-0" />
+                    <child.icon className={cn(
+                      "w-[15px] h-[15px] shrink-0",
+                      active ? "text-brand-teal dark:text-white" : "text-gray-400 dark:text-white/50"
+                    )} />
                     <span className="truncate">{child.label}</span>
                   </Link>
                 </li>
