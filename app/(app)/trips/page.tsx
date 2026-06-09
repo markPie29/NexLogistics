@@ -70,13 +70,13 @@ export default function TripsPage() {
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search ID, DR#, client, item, customer..." className="pl-10" />
         </div>
-        <div className="inline-flex rounded-md border border-brand-border/60 bg-white p-0.5 text-xs">
+        <div className="inline-flex rounded-md border border-brand-border/60 bg-white p-0.5 text-xs dark:bg-slate-900/75 dark:border-white/10">
           {(["all","company","subcon"] as const).map((k) => (
             <button
               key={k}
               type="button"
               onClick={() => setOwnerFilter(k)}
-              className={`px-3 py-1.5 rounded transition font-medium ${ownerFilter === k ? "bg-brand-teal text-white" : "text-muted-foreground hover:text-brand-navy"}`}
+              className={`px-3 py-1.5 rounded transition font-medium ${ownerFilter === k ? "bg-brand-teal text-white shadow-sm dark:bg-brand-teal/90" : "text-muted-foreground hover:text-brand-navy hover:bg-slate-50 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800"}`}
             >
               {k === "all" ? "All" : k === "company" ? "Company" : "Subcon"}
               <span className="ml-1.5 opacity-70">{counts[k]}</span>

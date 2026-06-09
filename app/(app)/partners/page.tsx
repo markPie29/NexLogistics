@@ -301,7 +301,7 @@ export default function PartnersPage() {
                     <Building2 className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-brand-navy truncate">{p.name}</div>
+                    <div className="font-bold text-brand-navy dark:text-white truncate">{p.name}</div>
                     <div className="text-xs text-muted-foreground">{p.vehicleTypes.join(", ")}</div>
                   </div>
                   <Badge variant={STATUS_VARIANT[p.status]}>{p.status}</Badge>

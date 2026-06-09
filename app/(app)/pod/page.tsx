@@ -41,7 +41,7 @@ export default function PodListPage() {
 
       <Card>
         <CardContent className="p-4">
-          <h3 className="font-bold text-brand-navy mb-3">Awaiting POD ({needsPod.length})</h3>
+          <h3 className="font-bold text-brand-navy mb-3 dark:text-white">Awaiting POD ({needsPod.length})</h3>
           <div className="space-y-2">
             {needsPod.map((t) => {
               const d = drivers.find((x) => x.id === t.driverId);
@@ -49,7 +49,7 @@ export default function PodListPage() {
                 <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg border border-brand-border">
                   <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center"><ClipboardCheck className="w-4 h-4 text-amber-600" /></div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-brand-navy">{t.id} <span className="text-xs text-muted-foreground font-normal">· {d?.name}</span></div>
+                    <div className="font-bold text-brand-navy dark:text-white">{t.id} <span className="text-xs text-muted-foreground font-normal">· {d?.name}</span></div>
                     <div className="text-xs text-muted-foreground truncate">{t.pickup.address} → {t.dropoff.address}</div>
                   </div>
                   <Badge variant="warning">Pending</Badge>
@@ -64,7 +64,7 @@ export default function PodListPage() {
 
       <Card>
         <CardContent className="p-4">
-          <h3 className="font-bold text-brand-navy mb-3">Captured ({captured.length})</h3>
+          <h3 className="font-bold text-brand-navy mb-3 dark:text-white">Captured ({captured.length})</h3>
           <div className="space-y-2">
             {captured.map((t) => {
               const pod = pods.find((p) => p.tripId === t.id)!;
@@ -72,7 +72,7 @@ export default function PodListPage() {
                 <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg border border-brand-border bg-emerald-50/30">
                   <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center"><ClipboardCheck className="w-4 h-4 text-emerald-600" /></div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-brand-navy">{t.id} <span className="text-xs text-muted-foreground font-normal">· {pod.receiverName}</span></div>
+                    <div className="font-bold text-brand-navy dark:text-white">{t.id} <span className="text-xs text-muted-foreground font-normal">· {pod.receiverName}</span></div>
                     <div className="text-xs text-muted-foreground">{new Date(pod.timestamp).toLocaleString()}</div>
                   </div>
                   <Badge variant="success">Done</Badge>
@@ -186,7 +186,7 @@ function DriverPodList({ user, trips, pods, drivers, needsPod, captured }: {
           {/* Awaiting section */}
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-sm text-brand-navy">Awaiting POD</h2>
+              <h2 className="font-bold text-sm text-brand-navy dark:text-white">Awaiting POD</h2>
               {myNeedsPod.length > 0 && (
                 <span className="text-[11px] text-white bg-amber-500 rounded-full px-2.5 py-0.5 font-semibold">
                   {myNeedsPod.length}
@@ -197,7 +197,7 @@ function DriverPodList({ user, trips, pods, drivers, needsPod, captured }: {
             {myNeedsPod.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
                 <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3 opacity-60" />
-                <p className="font-bold text-brand-navy">All caught up!</p>
+                <p className="font-bold text-brand-navy dark:text-white">All caught up!</p>
                 <p className="text-sm text-gray-400 mt-1">No deliveries need a POD right now.</p>
               </div>
             ) : (
@@ -212,7 +212,7 @@ function DriverPodList({ user, trips, pods, drivers, needsPod, captured }: {
                       <Camera className="w-5 h-5 text-amber-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-brand-navy">{t.id}</p>
+                      <p className="font-bold text-sm text-brand-navy dark:text-white">{t.id}</p>
                       <p className="text-xs text-gray-500 truncate mt-0.5">{t.dropoff.address}</p>
                       <span className="mt-1.5 inline-block text-[10px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">
                         Awaiting Capture
@@ -232,7 +232,7 @@ function DriverPodList({ user, trips, pods, drivers, needsPod, captured }: {
           {/* Captured section */}
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-sm text-brand-navy">Captured</h2>
+              <h2 className="font-bold text-sm text-brand-navy dark:text-white">Captured</h2>
               {myCaptured.length > 0 && (
                 <span className="text-[11px] text-white bg-emerald-500 rounded-full px-2.5 py-0.5 font-semibold">
                   {myCaptured.length}
@@ -242,7 +242,7 @@ function DriverPodList({ user, trips, pods, drivers, needsPod, captured }: {
             {myCaptured.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center">
                 <ClipboardCheck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">No PODs captured yet.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">No PODs captured yet.</p>
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -257,7 +257,7 @@ function DriverPodList({ user, trips, pods, drivers, needsPod, captured }: {
                         <ClipboardCheck className="w-5 h-5 text-emerald-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-brand-navy">{t.id}</p>
+                        <p className="font-bold text-sm text-brand-navy dark:text-white">{t.id}</p>
                         {pod && (
                           <p className="text-xs text-gray-500 mt-0.5">Received by: <span className="font-medium">{pod.receiverName}</span></p>
                         )}

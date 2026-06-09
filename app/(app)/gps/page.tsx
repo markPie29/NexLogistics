@@ -114,21 +114,21 @@ export default function GpsPage() {
               <Filter className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground cursor-pointer hover:text-brand-navy" />
             </div>
             {/* Tabs */}
-            <div className="flex bg-gray-100 p-1 rounded-md text-sm">
+            <div className="flex bg-gray-100 p-1 rounded-md text-sm dark:bg-slate-900/75">
               <button 
-                className={`flex-1 py-1.5 rounded-sm font-medium transition-colors ${activeTab === 'all' ? 'bg-white shadow-sm text-brand-navy' : 'text-muted-foreground hover:text-brand-navy'}`}
+                className={`flex-1 py-1.5 rounded-sm font-medium transition-colors ${activeTab === 'all' ? 'bg-white shadow-sm text-brand-navy dark:bg-slate-700 dark:text-white' : 'text-muted-foreground hover:text-brand-navy hover:bg-slate-50 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800'}`}
                 onClick={() => setActiveTab('all')}
               >
                 All ({totalCount})
               </button>
               <button 
-                className={`flex-1 py-1.5 rounded-sm font-medium transition-colors ${activeTab === 'active' ? 'bg-white shadow-sm text-brand-navy' : 'text-muted-foreground hover:text-brand-navy'}`}
+                className={`flex-1 py-1.5 rounded-sm font-medium transition-colors ${activeTab === 'active' ? 'bg-white shadow-sm text-brand-navy dark:bg-slate-700 dark:text-white' : 'text-muted-foreground hover:text-brand-navy hover:bg-slate-50 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800'}`}
                 onClick={() => setActiveTab('active')}
               >
                 Active ({activeCount})
               </button>
               <button 
-                className={`flex-1 py-1.5 rounded-sm font-medium transition-colors ${activeTab === 'in_trip' ? 'bg-white shadow-sm text-brand-navy' : 'text-muted-foreground hover:text-brand-navy'}`}
+                className={`flex-1 py-1.5 rounded-sm font-medium transition-colors ${activeTab === 'in_trip' ? 'bg-white shadow-sm text-brand-navy dark:bg-slate-700 dark:text-white' : 'text-muted-foreground hover:text-brand-navy hover:bg-slate-50 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800'}`}
                 onClick={() => setActiveTab('in_trip')}
               >
                 In Trip ({inTripCount})
@@ -155,7 +155,7 @@ export default function GpsPage() {
                   className={`p-3 rounded-lg border transition-all cursor-pointer ${
                     isSelected 
                       ? "border-brand-teal bg-brand-teal/5 shadow-sm" 
-                      : "border-brand-border/60 hover:bg-gray-50 hover:border-gray-300"
+                      : "border-brand-border/60 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-800 dark:hover:border-slate-700"
                   }`}
                 >
                   <div className="flex justify-between items-start mb-2">
@@ -169,7 +169,7 @@ export default function GpsPage() {
                         <Truck className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
-                        <div className="font-bold text-sm text-brand-navy truncate">{v.plate}</div>
+                        <div className="font-bold text-sm text-brand-navy dark:text-white truncate">{v.plate}</div>
                         <div className="text-xs text-muted-foreground truncate">{d?.name || "Unassigned"}</div>
                       </div>
                     </div>
@@ -187,7 +187,7 @@ export default function GpsPage() {
             )}
           </div>
 
-          <div className="p-3 border-t border-brand-border/60 flex flex-wrap gap-2 items-center justify-between text-xs text-muted-foreground bg-gray-50 shrink-0 rounded-b-lg">
+          <div className="p-3 border-t border-brand-border/60 flex flex-wrap gap-2 items-center justify-between text-xs text-muted-foreground bg-gray-50 dark:bg-brand-navy/10 dark:border-white/10 dark:text-slate-300 shrink-0 rounded-b-lg">
             <span>1-{filteredVehicles.length > 8 ? 8 : filteredVehicles.length} of {filteredVehicles.length}</span>
             <div className="flex items-center gap-1">
               <Button variant="outline" size="icon" className="w-6 h-6"><ChevronLeft className="w-3 h-3" /></Button>
@@ -282,7 +282,7 @@ export default function GpsPage() {
         <Card className="shadow-sm border-brand-border">
           <CardHeader className="pb-2 border-b border-brand-border/60">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-base font-semibold">Recent Alerts</CardTitle>
+              <CardTitle className="text-base font-semibold dark:text-white">Recent Alerts</CardTitle>
               <Badge variant="danger" className="rounded-full">5</Badge>
             </div>
           </CardHeader>
@@ -292,7 +292,7 @@ export default function GpsPage() {
                 <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0"><MapPin className="w-4 h-4" /></div>
                 <div className="flex-1 min-w-0 flex justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-brand-navy truncate">Geofence Exit (NEX-101)</p>
+                    <p className="text-sm font-semibold text-brand-navy dark:text-white truncate">Geofence Exit (NEX-101)</p>
                     <p className="text-xs text-muted-foreground truncate">Vehicle left designated route.</p>
                   </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap pt-0.5">2m ago</span>
@@ -302,7 +302,7 @@ export default function GpsPage() {
                 <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><Gauge className="w-4 h-4" /></div>
                 <div className="flex-1 min-w-0 flex justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-brand-navy truncate">High Speed (NEX-104)</p>
+                    <p className="text-sm font-semibold text-brand-navy dark:text-white truncate">High Speed (NEX-104)</p>
                     <p className="text-xs text-muted-foreground truncate">Speed exceeded 80 km/h.</p>
                   </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap pt-0.5">15m ago</span>
@@ -312,7 +312,7 @@ export default function GpsPage() {
                 <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><Fuel className="w-4 h-4" /></div>
                 <div className="flex-1 min-w-0 flex justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-brand-navy truncate">Low Fuel (NEX-109)</p>
+                    <p className="text-sm font-semibold text-brand-navy dark:text-white truncate">Low Fuel (NEX-109)</p>
                     <p className="text-xs text-muted-foreground truncate">Fuel level below 15%.</p>
                   </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap pt-0.5">1h ago</span>
@@ -327,7 +327,7 @@ export default function GpsPage() {
 
         <Card className="shadow-sm border-brand-border flex flex-col">
           <CardHeader className="pb-2 border-b border-brand-border/60 flex flex-row items-center justify-between shrink-0">
-            <CardTitle className="text-base font-semibold">Traffic Overview</CardTitle>
+            <CardTitle className="text-base font-semibold dark:text-white">Traffic Overview</CardTitle>
             <Button variant="ghost" size="sm" className="h-6 text-xs text-brand-teal mt-0">Refresh</Button>
           </CardHeader>
           <CardContent className="p-4 flex-1 flex flex-col">
@@ -354,7 +354,7 @@ export default function GpsPage() {
 
         <Card className="shadow-sm border-brand-border md:col-span-2 lg:col-span-1">
           <CardHeader className="pb-2 border-b border-brand-border/60 shrink-0">
-            <CardTitle className="text-base font-semibold">Replay History</CardTitle>
+            <CardTitle className="text-base font-semibold dark:text-white">Replay History</CardTitle>
           </CardHeader>
           <CardContent className="p-4 flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row items-center gap-2">
@@ -444,7 +444,7 @@ function DriverGpsView({ user, vehicles, drivers, trips }: {
                       "bg-gray-100 text-gray-500";
 
   return (
-    <div className="max-w-sm mx-auto -mt-6 -mx-6 min-h-screen flex flex-col bg-gray-50 sm:mx-auto">
+    <div className="max-w-sm -mt-6 -mx-6 min-h-screen flex flex-col bg-gray-50 sm:mx-auto">
       {/* Sticky header */}
       <header className="sticky top-0 z-30 bg-[#0B1C2E] h-14 px-4 flex items-center justify-between shrink-0">
         <button

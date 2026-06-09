@@ -191,7 +191,7 @@ export default function HelpersPage() {
                         <Link href={`/helpers/${h.id}`} className="flex items-center gap-3 hover:opacity-80 transition">
                           <Avatar className="h-10 w-10"><AvatarFallback>{initials(h.name)}</AvatarFallback></Avatar>
                           <div>
-                            <div className="font-semibold text-brand-navy hover:text-brand-teal transition">{h.name}</div>
+                            <div className="font-semibold text-brand-navy dark:text-white hover:text-brand-teal transition">{h.name}</div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" /> {h.phone}</div>
                           </div>
                         </Link>
