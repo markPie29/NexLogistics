@@ -107,7 +107,7 @@ export default function DispatcherPage() {
           <CardHeader className="border-b border-gray-100 pb-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <CardTitle className="text-xl font-bold text-brand-navy">Trip Queue</CardTitle>
+                <CardTitle className="text-xl font-bold text-brand-navy dark:text-white">Trip Queue</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">Assign drivers and vehicles to pending trips</p>
               </div>
               <div className="flex gap-1.5">
@@ -117,8 +117,8 @@ export default function DispatcherPage() {
                     onClick={() => setFilter(f)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
                       filter === f
-                        ? "bg-brand-navy text-white shadow"
-                        : "bg-gray-100 text-muted-foreground hover:bg-gray-200"
+                        ? "bg-slate-50 text-brand-navy shadow-sm dark:bg-slate-700/60 dark:text-white"
+                        : "bg-brand-navy/10 text-brand-navy border border-slate-300 hover:bg-brand-navy/20 dark:bg-brand-navy/10 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-brand-navy/30 dark:hover:text-white"
                     }`}
                   >
                     {f === "all" ? "All Active" : f}
@@ -141,13 +141,13 @@ export default function DispatcherPage() {
                 const vehicle = vehicles.find((v) => v.id === t.vehicleId);
                 const variant = STATUS_VARIANT[t.status] as any;
                 return (
-                  <div key={t.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/60 transition-colors">
+                  <div key={t.id} className="flex items-center gap-4 px-5 py-4 hover:bg-brand-navy/3 dark:hover:bg-brand-navy/8 transition-colors">
                     <div className="w-10 h-10 rounded-xl bg-brand-teal-light flex items-center justify-center shrink-0">
                       <Package className="w-5 h-5 text-brand-teal" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-brand-navy text-sm">{t.id}</span>
+                        <span className="font-bold text-brand-navy text-sm dark:text-white">{t.id}</span>
                         <Badge variant={variant}>{t.status.replace(/_/g, " ")}</Badge>
                         {t.cargo.type && <span className="text-xs text-muted-foreground">· {t.cargo.type}</span>}
                       </div>
@@ -185,7 +185,7 @@ export default function DispatcherPage() {
         <div className="space-y-4">
           <Card className="border-brand-border shadow-sm">
             <CardHeader className="pb-3 border-b border-gray-100">
-              <CardTitle className="text-lg font-bold text-brand-navy flex items-center justify-between">
+              <CardTitle className="text-lg font-bold text-brand-navy flex items-center justify-between dark:text-white">
                 Driver Status
                 <Link href="/drivers" className="text-sm font-medium text-brand-teal hover:underline">View all</Link>
               </CardTitle>
@@ -200,7 +200,7 @@ export default function DispatcherPage() {
                       <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${activeTrip ? "bg-sky-500" : "bg-emerald-500"}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-brand-navy truncate">{d.name}</div>
+                      <div className="text-sm font-semibold text-brand-navy truncate dark:text-white">{d.name}</div>
                       <div className="text-xs text-muted-foreground truncate">
                         {activeTrip ? `On trip: ${activeTrip.id}` : "Available"}
                       </div>
@@ -217,7 +217,7 @@ export default function DispatcherPage() {
           {/* Quick Links */}
           <Card className="border-brand-border shadow-sm">
             <CardHeader className="pb-3 border-b border-gray-100">
-              <CardTitle className="text-lg font-bold text-brand-navy">Quick Links</CardTitle>
+              <CardTitle className="text-lg font-bold text-brand-navy dark:text-white">Quick Links</CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-2">
               {[
@@ -236,7 +236,7 @@ export default function DispatcherPage() {
                     <link.icon className="w-4 h-4 text-brand-teal" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-brand-navy">{link.label}</div>
+                    <div className="text-sm font-semibold text-brand-navy dark:text-white">{link.label}</div>
                     <div className="text-xs text-muted-foreground">{link.desc}</div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-brand-teal transition-colors" />
@@ -252,11 +252,11 @@ export default function DispatcherPage() {
         <CardHeader className="border-b border-gray-100 pb-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <CardTitle className="text-xl font-bold text-brand-navy flex items-center gap-2">
+              <CardTitle className="text-xl font-bold text-brand-navy flex items-center gap-2 dark:text-white">
                 <BadgeCheck className="w-5 h-5 text-brand-teal" />
                 Trip Approval Queue
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1 dark:text-slate-300">
                 Review completed trips and approve them for payroll processing
               </p>
             </div>
@@ -278,13 +278,13 @@ export default function DispatcherPage() {
                 const driver = drivers.find((d) => d.id === t.driverId);
                 const vehicle = vehicles.find((v) => v.id === t.vehicleId);
                 return (
-                  <div key={t.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/60 transition-colors">
+                  <div key={t.id} className="flex items-center gap-4 px-5 py-4 hover:bg-brand-navy/3 dark:hover:bg-brand-navy/8 transition-colors">
                     <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
                       <AlertCircle className="w-5 h-5 text-amber-500" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-brand-navy text-sm">{t.id}</span>
+                        <span className="font-bold text-brand-navy text-sm dark:text-white">{t.id}</span>
                         <Badge variant="success">{t.status.replace(/_/g, " ")}</Badge>
                         <Badge variant="neutral">pending approval</Badge>
                       </div>
