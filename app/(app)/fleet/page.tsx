@@ -140,14 +140,14 @@ export default function FleetPage() {
                 {paged.map((v) => {
                   const driver = drivers.find((d) => d.id === v.assignedDriverId);
                   return (
-                    <tr key={v.id} className="border-b border-brand-border/60 hover:bg-gray-50 transition">
+                    <tr key={v.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                       <td className="py-3 px-4">
                         <Link href={`/fleet/${v.id}`} className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-brand-teal-light flex items-center justify-center">
                             <Truck className="w-5 h-5 text-brand-teal" />
                           </div>
                           <div>
-                            <div className="font-semibold text-brand-navy">{v.plate}</div>
+                            <div className="font-semibold text-brand-navy dark:text-white">{v.plate}</div>
                             <div className="text-xs text-muted-foreground">{v.brand} {v.model} · {v.year}</div>
                           </div>
                         </Link>
@@ -160,7 +160,7 @@ export default function FleetPage() {
                               <AvatarFallback>{initials(driver.name)}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <div className="font-medium text-brand-navy">{driver.name}</div>
+                              <div className="font-medium text-brand-navy dark:text-white">{driver.name}</div>
                               <div className="text-xs text-muted-foreground">{driver.phone}</div>
                             </div>
                           </div>
