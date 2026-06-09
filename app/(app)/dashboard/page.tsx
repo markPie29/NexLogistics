@@ -252,7 +252,7 @@ export default function DashboardPage() {
                     : t.status === "in_transit" || t.status === "loaded" ? "info"
                     : "neutral";
                   return (
-                    <tr key={t.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors">
+                    <tr key={t.id} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                       <td className="py-3 px-4">
                         <div className="font-bold text-brand-navy dark:text-white truncate max-w-[200px]">{t.pickup.address}</div>
                         <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">→ {t.dropoff.address}</div>

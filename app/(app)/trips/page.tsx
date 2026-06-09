@@ -65,34 +65,32 @@ export default function TripsPage() {
         }
       />
 
-      <Card>
-        <CardContent className="p-4 flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search ID, DR#, client, item, customer..." className="pl-10" />
-          </div>
-          <div className="inline-flex rounded-md border border-brand-border/60 bg-white p-0.5 text-xs">
-            {(["all","company","subcon"] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setOwnerFilter(k)}
-                className={`px-3 py-1.5 rounded transition font-medium ${ownerFilter === k ? "bg-brand-teal text-white" : "text-muted-foreground hover:text-brand-navy"}`}
-              >
-                {k === "all" ? "All" : k === "company" ? "Company" : "Subcon"}
-                <span className="ml-1.5 opacity-70">{counts[k]}</span>
-              </button>
-            ))}
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              {Object.keys(STATUS_VARIANT).map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search ID, DR#, client, item, customer..." className="pl-10" />
+        </div>
+        <div className="inline-flex rounded-md border border-brand-border/60 bg-white p-0.5 text-xs">
+          {(["all","company","subcon"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setOwnerFilter(k)}
+              className={`px-3 py-1.5 rounded transition font-medium ${ownerFilter === k ? "bg-brand-teal text-white" : "text-muted-foreground hover:text-brand-navy"}`}
+            >
+              {k === "all" ? "All" : k === "company" ? "Company" : "Subcon"}
+              <span className="ml-1.5 opacity-70">{counts[k]}</span>
+            </button>
+          ))}
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            {Object.keys(STATUS_VARIANT).map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
 
       <Card>
         <CardContent className="p-0">
@@ -119,7 +117,7 @@ export default function TripsPage() {
                   const client = clients.find((c) => c.id === t.clientId);
                   const partner = partners.find((p) => p.id === t.partnerId);
                   return (
-                    <tr key={t.id} className="border-b border-brand-border/60 hover:bg-gray-50">
+                      <tr key={t.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                       <td className="py-3 px-4">
                         <Link href={`/trips/${t.id}`} className="font-semibold text-brand-teal hover:underline">{t.id}</Link>
                       </td>

@@ -102,34 +102,31 @@ export default function DriversPage() {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-4 flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or license number..."
-              className="pl-10"
-            />
-            {search && (
-              <button className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setSearch("")}>
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-44"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="off_duty">Off Duty</SelectItem>
-              <SelectItem value="on_leave">On Leave</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name or license number..."
+            className="pl-10"
+          />
+          {search && (
+            <button className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setSearch("")}> 
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full md:w-44"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="off_duty">Off Duty</SelectItem>
+            <SelectItem value="on_leave">On Leave</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       {/* Driver Table */}
       <Card>
         <CardContent className="p-0">
@@ -166,7 +163,7 @@ export default function DriversPage() {
                   const vehicle = vehicles.find((v) => v.id === d.assignedVehicleId);
                   const tripCount = tripCountByDriver[d.id] ?? d.totalTrips;
                   return (
-                    <tr key={d.id} className="border-b border-brand-border/60 hover:bg-gray-50 transition-colors">
+                      <tr key={d.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                       <td className="py-3 px-4">
                         <Link href={`/drivers/${d.id}`} className="flex items-center gap-3 group">
                           <Avatar className="h-9 w-9 shrink-0">
@@ -175,7 +172,7 @@ export default function DriversPage() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-semibold text-brand-navy group-hover:text-brand-teal transition-colors">{d.name}</div>
+                            <div className="font-semibold text-brand-navy group-hover:text-brand-teal transition-colors dark:text-white">{d.name}</div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                               <Phone className="w-3 h-3" /> {d.phone}
                             </div>

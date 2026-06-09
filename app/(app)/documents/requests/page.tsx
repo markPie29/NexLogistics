@@ -140,7 +140,7 @@ export default function DocumentRequestsPage() {
                 {filtered.map((req) => {
                   const sb = statusBadge(req.status);
                   return (
-                    <tr key={req.id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr key={req.id} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-2 font-semibold text-gray-800">
                           <FileQuestion className="w-4 h-4 text-amber-500 shrink-0" />

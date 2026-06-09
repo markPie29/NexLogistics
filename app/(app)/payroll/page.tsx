@@ -247,7 +247,7 @@ export default function PayrollHubPage() {
                         const ps = summaries.filter((x) => x.payrollPeriodId === p.id);
                         const net = ps.reduce((a, b) => a + b.netPay, 0);
                         return (
-                          <tr key={p.id} className="border-b border-brand-border/50 hover:bg-gray-50/80 transition-colors">
+                          <tr key={p.id} className="border-b border-brand-border/50 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                             <td className="py-3 px-4">
                               <div className="font-semibold text-brand-navy">{p.name}</div>
                               <div className="text-[10px] text-muted-foreground">Pay: {p.payDate ? new Date(p.payDate).toLocaleDateString() : "TBD"}</div>
@@ -646,7 +646,7 @@ function TripRatesTab() {
             </thead>
             <tbody>
               {rates.map((r) => (
-                <tr key={r.id} className="border-b border-brand-border/50 hover:bg-gray-50/80">
+                <tr key={r.id} className="border-b border-brand-border/50 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                   <td className="py-2.5 px-4 font-medium text-brand-navy">{r.name}</td>
                   <td className="py-2.5 px-4 text-xs">{r.vehicleType}</td>
                   <td className="py-2.5 px-4 text-xs text-muted-foreground">{r.routeOrigin} → {r.routeDestination}</td>
@@ -731,7 +731,7 @@ function PayProfilesTab() {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b border-brand-border/50 hover:bg-gray-50/80">
+                <tr key={item.id} className="border-b border-brand-border/50 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                   <td className="py-2.5 px-4 font-medium text-brand-navy">{item.name}</td>
                   <td className="py-2.5 px-4"><Badge variant={item.role === "Helper" ? "purple" : "info"} className="text-[10px]">{item.role}</Badge></td>
                   <td className="py-2.5 px-4">
@@ -803,7 +803,7 @@ function OfficeStaffTab() {
               {employees.map((e) => {
                 const ded = computeOfficeDeductions(e.monthlySalary, e);
                 return (
-                  <tr key={e.id} className="border-b border-brand-border/50 hover:bg-gray-50/80">
+                  <tr key={e.id} className="border-b border-brand-border/50 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                     <td className="py-2.5 px-4">
                       <div className="font-medium text-brand-navy">{e.name}</div>
                       <div className="text-[10px] text-muted-foreground">{e.email}</div>

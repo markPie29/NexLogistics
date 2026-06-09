@@ -164,7 +164,7 @@ export default function DocumentCategoriesPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <tr key={c.id} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors group">
                     <td className="py-4 px-5">
                       <div className="flex items-center gap-2 font-semibold text-blue-600">
                         <Folder className="w-4 h-4 text-[#008A56]" />{c.name}

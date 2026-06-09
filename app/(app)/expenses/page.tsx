@@ -513,7 +513,7 @@ function KpiBlock({ title, value, trend, trendColor, icon: Icon, iconBg, iconCol
 
 function TableRow({ d1, d2, type, typeCol, v1, v2, desc1, desc2, cat, catCol, pay, payCol, amt }: any) {
   return (
-    <tr className="hover:bg-gray-50/80 transition-colors">
+    <tr className="hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
       <td className="py-3 px-4">
         <div className="font-medium">{d1}</div>
         <div className="text-muted-foreground text-[11px]">{d2}</div>

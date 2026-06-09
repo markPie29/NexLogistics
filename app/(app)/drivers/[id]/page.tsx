@@ -222,7 +222,7 @@ export default function DriverDetailPage() {
                 </thead>
                 <tbody>
                   {driverTrips.map((t) => (
-                    <tr key={t.id} className="border-b border-brand-border/60 hover:bg-gray-50 cursor-pointer transition"
+                    <tr key={t.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] cursor-pointer transition-colors"
                       onClick={() => router.push(`/trips/${t.id}`)}>
                       <td className="py-3 px-4 font-medium text-brand-teal">{t.id}</td>
                       <td className="py-3 px-4">
@@ -282,7 +282,7 @@ export default function DriverDetailPage() {
                       {driverSummaries.map((s) => {
                         const period = periods.find((p) => p.id === s.payrollPeriodId);
                         return (
-                          <tr key={s.id} className="border-b border-brand-border/60 hover:bg-gray-50 cursor-pointer transition"
+                          <tr key={s.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] cursor-pointer transition-colors"
                             onClick={() => router.push(`/payroll/${s.payrollPeriodId}`)}>
                             <td className="py-3 px-4 text-muted-foreground">{period?.name ?? s.payrollPeriodId}</td>
                             <td className="py-3 px-4 text-xs capitalize">{s.payrollMode.replace(/_/g, " ")}</td>

@@ -145,23 +145,21 @@ export default function HelpersPage() {
         <KpiCard label="On Leave" value={counts.on_leave} icon={Briefcase} iconColor="text-amber-600" iconBg="bg-amber-50" sparklineData={[0,0,0,0,0,0,0,0]} sparklineColor="#F59E0B" />
       </div>
 
-      <Card>
-        <CardContent className="p-4 flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search helper name..." className="pl-10" />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="off_duty">Off Duty</SelectItem>
-              <SelectItem value="on_leave">On Leave</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search helper name..." className="pl-10" />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="off_duty">Off Duty</SelectItem>
+            <SelectItem value="on_leave">On Leave</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       <Card>
         <CardContent className="p-0">
@@ -188,7 +186,7 @@ export default function HelpersPage() {
                       ? `${formatCurrency(h.monthlyBaseSalary || 0)} + ${formatCurrency(h.baseRatePerTrip || 0)}/trip`
                       : `${formatCurrency(h.baseRatePerTrip || 0)} / trip`;
                   return (
-                    <tr key={h.id} className="border-b border-brand-border/60 hover:bg-gray-50">
+                    <tr key={h.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                       <td className="py-3 px-4">
                         <Link href={`/helpers/${h.id}`} className="flex items-center gap-3 hover:opacity-80 transition">
                           <Avatar className="h-10 w-10"><AvatarFallback>{initials(h.name)}</AvatarFallback></Avatar>

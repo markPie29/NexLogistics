@@ -130,29 +130,27 @@ export default function PayablesPage() {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-4 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by trip ID, DR#, partner…" className="pl-10" />
-          </div>
-          <Select value={partnerFilter} onValueChange={setPartnerFilter}>
-            <SelectTrigger className="w-52"><SelectValue placeholder="All Partners" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Partners</SelectItem>
-              {partners.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={payoutFilter} onValueChange={(v: any) => setPayoutFilter(v)}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="All Statuses" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by trip ID, DR#, partner…" className="pl-10" />
+        </div>
+        <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+          <SelectTrigger className="w-52"><SelectValue placeholder="All Partners" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Partners</SelectItem>
+            {partners.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={payoutFilter} onValueChange={(v: any) => setPayoutFilter(v)}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Per-partner sections */}
       {partners
@@ -195,7 +193,7 @@ export default function PayablesPage() {
                     {pRows.map((t) => {
                       const payout = computePayout(t.distanceKm, p.defaultRate, p.ratePerKm);
                       return (
-                        <tr key={t.id} className="border-b border-brand-border/60 hover:bg-gray-50">
+                        <tr key={t.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                           <td className="py-3 px-4 font-mono text-xs font-bold text-brand-teal">{t.id}</td>
                           <td className="py-3 px-4 font-mono text-xs text-muted-foreground">{t.documentNo ?? "—"}</td>
                           <td className="py-3 px-4 text-xs text-muted-foreground max-w-[180px] truncate">

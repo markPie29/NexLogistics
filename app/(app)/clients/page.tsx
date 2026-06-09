@@ -121,7 +121,7 @@ function ClientView() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50/60 transition-colors">
+                  <tr key={t.id} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                     <td className="py-3.5 px-5 font-bold text-brand-navy">{t.id}</td>
                     <td className="py-3.5 px-5">
                       <div className="flex items-center gap-1 text-xs"><MapPin className="w-3 h-3 text-emerald-500 shrink-0" /><span className="truncate max-w-[120px]">{t.pickup.address}</span></div>

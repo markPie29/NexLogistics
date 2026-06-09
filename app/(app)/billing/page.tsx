@@ -198,7 +198,7 @@ export default function BillingOverviewPage() {
                 </thead>
                 <tbody>
                   {filtered.map((inv) => (
-                    <tr key={inv.id} className="border-b border-brand-border/60 hover:bg-gray-50 transition-colors">
+                    <tr key={inv.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                       <td className="py-3 px-4">
                         <Link href={`/billing/invoices?id=${inv.id}`} className="font-bold text-brand-teal hover:underline">
                           {inv.invoiceNumber}
@@ -355,7 +355,7 @@ export default function BillingOverviewPage() {
               </thead>
               <tbody>
                 {topCustomers.map((c) => (
-                  <tr key={c.name} className="border-b border-brand-border/40 hover:bg-gray-50 transition">
+                  <tr key={c.name} className="border-b border-brand-border/40 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                     <td className="py-3 px-4 font-medium text-brand-navy">{c.name}</td>
                     <td className="py-3 px-4 text-right font-bold text-red-500">{formatCurrency(c.amount)}</td>
                   </tr>

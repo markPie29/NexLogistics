@@ -203,7 +203,7 @@ export default function CompanyAdminPage() {
                 {DEMO_USERS.map((u) => {
                   const style = ROLE_STYLES[u.role] || ROLE_STYLES.driver;
                   return (
-                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={u.id} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-brand-navy text-white font-bold text-xs flex items-center justify-center shrink-0">

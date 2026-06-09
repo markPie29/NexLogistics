@@ -115,7 +115,7 @@ export default function ApprovalsPage() {
                 const partner = partners.find((p) => p.id === t.partnerId);
                 const client  = clients.find((c) => c.id === t.clientId);
                 return (
-                  <tr key={t.id} className="border-b border-brand-border/60 hover:bg-gray-50">
+                  <tr key={t.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                     <td className="py-3 px-4 font-mono text-xs">
                       <Link href={`/trips/${t.id}`} className="text-brand-teal font-semibold hover:underline">{t.id}</Link>
                     </td>

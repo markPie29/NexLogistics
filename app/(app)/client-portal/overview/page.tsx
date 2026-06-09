@@ -60,7 +60,7 @@ export default function ClientPortalOverviewPage() {
               </thead>
               <tbody>
                 {shipments.slice(0, 4).map((s) => (
-                  <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50/60">
+                  <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                     <td className="py-3 px-4 font-semibold text-[#0B1220]">{s.trackingNumber}</td>
                     <td className="py-3 px-4 text-gray-600">{s.origin}{" -> "}{s.destination}</td>
                     <td className="py-3 px-4"><StatusBadge status={s.status} /></td>

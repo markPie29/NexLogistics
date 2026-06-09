@@ -394,7 +394,7 @@ export default function PayrollPeriodDetailPage() {
                 const roleBadge = isOffice ? "Office" : isHelper ? "Helper" : "Driver";
                 const roleVariant = isOffice ? "neutral" : isHelper ? "purple" : "info";
                 return (
-                  <tr key={s.id} className="border-b border-brand-border/60 hover:bg-gray-50 group">
+                  <tr key={s.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors group">
                     <td className="py-3 px-4">
                       <div className="font-medium text-brand-navy">{empName}</div>
                       <div className="text-[10px] text-muted-foreground">{empSub}</div>
