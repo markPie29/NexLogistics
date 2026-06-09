@@ -56,7 +56,7 @@ const config: Config = {
           navy: "#0B1220",
           "navy-light": "#172033",
           gray: "#333333",
-          "bg": "#F5F7FA",
+          "bg": "#FFFFFF",
           "border": "#E5E7EB",
         },
         status: {

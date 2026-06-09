@@ -39,7 +39,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Platform-admin with no session: render bare so the login gate shows without sidebar
   if (pathname === "/platform-admin" && !user) {
     return (
-      <div className="min-h-screen bg-brand-bg">
+      <div className="min-h-screen bg-white">
         <main className="p-6">{children}</main>
       </div>
     );
@@ -47,7 +47,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-brand-bg">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-sm text-muted-foreground">Loading workspace…</div>
       </div>
     );
@@ -73,7 +73,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg dark:bg-background">
+    <div className="min-h-screen bg-white dark:bg-background">
       <Sidebar />
       <div className={cn("transition-[padding] duration-300", collapsed ? "pl-[78px]" : "pl-[260px]")}>
         <Topbar />
