@@ -23,6 +23,9 @@ import {
   LifeBuoy,
   BarChart3,
   Handshake,
+  Wallet,
+  Settings,
+  User,
 } from "lucide-react";
 
 const GROUPS: Array<{ key: "operations" | "finance" | "customer" | "reports" | "others"; label: string }> = [
@@ -96,8 +99,9 @@ export function Sidebar() {
                   const isBilling = item.href === "/billing";
                   const isDocuments = item.href === "/documents";
                   const isClientPortal = item.href === "/client-portal";
+                  const isPartnerPortal = item.href === "/partner-portal";
                   const active =
-                    pathname === item.href || (item.href !== "/dashboard" && !isBilling && !isDocuments && !isClientPortal && pathname.startsWith(item.href));
+                    pathname === item.href || (item.href !== "/dashboard" && !isBilling && !isDocuments && !isClientPortal && !isPartnerPortal && pathname.startsWith(item.href));
 
                   return (
                     <li key={item.href}>
@@ -107,6 +111,8 @@ export function Sidebar() {
                         <ExpandableNav collapsed={collapsed} pathname={pathname} item={item} childrenItems={DOCUMENTS_CHILDREN} basePath="/documents" />
                       ) : isClientPortal ? (
                         <ExpandableNav collapsed={collapsed} pathname={pathname} item={item} childrenItems={CLIENT_PORTAL_CHILDREN} basePath="/client-portal" />
+                      ) : isPartnerPortal ? (
+                        <ExpandableNav collapsed={collapsed} pathname={pathname} item={item} childrenItems={PARTNER_PORTAL_CHILDREN} basePath="/partner-portal" />
                       ) : (
                         <Link
                           href={item.href}
@@ -229,6 +235,15 @@ const CLIENT_PORTAL_CHILDREN = [
   { label: "Invoices", href: "/client-portal/invoices", icon: Receipt },
   { label: "Tickets & Support", href: "/client-portal/support", icon: LifeBuoy },
   { label: "Reports", href: "/client-portal/reports", icon: BarChart3 },
+];
+
+const PARTNER_PORTAL_CHILDREN = [
+  { label: "Overview", href: "/partner-portal/overview", icon: LayoutGrid },
+  { label: "My Trips", href: "/partner-portal/trips", icon: Truck },
+  { label: "Requests", href: "/partner-portal/requests", icon: Receipt },
+  { label: "Earnings", href: "/partner-portal/earnings", icon: Wallet },
+  { label: "Profile", href: "/partner-portal/profile", icon: User },
+  { label: "Settings", href: "/partner-portal/settings", icon: Settings },
 ];
 
 function ExpandableNav({ collapsed, pathname, item, childrenItems, basePath }: { collapsed: boolean; pathname: string; item: any; childrenItems: any[]; basePath: string }) {

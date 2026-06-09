@@ -60,6 +60,15 @@ export const seedUsers: User[] = [
     phone: "(02) 8888 1100",
     clientId: "c-001",
   },
+  {
+    id: "u-008",
+    name: "Northbound Trucking",
+    email: "partner@nexlogistics.demo",
+    role: "partner",
+    _demoPassword: "Partner123!",
+    phone: "0917 234 5678",
+    partnerId: "ptn-001",
+  },
   // ⚠️  PLATFORM OWNER — not shown in login UI, accessed via direct email login only
   {
     id: "u-999",

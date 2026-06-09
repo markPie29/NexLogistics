@@ -58,6 +58,9 @@ export const NAV_ITEMS: NavItem[] = [
   // === Client-specific ===
   { label: "Client Portal", href: "/client-portal", icon: Briefcase, group: "customer", roles: ["client"], featureKey: "client_portal" },
 
+  // === Partner-specific ===
+  { label: "Partner Portal", href: "/partner-portal", icon: Handshake, group: "customer", roles: ["partner"] },
+
   // === Customer ===
   { label: "Client Management", href: "/clients", icon: Briefcase, group: "customer", roles: ["super_admin", "company_admin"], featureKey: "client_management" },
 
@@ -98,6 +101,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   helper: "Helper",
   accounting: "Accounting / HR",
   client: "Client / Customer",
+  partner: "Subcon Partner",
 };
 
 export function navForRole(role: Role | undefined) {
@@ -114,4 +118,5 @@ export const DEFAULT_LANDING: Record<Role, string> = {
   helper: "/helper",
   accounting: "/accounting",
   client: "/client-portal/overview",
+  partner: "/partner-portal/overview",
 };

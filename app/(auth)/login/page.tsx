@@ -12,6 +12,7 @@ import {
   ArrowRight,
   Rocket,
   User,
+  Handshake,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/lib/store/auth";
@@ -118,6 +119,18 @@ const ROLE_CARDS: RoleCard[] = [
     accent: "text-teal-700",
     iconBg: "bg-brand-teal-light ring-1 ring-brand-teal/40",
   },
+  {
+    role: "partner",
+    number: 8,
+    title: "SUBCON PARTNER",
+    subtitle: "Partner portal access",
+    description: "View assigned trips, submit requests, track earnings, payouts and manage company profile.",
+    email: "partner@nexlogistics.demo",
+    demoPassword: "Partner123!",
+    icon: Handshake,
+    accent: "text-rose-700",
+    iconBg: "bg-rose-50 ring-1 ring-rose-200",
+  },
 ];
 
 const QUICK_ACCESS = [
@@ -128,6 +141,7 @@ const QUICK_ACCESS = [
   { role: "helper", label: "Helper", code: "Helper123!", icon: UsersIcon, color: "bg-cyan-500/15 text-cyan-300" },
   { role: "accounting", label: "Accounting / HR", code: "Finance123!", icon: Calculator, color: "bg-orange-500/15 text-orange-300" },
   { role: "client", label: "Client Portal", code: "Client123!", icon: UsersIcon, color: "bg-brand-teal/20 text-brand-teal" },
+  { role: "partner", label: "Subcon Partner", code: "Partner123!", icon: Handshake, color: "bg-rose-500/15 text-rose-300" },
 ] as const;
 
 export default function LoginPage() {
