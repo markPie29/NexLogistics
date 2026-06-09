@@ -183,7 +183,7 @@ export default function BillingOverviewPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
+                  <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                     <th className="py-3 px-4 font-medium">Invoice #</th>
                     <th className="py-3 px-4 font-medium">Customer</th>
                     <th className="py-3 px-4 font-medium">Reference / PO #</th>
@@ -348,7 +348,7 @@ export default function BillingOverviewPage() {
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase text-muted-foreground border-b bg-gray-50/50">
+                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                   <th className="py-2.5 px-4 font-medium">Customer</th>
                   <th className="py-2.5 px-4 font-medium text-right">Outstanding Amount</th>
                 </tr>

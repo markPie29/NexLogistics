@@ -191,7 +191,7 @@ export default function CompanyAdminPage() {
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-gray-100 bg-gray-50/50">
+                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                   <th className="py-3 px-5 font-semibold">User</th>
                   <th className="py-3 px-5 font-semibold">Contact</th>
                   <th className="py-3 px-5 font-semibold">Role</th>

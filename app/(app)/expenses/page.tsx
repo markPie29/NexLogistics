@@ -316,7 +316,7 @@ export default function ExpensesPage() {
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
               <table className="w-full text-xs xl:text-sm text-brand-navy min-w-[900px]">
-                <thead className="text-left text-muted-foreground border-b border-brand-border bg-gray-50/80 font-medium text-[11px] xl:text-xs">
+                <thead className="text-left text-muted-foreground border-b border-brand-border dark:border-white/10 font-medium text-[11px] xl:text-xs uppercase tracking-wider">
                   <tr>
                     <th className="py-3 px-4 font-semibold">Date & Time</th>
                     <th className="py-3 px-4 font-semibold">Type</th>

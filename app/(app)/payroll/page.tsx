@@ -233,7 +233,7 @@ export default function PayrollHubPage() {
                 <CardContent className="p-0 overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/60">
+                      <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                         <th className="py-3 px-4 font-medium">Period</th>
                         <th className="py-3 px-4 font-medium">Date Range</th>
                         <th className="py-3 px-4 font-medium text-right">Employees</th>
@@ -635,7 +635,7 @@ function TripRatesTab() {
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/60">
+              <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                 <th className="py-3 px-4 font-medium">Rate Name</th>
                 <th className="py-3 px-4 font-medium">Vehicle</th>
                 <th className="py-3 px-4 font-medium">Route</th>
@@ -721,7 +721,7 @@ function PayProfilesTab() {
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/60">
+              <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                 <th className="py-3 px-4 font-medium">Employee</th>
                 <th className="py-3 px-4 font-medium">Role</th>
                 <th className="py-3 px-4 font-medium">Payroll Mode</th>
@@ -789,7 +789,7 @@ function OfficeStaffTab() {
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/60">
+              <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                 <th className="py-3 px-4 font-medium">Employee</th>
                 <th className="py-3 px-4 font-medium">Department</th>
                 <th className="py-3 px-4 font-medium">Position</th>

@@ -125,7 +125,7 @@ export default function FleetPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
+                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                   <th className="py-3 px-4 font-medium">Vehicle</th>
                   <th className="py-3 px-4 font-medium">Type</th>
                   <th className="py-3 px-4 font-medium">Assigned Driver</th>

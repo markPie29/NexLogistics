@@ -168,17 +168,17 @@ export default function RecurringInvoicesPage() {
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="border-b border-brand-border dark:border-white/10">
                     <tr>
-                      <th className="text-left px-6 py-3 font-semibold text-xs text-gray-600 uppercase tracking-wider">Invoice Name</th>
-                      <th className="text-left px-6 py-3 font-semibold text-xs text-gray-600 uppercase tracking-wider">Customer</th>
-                      <th className="text-left px-6 py-3 font-semibold text-xs text-gray-600 uppercase tracking-wider">Reference</th>
-                      <th className="text-left px-6 py-3 font-semibold text-xs text-gray-600 uppercase tracking-wider">Frequency</th>
-                      <th className="text-left px-6 py-3 font-semibold text-xs text-gray-600 uppercase tracking-wider">Next Invoice Date</th>
-                      <th className="text-left px-6 py-3 font-semibold text-xs text-gray-600 uppercase tracking-wider">Last Invoice Date</th>
-                      <th className="text-left px-6 py-3 font-semibold text-xs text-gray-600 uppercase tracking-wider">Status</th>
-                      <th className="text-right px-6 py-3 font-semibold text-xs text-gray-600 uppercase tracking-wider">Next Amount</th>
-                      <th className="text-center px-6 py-3 font-semibold text-xs text-gray-600 uppercase tracking-wider">Actions</th>
+                      <th className="text-left px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Invoice Name</th>
+                      <th className="text-left px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Customer</th>
+                      <th className="text-left px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Reference</th>
+                      <th className="text-left px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Frequency</th>
+                      <th className="text-left px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Next Invoice Date</th>
+                      <th className="text-left px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Last Invoice Date</th>
+                      <th className="text-left px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Status</th>
+                      <th className="text-right px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Next Amount</th>
+                      <th className="text-center px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">

@@ -159,7 +159,7 @@ export function PmsDataTable({
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm" aria-label="Maintenance records table">
           <thead>
-            <tr className="border-b border-brand-border bg-gray-50/60 dark:bg-white/[0.03]">
+            <tr className="border-b border-brand-border dark:border-white/10">
               {/* Select-all checkbox */}
               <th scope="col" className="w-10 px-3 py-3">
                 <Checkbox
@@ -172,7 +172,7 @@ export function PmsDataTable({
                 <th
                   key={col.key}
                   scope="col"
-                  className="px-3 py-3 text-left font-medium text-brand-gray dark:text-gray-300 whitespace-nowrap"
+                  className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground whitespace-nowrap"
                 >
                   {col.sortable ? (
                     <button
@@ -197,7 +197,7 @@ export function PmsDataTable({
                   )}
                 </th>
               ))}
-              <th scope="col" className="px-3 py-3 text-right font-medium text-brand-gray dark:text-gray-300">
+              <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Actions
               </th>
             </tr>

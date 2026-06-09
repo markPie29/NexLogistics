@@ -78,7 +78,7 @@ export default function BillingCustomersPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
+                  <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                     <th className="py-3 px-4 font-medium">Customer</th>
                     <th className="py-3 px-4 font-medium">Industry</th>
                     <th className="py-3 px-4 font-medium text-center">Invoices</th>

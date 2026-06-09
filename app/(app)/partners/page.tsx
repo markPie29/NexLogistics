@@ -220,7 +220,7 @@ export default function PartnersPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
+                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                   <th className="py-3 px-3">Date</th>
                   <th className="py-3 px-3">Partner</th>
                   <th className="py-3 px-3">Type</th>

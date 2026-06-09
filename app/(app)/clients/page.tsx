@@ -109,7 +109,7 @@ function ClientView() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-gray-100 bg-gray-50/50">
+                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                   <th className="py-3 px-5 font-semibold">Trip ID</th>
                   <th className="py-3 px-5 font-semibold">Route</th>
                   <th className="py-3 px-5 font-semibold">Schedule</th>

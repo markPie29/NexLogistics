@@ -14,8 +14,8 @@ const buttonVariants = cva(
         primary:
           "bg-brand-navy text-white hover:bg-brand-navy-light shadow-sm",
         outline:
-          "border border-brand-border bg-white text-brand-gray hover:bg-gray-50",
-        ghost: "hover:bg-gray-100 text-brand-gray",
+          "border border-brand-border bg-white text-brand-gray hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-foreground dark:hover:bg-white/10",
+        ghost: "hover:bg-gray-100 text-brand-gray dark:hover:bg-white/10 dark:text-foreground",
         destructive: "bg-status-danger text-white hover:bg-red-600",
         secondary:
           "bg-brand-teal-light text-brand-teal-dark hover:bg-brand-teal/20",

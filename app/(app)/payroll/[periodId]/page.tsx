@@ -359,7 +359,7 @@ export default function PayrollPeriodDetailPage() {
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
+              <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                 <th className="py-3 px-4 font-medium">Employee</th>
                 <th className="py-3 px-4 font-medium">Role</th>
                 <th className="py-3 px-4 font-medium">Mode</th>
@@ -616,8 +616,8 @@ export default function PayrollPeriodDetailPage() {
                       </h4>
                       <div className="border border-brand-border rounded-lg overflow-hidden">
                         <table className="w-full text-xs">
-                          <thead className="bg-gray-50">
-                            <tr>
+                          <thead className="border-b border-brand-border dark:border-white/10">
+                            <tr className="text-xs uppercase tracking-wider text-muted-foreground">
                               <th className="text-left py-2 px-3 font-medium">Trip ID</th>
                               <th className="text-left py-2 px-3 font-medium">Route</th>
                               <th className="text-right py-2 px-3 font-medium">Amount</th>

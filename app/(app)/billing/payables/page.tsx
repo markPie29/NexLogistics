@@ -180,7 +180,7 @@ export default function PayablesPage() {
               <CardContent className="p-0 overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
+                    <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                       <th className="py-3 px-4 font-medium">Trip ID</th>
                       <th className="py-3 px-4 font-medium">DR#</th>
                       <th className="py-3 px-4 font-medium">Route</th>

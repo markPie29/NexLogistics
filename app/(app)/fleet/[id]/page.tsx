@@ -82,7 +82,7 @@ export default function VehicleDetailPage() {
         <TabsContent value="maintenance">
           <Card><CardContent className="p-0">
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50">
+              <thead><tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                 <th className="py-3 px-4">Type</th><th className="py-3 px-4">Due</th><th className="py-3 px-4">Cost</th><th className="py-3 px-4">Status</th>
               </tr></thead>
               <tbody>
@@ -103,7 +103,7 @@ export default function VehicleDetailPage() {
         <TabsContent value="expenses">
           <Card><CardContent className="p-0">
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50">
+              <thead><tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-brand-border dark:border-white/10">
                 <th className="py-3 px-4">Date</th><th className="py-3 px-4">Category</th><th className="py-3 px-4">Vendor</th><th className="py-3 px-4 text-right">Amount</th>
               </tr></thead>
               <tbody>
