@@ -18,6 +18,8 @@ import { PodKpiPanel } from "@/components/pod/PodKpiPanel";
 import { PodFilterBar } from "@/components/pod/PodFilterBar";
 import { PodDataTable } from "@/components/pod/PodDataTable";
 import { PodDetailDrawer } from "@/components/pod/PodDetailDrawer";
+import { PodCaptureModal } from "@/components/pod/PodCaptureModal";
+import type { CaptureData } from "@/components/pod/PodCaptureModal";
 import { cn } from "@/lib/utils";
 import {
   computePodKpis,
@@ -27,6 +29,7 @@ import {
   sortPodRows,
   resolveDriverName,
 } from "@/lib/utils/pod-helpers";
+import { usePodStore, useTripStore } from "@/lib/store";
 import type { Trip, ProofOfDelivery, Driver } from "@/lib/types";
 
 interface PodAdminViewProps {
@@ -46,6 +49,12 @@ export function PodAdminView({ trips, pods, drivers }: PodAdminViewProps) {
   const pageSize = 10;
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [selectedPodId, setSelectedPodId] = React.useState<string | null>(null);
+  const [captureModalOpen, setCaptureModalOpen] = React.useState(false);
+  const [captureTripId, setCaptureTripId] = React.useState<string | null>(null);
+
+  // Store actions for capture
+  const addPod = usePodStore((s) => s.addPod);
+  const setTripStatus = useTripStore((s) => s.setStatus);
 
   // ─── KPI Computation ─────────────────────────────────────────
   const kpis = React.useMemo(() => computePodKpis(trips, pods), [trips, pods]);
@@ -150,6 +159,46 @@ export function PodAdminView({ trips, pods, drivers }: PodAdminViewProps) {
     setSelectedPodId(null);
   }, []);
 
+  // ─── Capture Modal Handlers ──────────────────────────────────
+
+  const captureTrip = React.useMemo(() => {
+    if (!captureTripId) return null;
+    return trips.find((t) => t.id === captureTripId) ?? null;
+  }, [captureTripId, trips]);
+
+  const captureDriverName = React.useMemo(() => {
+    if (!captureTrip) return "Unassigned";
+    return resolveDriverName(captureTrip.driverId, drivers);
+  }, [captureTrip, drivers]);
+
+  const handleOpenCapture = React.useCallback((tripId: string) => {
+    setCaptureTripId(tripId);
+    setCaptureModalOpen(true);
+  }, []);
+
+  const handleCaptureModalClose = React.useCallback(() => {
+    setCaptureModalOpen(false);
+    setCaptureTripId(null);
+  }, []);
+
+  const handleConfirmCapture = React.useCallback((tripId: string, data: CaptureData) => {
+    // Add POD to store
+    addPod({
+      tripId,
+      receiverName: data.receiverName,
+      receiverContact: data.receiverContact,
+      signatureDataUrl: data.signatureDataUrl,
+      photoDataUrls: data.photoDataUrls,
+      notes: data.notes,
+      gps: data.gps,
+    });
+    // Update trip status to completed
+    setTripStatus(tripId, "completed", "admin", "POD captured via modal");
+    // Close modal
+    setCaptureModalOpen(false);
+    setCaptureTripId(null);
+  }, [addPod, setTripStatus]);
+
   // ─── Render ──────────────────────────────────────────────────
   return (
     <div className={cn("space-y-6 min-w-0 overflow-hidden dark:bg-brand-navy")}>
@@ -189,6 +238,7 @@ export function PodAdminView({ trips, pods, drivers }: PodAdminViewProps) {
         pageSize={pageSize}
         onPageChange={handlePageChange}
         onViewPod={handleViewPod}
+        onCapture={handleOpenCapture}
       />
 
       <PodDetailDrawer
@@ -196,6 +246,14 @@ export function PodAdminView({ trips, pods, drivers }: PodAdminViewProps) {
         pod={selectedPod}
         tripId={selectedTripId}
         onClose={handleDrawerClose}
+      />
+
+      <PodCaptureModal
+        open={captureModalOpen}
+        trip={captureTrip}
+        driverName={captureDriverName}
+        onClose={handleCaptureModalClose}
+        onConfirmCapture={handleConfirmCapture}
       />
     </div>
   );

@@ -9,7 +9,6 @@
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.8, 4.9, 4.10, 9.2, 9.6, 11.1, 11.2, 11.5, 11.8
  */
 
-import Link from "next/link";
 import {
   ClipboardCheck,
   ChevronLeft,
@@ -41,6 +40,7 @@ interface PodDataTableProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onViewPod: (podId: string) => void;
+  onCapture?: (tripId: string) => void;
 }
 
 function truncate(text: string, maxLength: number): string {
@@ -60,6 +60,7 @@ export function PodDataTable({
   pageSize,
   onPageChange,
   onViewPod,
+  onCapture,
 }: PodDataTableProps) {
   const records = activeTab === "awaiting" ? awaitingRecords : capturedRecords;
   const totalCount = records.length;
@@ -167,8 +168,13 @@ export function PodDataTable({
                           <Badge variant="warning">Awaiting POD</Badge>
                         </td>
                         <td className="px-3 py-3">
-                          <Button variant="link" size="sm" asChild>
-                            <Link href={`/pod/${row.tripId}`}>Capture</Link>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => onCapture?.(row.tripId)}
+                            aria-label={`Capture POD for Trip ${row.tripId}`}
+                          >
+                            Capture
                           </Button>
                         </td>
                       </tr>
@@ -180,7 +186,7 @@ export function PodDataTable({
               {/* Mobile card layout */}
               <div className="md:hidden space-y-3">
                 {(pageRows as AwaitingPodRow[]).map((row) => (
-                  <MobileAwaitingCard key={row.tripId} row={row} />
+                  <MobileAwaitingCard key={row.tripId} row={row} onCapture={onCapture} />
                 ))}
               </div>
             </>
@@ -394,7 +400,7 @@ function EmptyState() {
   );
 }
 
-function MobileAwaitingCard({ row }: { row: AwaitingPodRow }) {
+function MobileAwaitingCard({ row, onCapture }: { row: AwaitingPodRow; onCapture?: (tripId: string) => void }) {
   return (
     <div className="rounded-xl border border-brand-border dark:border-gray-700 bg-white dark:bg-brand-navy-light p-4 min-w-0">
       <div className="flex items-center justify-between mb-2 gap-2">
@@ -409,8 +415,13 @@ function MobileAwaitingCard({ row }: { row: AwaitingPodRow }) {
       <p className="text-xs text-muted-foreground mb-3">
         {formatDeliveryDate(row.deliveryDate)}
       </p>
-      <Button variant="default" size="sm" asChild className="w-full min-h-[44px]">
-        <Link href={`/pod/${row.tripId}`}>Capture</Link>
+      <Button
+        variant="default"
+        size="sm"
+        className="w-full min-h-[44px]"
+        onClick={() => onCapture?.(row.tripId)}
+      >
+        Capture
       </Button>
     </div>
   );
