@@ -20,14 +20,14 @@ export function PageHeader({ title, subtitle, breadcrumbs, actions }: PageHeader
                 {b.href ? (
                   <Link href={b.href} className="hover:text-brand-teal">{b.label}</Link>
                 ) : (
-                  <span className="text-brand-gray font-medium">{b.label}</span>
+                  <span className="text-brand-gray font-medium dark:text-gray-300">{b.label}</span>
                 )}
                 {i < breadcrumbs.length - 1 && <ChevronRight className="w-3 h-3" />}
               </span>
             ))}
           </div>
         )}
-        <h1 className="text-2xl md:text-3xl font-extrabold text-brand-navy tracking-tight">{title}</h1>
+        <h1 className="text-2xl md:text-3xl font-extrabold text-brand-navy tracking-tight dark:text-white">{title}</h1>
         {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
