@@ -1,105 +1,380 @@
 "use client";
-import { useMemo, useState } from "react";
-import { Wrench, AlertTriangle, Clock, CheckCircle2, Plus, Search } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { KpiCard } from "@/components/dashboard/KpiCard";
-import { useMaintenanceStore, useFleetStore } from "@/lib/store";
-import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useMaintenanceStore, useFleetStore } from "@/lib/store";
+import { filterRecords, sortRecords, paginateRecords } from "@/lib/services/pms-filters";
+import { exportPmsReport, generateCsv } from "@/lib/services/pms-export";
 import { toast } from "sonner";
 
-const STATUS_VARIANT: Record<string, any> = { overdue: "danger", due_soon: "warning", upcoming: "info", completed: "success" };
+import { PmsKpiPanel } from "@/components/pms/PmsKpiPanel";
+import { PmsAlertBanner } from "@/components/pms/PmsAlertBanner";
+import { PmsToolbar } from "@/components/pms/PmsToolbar";
+import { PmsBulkActionToolbar } from "@/components/pms/PmsBulkActionToolbar";
+import { PmsDataTable } from "@/components/pms/PmsDataTable";
+import { PmsCalendarView } from "@/components/pms/PmsCalendarView";
+import { PmsScheduleModal } from "@/components/pms/PmsScheduleModal";
+import { PmsVehicleHistoryPanel } from "@/components/pms/PmsVehicleHistoryPanel";
+import { PmsCostAnalytics } from "@/components/pms/PmsCostAnalytics";
+import { PmsRecordDetailModal } from "@/components/pms/PmsRecordDetailModal";
+
+import type { MaintenanceRecord, MaintenanceStatus } from "@/lib/types";
+import type { PmsSort } from "@/lib/services/pms-types";
+
+// ─── Session storage helpers ─────────────────────────────────────────────────
+
+function getSessionBoolean(key: string, defaultValue: boolean): boolean {
+  if (typeof window === "undefined") return defaultValue;
+  const stored = sessionStorage.getItem(key);
+  if (stored === null) return defaultValue;
+  return stored === "true";
+}
+
+// ─── Page Component ──────────────────────────────────────────────────────────
 
 export default function PmsPage() {
+  // ── Global store data ────────────────────────────────────────────────────
   const records = useMaintenanceStore((s) => s.records);
+  const addRecord = useMaintenanceStore((s) => s.addRecord);
   const updateRecord = useMaintenanceStore((s) => s.updateRecord);
+  const deleteRecord = useMaintenanceStore((s) => s.deleteRecord);
   const vehicles = useFleetStore((s) => s.vehicles);
+
+  // ── Local UI state ───────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<MaintenanceStatus[]>([]);
+  const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({});
+  const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
+  const [sortColumn, setSortColumn] = useState<PmsSort["column"]>("dueDate");
+  const [sortDirection, setSortDirection] = useState<PmsSort["direction"]>("asc");
+  const [pageSize, setPageSize] = useState<10 | 25 | 50>(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [modalState, setModalState] = useState<{
+    open: boolean;
+    mode: "add" | "edit";
+    record?: MaintenanceRecord;
+  }>({ open: false, mode: "add" });
+  const [vehicleHistoryId, setVehicleHistoryId] = useState<string | null>(null);
+  const [detailRecord, setDetailRecord] = useState<MaintenanceRecord | null>(null);
+  const [alertDismissed, setAlertDismissed] = useState(() => getSessionBoolean("pms-alert-dismissed", false));
+  const [costAnalyticsCollapsed, setCostAnalyticsCollapsed] = useState(() => getSessionBoolean("pms-analytics-collapsed", false));
 
-  const filtered = useMemo(() => records.filter((r) => {
-    if (statusFilter !== "all" && r.status !== statusFilter) return false;
-    if (search) {
-      const v = vehicles.find((x) => x.id === r.vehicleId);
-      if (!`${v?.plate} ${r.type}`.toLowerCase().includes(search.toLowerCase())) return false;
+  // Ref for scrolling to table
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  // ── Derived / memoized data ──────────────────────────────────────────────
+  const filtered = useMemo(
+    () => filterRecords(records, vehicles, { search, statuses: statusFilter, dateRange }),
+    [records, vehicles, search, statusFilter, dateRange]
+  );
+
+  const sorted = useMemo(
+    () => sortRecords(filtered, vehicles, sortColumn, sortDirection),
+    [filtered, vehicles, sortColumn, sortDirection]
+  );
+
+  const paginated = useMemo(
+    () => paginateRecords(sorted, pageSize, currentPage),
+    [sorted, pageSize, currentPage]
+  );
+
+  const overdueRecords = useMemo(
+    () => records.filter((r) => r.status === "overdue"),
+    [records]
+  );
+
+  const vehicleHistoryRecords = useMemo(
+    () => (vehicleHistoryId ? records.filter((r) => r.vehicleId === vehicleHistoryId) : []),
+    [records, vehicleHistoryId]
+  );
+
+  const historyVehicle = useMemo(
+    () => vehicles.find((v) => v.id === vehicleHistoryId),
+    [vehicles, vehicleHistoryId]
+  );
+
+  const detailVehicle = useMemo(
+    () => detailRecord ? vehicles.find((v) => v.id === detailRecord.vehicleId) : undefined,
+    [vehicles, detailRecord]
+  );
+
+  // ── Alert reappear logic ─────────────────────────────────────────────────
+  const prevOverdueCount = useRef(overdueRecords.length);
+  useEffect(() => {
+    if (overdueRecords.length !== prevOverdueCount.current) {
+      setAlertDismissed(false);
+      sessionStorage.setItem("pms-alert-dismissed", "false");
+      prevOverdueCount.current = overdueRecords.length;
     }
-    return true;
-  }), [records, vehicles, search, statusFilter]);
+  }, [overdueRecords.length]);
 
-  const counts = {
-    overdue: records.filter((r) => r.status === "overdue").length,
-    due_soon: records.filter((r) => r.status === "due_soon").length,
-    upcoming: records.filter((r) => r.status === "upcoming").length,
-    completed: records.filter((r) => r.status === "completed").length,
-  };
+  // ── Reset page when filters change ──────────────────────────────────────
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, dateRange, pageSize]);
 
-  const markComplete = (id: string) => {
+  // ── Event handlers ───────────────────────────────────────────────────────
+
+  const handleSort = useCallback((column: string) => {
+    setSortColumn((prev) => {
+      if (prev === column) {
+        setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+      setSortDirection("asc");
+      return column as PmsSort["column"];
+    });
+  }, []);
+
+  const handleBulkMarkComplete = useCallback(() => {
+    const now = new Date().toISOString();
+    selectedIds.forEach((id) => {
+      updateRecord(id, { status: "completed", completedAt: now });
+    });
+    const count = selectedIds.size;
+    setSelectedIds(new Set());
+    toast.success(`${count} record${count > 1 ? "s" : ""} marked as completed`);
+  }, [selectedIds, updateRecord]);
+
+  const handleBulkDelete = useCallback(() => {
+    const count = selectedIds.size;
+    selectedIds.forEach((id) => {
+      deleteRecord(id);
+    });
+    setSelectedIds(new Set());
+    toast.success(`${count} record${count > 1 ? "s" : ""} deleted`);
+  }, [selectedIds, deleteRecord]);
+
+  const handleBulkExport = useCallback(() => {
+    const selectedRecords = records.filter((r) => selectedIds.has(r.id));
+    if (selectedRecords.length === 0) return;
+    const csv = generateCsv(selectedRecords, vehicles);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const filename = `pms-report-${yyyy}-${mm}-${dd}.csv`;
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${selectedRecords.length} record${selectedRecords.length > 1 ? "s" : ""} to CSV`);
+  }, [records, selectedIds, vehicles]);
+
+  const handleExport = useCallback(
+    async (format: "csv" | "pdf") => {
+      if (filtered.length === 0) {
+        toast.info("No records available to export");
+        return;
+      }
+      try {
+        await exportPmsReport({ records: filtered, vehicles, format });
+        toast.success(`Report exported as ${format.toUpperCase()}`);
+      } catch {
+        toast.error("Export could not be completed");
+      }
+    },
+    [filtered, vehicles]
+  );
+
+  const handleAddSubmit = useCallback(
+    (data: Omit<MaintenanceRecord, "id">) => {
+      addRecord(data);
+      setModalState({ open: false, mode: "add" });
+      toast.success("Maintenance schedule added");
+    },
+    [addRecord]
+  );
+
+  const handleEditSubmit = useCallback(
+    (data: Omit<MaintenanceRecord, "id">) => {
+      if (!modalState.record) return;
+      updateRecord(modalState.record.id, data);
+      setModalState({ open: false, mode: "add" });
+      toast.success("Maintenance schedule updated");
+    },
+    [modalState.record, updateRecord]
+  );
+
+  const handleDeleteRecord = useCallback(
+    (id: string) => {
+      deleteRecord(id);
+      toast.success("Record deleted");
+    },
+    [deleteRecord]
+  );
+
+  const handleViewAllOverdue = useCallback(() => {
+    setStatusFilter(["overdue"]);
+    // Scroll to table area
+    setTimeout(() => {
+      tableRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  }, []);
+
+  const handleAlertDismiss = useCallback(() => {
+    setAlertDismissed(true);
+    sessionStorage.setItem("pms-alert-dismissed", "true");
+  }, []);
+
+  const handleCostToggle = useCallback(() => {
+    setCostAnalyticsCollapsed((prev) => {
+      const next = !prev;
+      sessionStorage.setItem("pms-analytics-collapsed", String(next));
+      return next;
+    });
+  }, []);
+
+  const handleVehicleClick = useCallback((vehicleId: string) => {
+    setVehicleHistoryId(vehicleId);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setSearch("");
+    setStatusFilter([]);
+    setDateRange({});
+  }, []);
+
+  const handleEditRecord = useCallback((record: MaintenanceRecord) => {
+    setModalState({ open: true, mode: "edit", record });
+  }, []);
+
+  const handleCalendarEventClick = useCallback((record: MaintenanceRecord) => {
+    setModalState({ open: true, mode: "edit", record });
+  }, []);
+
+  const handleRowClick = useCallback((record: MaintenanceRecord) => {
+    setDetailRecord(record);
+  }, []);
+
+  const handleMarkCompleteSingle = useCallback((id: string) => {
     updateRecord(id, { status: "completed", completedAt: new Date().toISOString() });
     toast.success("Marked as completed");
-  };
+  }, [updateRecord]);
 
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <PageHeader
         title="Preventive Maintenance"
         subtitle="Track service schedules, repairs, and overdue alerts"
         breadcrumbs={[{ label: "Operations" }, { label: "PMS" }]}
-        actions={<Button size="sm"><Plus className="w-4 h-4" /> Add Schedule</Button>}
+        actions={
+          <Button
+            size="sm"
+            onClick={() => setModalState({ open: true, mode: "add", record: undefined })}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Add Schedule
+          </Button>
+        }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4">
-        <KpiCard label="Overdue" value={counts.overdue} icon={AlertTriangle} iconColor="text-red-600" iconBg="bg-red-50" sparklineColor="#EF4444" sparklineData={[1,2,2,3,3,3,3,3]} />
-        <KpiCard label="Due Soon" value={counts.due_soon} icon={Clock} iconColor="text-amber-600" iconBg="bg-amber-50" sparklineColor="#F59E0B" sparklineData={[2,2,3,3,4,4,4,4]} />
-        <KpiCard label="Upcoming" value={counts.upcoming} icon={Wrench} iconColor="text-sky-600" iconBg="bg-sky-50" sparklineColor="#0EA5E9" sparklineData={[5,6,6,7,7,7,7,7]} />
-        <KpiCard label="Completed" value={counts.completed} icon={CheckCircle2} iconColor="text-emerald-600" iconBg="bg-emerald-50" sparklineColor="#10B981" sparklineData={[10,12,15,18,20,22,25,28]} />
+      <PmsKpiPanel records={records} />
+
+      <PmsAlertBanner
+        overdueRecords={overdueRecords}
+        vehicles={vehicles}
+        dismissed={alertDismissed}
+        onDismiss={handleAlertDismiss}
+        onViewAll={handleViewAllOverdue}
+      />
+
+      <PmsToolbar
+        search={search}
+        onSearchChange={setSearch}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onExport={handleExport}
+        filteredCount={filtered.length}
+      />
+
+      {selectedIds.size > 0 && (
+        <PmsBulkActionToolbar
+          selectedCount={selectedIds.size}
+          onMarkComplete={handleBulkMarkComplete}
+          onDelete={handleBulkDelete}
+          onExportSelected={handleBulkExport}
+          onClearSelection={() => setSelectedIds(new Set())}
+        />
+      )}
+
+      <div ref={tableRef}>
+        {viewMode === "table" ? (
+          <PmsDataTable
+            records={paginated.data}
+            vehicles={vehicles}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            pageSize={pageSize}
+            currentPage={currentPage}
+            totalPages={paginated.totalPages}
+            totalCount={paginated.totalCount}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            onEditRecord={handleEditRecord}
+            onDeleteRecord={handleDeleteRecord}
+            onVehicleClick={handleVehicleClick}
+            onRowClick={handleRowClick}
+            onClearFilters={handleClearFilters}
+          />
+        ) : (
+          <PmsCalendarView
+            records={filtered}
+            vehicles={vehicles}
+            onEventClick={handleCalendarEventClick}
+          />
+        )}
       </div>
 
-      <Card><CardContent className="p-4 flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." /></div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {Object.keys(STATUS_VARIANT).map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </CardContent></Card>
+      <PmsCostAnalytics
+        records={records}
+        collapsed={costAnalyticsCollapsed}
+        onToggleCollapse={handleCostToggle}
+      />
 
-      <Card><CardContent className="p-0">
-        <table className="w-full text-sm">
-          <thead><tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
-            <th className="py-3 px-4 font-medium">Vehicle</th>
-            <th className="py-3 px-4 font-medium">Service Type</th>
-            <th className="py-3 px-4 font-medium">Due Date</th>
-            <th className="py-3 px-4 font-medium">Due Odometer</th>
-            <th className="py-3 px-4 font-medium">Cost</th>
-            <th className="py-3 px-4 font-medium">Status</th>
-            <th className="py-3 px-4 font-medium w-32"></th>
-          </tr></thead>
-          <tbody>
-            {filtered.map((r) => {
-              const v = vehicles.find((x) => x.id === r.vehicleId);
-              return (
-                <tr key={r.id} className="border-b border-brand-border/60 hover:bg-gray-50">
-                  <td className="py-3 px-4 font-medium">{v?.plate || r.vehicleId}</td>
-                  <td className="py-3 px-4">{r.type}</td>
-                  <td className="py-3 px-4 text-muted-foreground">{new Date(r.dueDate).toLocaleDateString()}</td>
-                  <td className="py-3 px-4 text-muted-foreground">{r.dueOdometer?.toLocaleString() || "—"}</td>
-                  <td className="py-3 px-4">{r.cost ? formatCurrency(r.cost) : "—"}</td>
-                  <td className="py-3 px-4"><Badge variant={STATUS_VARIANT[r.status]}>{r.status.replace("_", " ")}</Badge></td>
-                  <td className="py-3 px-4">{r.status !== "completed" && <Button size="sm" variant="outline" onClick={() => markComplete(r.id)}>Complete</Button>}</td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No records.</td></tr>}
-          </tbody>
-        </table>
-      </CardContent></Card>
+      <PmsScheduleModal
+        open={modalState.open}
+        mode={modalState.mode}
+        record={modalState.record}
+        vehicles={vehicles}
+        onSubmit={modalState.mode === "edit" ? handleEditSubmit : handleAddSubmit}
+        onClose={() => setModalState({ open: false, mode: "add" })}
+      />
+
+      <PmsVehicleHistoryPanel
+        vehicleId={vehicleHistoryId ?? ""}
+        records={vehicleHistoryRecords}
+        vehicle={historyVehicle}
+        open={vehicleHistoryId !== null}
+        onClose={() => setVehicleHistoryId(null)}
+      />
+
+      <PmsRecordDetailModal
+        record={detailRecord}
+        vehicle={detailVehicle}
+        open={detailRecord !== null}
+        onClose={() => setDetailRecord(null)}
+        onEdit={handleEditRecord}
+        onDelete={handleDeleteRecord}
+        onMarkComplete={handleMarkCompleteSingle}
+      />
     </div>
   );
 }
-

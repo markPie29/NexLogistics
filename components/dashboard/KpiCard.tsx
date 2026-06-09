@@ -45,10 +45,10 @@ export function KpiCard({
     >
       <Tag
         href={href || "#"}
-        className="flex flex-col h-full rounded-2xl border border-brand-border bg-white p-4 xl:p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden"
+        className="flex flex-col h-full rounded-2xl border border-brand-border dark:border-white/10 bg-white dark:bg-brand-navy-light p-4 xl:p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden"
       >
         <div className="flex items-start gap-3">
-          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", iconBg)}>
+          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 dark:bg-white/10", iconBg)}>
             <Icon className={cn("w-5 h-5", iconColor)} />
           </div>
           <div className="flex flex-col min-w-0 flex-1 overflow-hidden">

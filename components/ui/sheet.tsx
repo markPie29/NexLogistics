@@ -25,7 +25,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = "SheetOverlay";
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-white p-6 shadow-xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500 overflow-y-auto scrollbar-thin",
+  "fixed z-50 gap-4 bg-white dark:bg-brand-navy-light p-6 shadow-xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500 overflow-y-auto scrollbar-thin",
   {
     variants: {
       side: {
@@ -33,7 +33,7 @@ const sheetVariants = cva(
         bottom: "inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
         right:
-          "inset-y-0 right-0 h-full w-3/4 border-l border-brand-border data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-md md:max-w-lg",
+          "inset-y-0 right-0 h-full w-3/4 border-l border-brand-border dark:border-white/10 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-md md:max-w-lg",
       },
     },
     defaultVariants: { side: "right" },
@@ -71,7 +71,7 @@ export const SheetTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title ref={ref} className={cn("text-lg font-semibold text-brand-navy", className)} {...props} />
+  <DialogPrimitive.Title ref={ref} className={cn("text-lg font-semibold text-brand-navy dark:text-white", className)} {...props} />
 ));
 SheetTitle.displayName = "SheetTitle";
 export const SheetDescription = React.forwardRef<
