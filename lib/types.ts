@@ -7,7 +7,8 @@ export type Role =
   | "driver"
   | "helper"
   | "accounting"
-  | "client";
+  | "client"
+  | "partner";
 
 export interface User {
   id: string;
@@ -22,6 +23,7 @@ export interface User {
   driverId?: string; // when role is driver
   helperId?: string; // when role is helper
   clientId?: string; // when role is client
+  partnerId?: string; // when role is partner
   isPlatformOwner?: boolean; // hidden: platform-level feature toggle access
 }
 

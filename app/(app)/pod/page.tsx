@@ -1,43 +1,20 @@
 "use client";
-import React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useTripStore, usePodStore, useDriverStore, useUiStore } from "@/lib/store";
+
+import { PodAdminView } from "@/components/pod/PodAdminView";
+import { DriverPodList } from "@/components/pod/DriverPodList";
+import { usePodStore, useTripStore, useDriverStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/store/auth";
-import { PageHeader } from "@/components/layout/PageHeader";
-import {
-  ClipboardCheck, ChevronRight, Camera, CheckCircle2, FileImage, Bell,
-} from "lucide-react";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { DriverNav } from "@/components/driver/DriverNav";
-import { DriverSidebar } from "@/components/driver/DriverSidebar";
 
-export default function PodListPage() {
-  const user    = useAuthStore((s) => s.user);
-  const trips   = useTripStore((s) => s.trips);
-  const pods    = usePodStore((s) => s.pods);
-  const drivers = useDriverStore((s) => s.drivers);
-
-  const needsPod = trips.filter((t) => (t.status === "delivered" || t.status === "completed") && !pods.find((p) => p.tripId === t.id));
-  const captured = trips.filter((t) => pods.find((p) => p.tripId === t.id));
-
-  // ── Driver / Helper mobile view ──
-  if (user?.role === "driver" || user?.role === "helper") {
-    return <DriverPodList user={user} trips={trips} pods={pods} drivers={drivers} needsPod={needsPod} captured={captured} />;
-  }
-
-  // ── Admin / dispatcher view (unchanged) ──
+// ─── Loading Skeleton ─────────────────────────────────────────
+function PodLoadingSkeleton() {
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Proof of Delivery"
-        subtitle="Capture signatures, photos, and receiver confirmations"
-        breadcrumbs={[{ label: "Operations" }, { label: "POD" }]}
-      />
+    <div className="space-y-6 animate-pulse">
+      {/* PageHeader skeleton */}
+      <div className="space-y-2">
+        <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-4 w-80 bg-gray-200 dark:bg-gray-700 rounded" />
+      </div>
 
       <Card>
         <CardContent className="p-4">
@@ -283,13 +260,11 @@ function DriverPodList({ user, trips, pods, drivers, needsPod, captured }: {
         </div>
       </main>
 
-      <DriverNav active={"pod"} />
+  // Driver / Helper → mobile-optimized Driver View
+  if (user?.role === "driver" || user?.role === "helper") {
+    return <DriverPodList user={user} trips={trips} pods={pods} drivers={drivers} />;
+  }
 
-      <DriverSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        active="pod"
-      />
-    </div>
-  );
+  // Super Admin, Company Admin, Dispatcher, or any other role (fallback) → Admin View
+  return <PodAdminView trips={trips} pods={pods} drivers={drivers} />;
 }
