@@ -225,13 +225,6 @@ export function Topbar() {
           </PopoverContent>
         </Popover>
 
-        <button className="relative w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 flex items-center justify-center transition">
-          <Inbox className="w-5 h-5 text-brand-gray dark:text-white/70" />
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-teal text-white text-[10px] font-bold flex items-center justify-center">
-            5
-          </span>
-        </button>
-
         <button onClick={onFullscreen} className="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 flex items-center justify-center transition">
           <Maximize2 className="w-4 h-4 text-brand-gray dark:text-white/70" />
         </button>
