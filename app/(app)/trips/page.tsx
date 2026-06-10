@@ -136,7 +136,7 @@ export default function TripsPage() {
                       <td className="py-3 px-4">{(t.customerName ?? t.consigneeName) || <span className="text-muted-foreground">—</span>}</td>
                       <td className="py-3 px-4">
                         {partner ? (
-                          <span className="inline-flex items-center gap-1 text-brand-navy"><Handshake className="w-3 h-3" /> {partner.name}</span>
+                          <span className="inline-flex items-center gap-1 text-brand-navy dark:text-white"><Handshake className="w-3 h-3" /> {partner.name}</span>
                         ) : (driver?.name || "—")}
                       </td>
                       <td className="py-3 px-4 text-xs font-mono">{vehicle?.plate || (partner ? <span className="text-muted-foreground italic">subcon</span> : "—")}</td>

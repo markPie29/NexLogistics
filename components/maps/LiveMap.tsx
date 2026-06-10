@@ -113,12 +113,12 @@ export default function LiveMap({ height = 320, showLegend = true, zoom = 11 }: 
   );
 
   return (
-    <div className="relative rounded-xl overflow-hidden border border-brand-border" style={{ height }}>
+    <div className="relative z-0 rounded-xl overflow-hidden border border-brand-border" style={{ height }}>
       <MapContainer
         center={[14.6, 121.0]}
         zoom={zoom}
         scrollWheelZoom={false}
-        style={{ height: "100%", width: "100%" }}
+        style={{ zIndex: 0, height: "100%", width: "100%" }}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -146,7 +146,7 @@ export default function LiveMap({ height = 320, showLegend = true, zoom = 11 }: 
       </MapContainer>
 
       {showLegend && (
-        <div className="absolute bottom-3 left-3 right-3 z-[400] flex items-center justify-between gap-2 bg-white/95 backdrop-blur border border-brand-border rounded-lg px-3 py-2 text-xs shadow-md">
+        <div className="absolute bottom-3 left-3 right-3 z-[400] flex items-center justify-between gap-2 bg-white/95 backdrop-blur border border-brand-border rounded-lg px-3 py-2 text-xs shadow-md dark:bg-slate-900/95 dark:border-0">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Moving <b>{counts.moving}</b></span>
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" /> Idle <b>{counts.idle}</b></span>

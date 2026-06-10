@@ -27,7 +27,7 @@ export function TripSummaryDonut({ data, centerLabel, centerValue }: DonutProps)
         </PieChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <div className="text-3xl font-extrabold text-brand-navy">{centerValue}</div>
+        <div className="text-3xl font-extrabold text-brand-navy dark:text-white">{centerValue}</div>
         <div className="text-xs text-muted-foreground">{centerLabel}</div>
       </div>
     </div>
