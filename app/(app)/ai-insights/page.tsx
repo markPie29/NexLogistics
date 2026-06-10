@@ -34,14 +34,88 @@ const SEVERITY_STYLES: Record<AiInsight["severity"], { bg: string; text: string;
 
 // ─── Suggestion Chips ──────────────────────────────────────────────────────────
 const SUGGESTION_CHIPS = [
-  "📊 How is my fleet performing this quarter?",
-  "⛽ Which trucks have fuel anomalies?",
-  "🚛 Recommend routes for tomorrow's deliveries",
-  "👨‍✈️ Who are my top-performing drivers?",
-  "🔧 What maintenance is overdue?",
-  "💰 What's our profit margin this month?",
-  "⚠️ Any critical alerts right now?",
-  "📈 Show me cost-saving opportunities",
+  "📊 Show fuel efficiency report",
+  "👨‍✈️ Which driver needs attention?",
+  "🚛 Route optimization for today",
+  "🔧 Predict maintenance needs",
+  "💰 Fleet profit analysis",
+  "📈 Cost reduction opportunities",
+  "⚠️ Driver safety scores",
+  "⏱️ Delivery time predictions",
+];
+
+// ─── Pre-loaded Sample Conversation ────────────────────────────────────────────
+function buildPreloadedGreeting(): React.ReactNode {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-brand-navy">Good morning! I&apos;ve completed your overnight fleet analysis. Here&apos;s what I found:</p>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-amber-500">🔧</span>
+          <span><span className="font-bold">3 vehicles</span> need attention</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-emerald-500">⛽</span>
+          <span>Fuel costs are <span className="font-bold text-emerald-600">trending down 4%</span> this week</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-brand-teal">⭐</span>
+          <span>Mark Santos has maintained a <span className="font-bold">96% on-time streak</span></span>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground mt-2">What would you like to explore?</p>
+    </div>
+  );
+}
+
+function buildPreloadedFuelResponse(): React.ReactNode {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-brand-navy font-medium">**Fleet Fuel Analysis (This Quarter)**</p>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">•</span>
+          <span>Average fleet cost: <span className="font-bold text-brand-navy">₱6.2/km</span></span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-emerald-500">•</span>
+          <span>Best performer: <VehicleBadge plate="NEX-109" /> at <span className="font-bold text-emerald-600">₱5.1/km</span></span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-red-500">•</span>
+          <span>Needs attention: <VehicleBadge plate="NEX-104" /> at <span className="font-bold text-red-600">₱7.8/km</span> (+26% above average)</span>
+        </div>
+      </div>
+      <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-100 mt-2">
+        <p className="text-xs font-bold text-amber-800 mb-1">💡 Recommendation:</p>
+        <p className="text-xs text-amber-700">Schedule ECU diagnostic for NEX-104 and consider driver coaching on fuel-efficient driving techniques.</p>
+        <p className="text-xs font-medium text-emerald-700 mt-1">Estimated savings: ₱18,000/month</p>
+      </div>
+    </div>
+  );
+}
+
+const PRELOADED_MESSAGES: ChatMessage[] = [
+  {
+    id: "preload-ai-1",
+    role: "ai",
+    content: "greeting",
+    richContent: buildPreloadedGreeting(),
+    timestamp: new Date(Date.now() - 300000),
+  },
+  {
+    id: "preload-user-1",
+    role: "user",
+    content: "Tell me about fuel efficiency",
+    timestamp: new Date(Date.now() - 240000),
+  },
+  {
+    id: "preload-ai-2",
+    role: "ai",
+    content: "fuel-analysis",
+    richContent: buildPreloadedFuelResponse(),
+    timestamp: new Date(Date.now() - 200000),
+  },
 ];
 
 // ─── Generated Insights (sidebar) ─────────────────────────────────────────────
@@ -74,7 +148,10 @@ function buildFleetResponse(): React.ReactNode {
           <span>Underperformer: <VehicleBadge plate="NEX-108" /> — ₱7,400/trip avg</span>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground mt-2">Fleet is performing 12% above industry average. Consider reassigning NEX-108 to higher-margin corridors.</p>
+      <div className="p-2 bg-sky-50 rounded-lg mt-2">
+        <p className="text-xs font-bold text-sky-800 mb-1">📊 Industry Comparison:</p>
+        <p className="text-xs text-sky-700">Fleet is performing <span className="font-bold">12% above</span> industry average. Consider reassigning NEX-108 to higher-margin corridors for an estimated ₱24,000/month uplift.</p>
+      </div>
     </div>
   );
 }
@@ -99,13 +176,15 @@ function buildFuelResponse(): React.ReactNode {
           <p className="text-xs text-amber-600 mt-1">₱6.9/km consumption rate | Fleet avg: ₱5.8/km</p>
         </div>
       </div>
-      <div className="mt-2">
-        <p className="text-xs font-medium text-brand-navy mb-1">Recommendations:</p>
-        <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+      <div className="mt-2 p-2.5 bg-sky-50 rounded-lg border border-sky-100">
+        <p className="text-xs font-bold text-sky-800 mb-1">💡 Recommendations:</p>
+        <ul className="text-xs text-sky-700 space-y-0.5 list-disc list-inside">
           <li>Schedule ECU diagnostic for both vehicles</li>
           <li>Enroll drivers in fuel efficiency coaching program</li>
           <li>Check tire pressure alignment (contributes to 8% excess)</li>
+          <li>Consider route reassignment to flatter terrain corridors</li>
         </ul>
+        <p className="text-xs font-medium text-emerald-700 mt-1.5">Estimated monthly savings: ₱32,000</p>
       </div>
     </div>
   );
@@ -114,18 +193,22 @@ function buildFuelResponse(): React.ReactNode {
 function buildRouteResponse(): React.ReactNode {
   return (
     <div className="space-y-3">
-      <p className="text-sm text-brand-navy font-medium">🚛 Recommended dispatch schedule for tomorrow:</p>
+      <p className="text-sm text-brand-navy font-medium">🚛 Optimized Route Plan for Today:</p>
       <div className="space-y-1.5">
         <RouteRow time="04:00" route="Manila → Pampanga" trips={3} revenue="₱67,500" />
         <RouteRow time="05:30" route="Cavite → Laguna" trips={2} revenue="₱38,000" />
         <RouteRow time="03:00" route="Batangas → Quezon City" trips={1} revenue="₱19,500" />
       </div>
       <div className="p-2 bg-emerald-50 rounded-lg mt-2">
-        <p className="text-sm font-medium text-emerald-700">Total Estimated Revenue: ₱125,000</p>
+        <p className="text-sm font-medium text-emerald-700">Total Estimated Revenue: <span className="font-bold">₱125,000</span></p>
       </div>
       <div className="p-2 bg-amber-50 rounded-lg flex items-center gap-2">
         <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
         <p className="text-xs text-amber-700">Avoid EDSA corridor 07:00–09:00 (average 38-min delay)</p>
+      </div>
+      <div className="p-2 bg-sky-50 rounded-lg mt-1">
+        <p className="text-xs font-bold text-sky-800 mb-1">⚡ Optimization Applied:</p>
+        <p className="text-xs text-sky-700">By batching Laguna-bound deliveries and shifting Pampanga departures 30 min earlier, estimated <span className="font-bold">₱12,400 savings</span> in fuel and overtime costs.</p>
       </div>
     </div>
   );
@@ -134,7 +217,7 @@ function buildRouteResponse(): React.ReactNode {
 function buildDriverResponse(): React.ReactNode {
   return (
     <div className="space-y-3">
-      <p className="text-sm text-brand-navy font-medium">👨‍✈️ Driver Performance Rankings:</p>
+      <p className="text-sm text-brand-navy font-medium">👨‍✈️ Driver Safety & Performance Scores:</p>
       <div className="space-y-1.5">
         <DriverRow rank={1} name="Mark Santos" onTime="96%" rating="4.8★" status="excellent" />
         <DriverRow rank={2} name="Allan Reyes" onTime="94%" rating="4.6★" status="excellent" />
@@ -143,9 +226,17 @@ function buildDriverResponse(): React.ReactNode {
       <div className="p-2.5 bg-red-50 rounded-lg border border-red-100 mt-2">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
-          <span className="text-sm font-medium text-red-700">Fatigue Alert: Edwin Ramos</span>
+          <span className="text-sm font-medium text-red-700">⚠️ Driver Needing Attention: Edwin Ramos</span>
         </div>
-        <p className="text-xs text-red-600 mt-1">3 consecutive days exceeding 10hr driving time. Mandatory rest period recommended per DOTr compliance.</p>
+        <p className="text-xs text-red-600 mt-1">3 consecutive days exceeding 10hr driving time. Safety score dropped to 72%. Mandatory rest period recommended per DOTr compliance.</p>
+      </div>
+      <div className="p-2 bg-sky-50 rounded-lg mt-1">
+        <p className="text-xs font-bold text-sky-800 mb-1">📋 Action Items:</p>
+        <ul className="text-xs text-sky-700 space-y-0.5 list-disc list-inside">
+          <li>Schedule mandatory rest day for Edwin Ramos (tomorrow)</li>
+          <li>Review overtime policy adherence fleet-wide</li>
+          <li>Consider performance bonus for Mark Santos (3rd consecutive month top rated)</li>
+        </ul>
       </div>
     </div>
   );
@@ -154,21 +245,25 @@ function buildDriverResponse(): React.ReactNode {
 function buildMaintenanceResponse(): React.ReactNode {
   return (
     <div className="space-y-3">
-      <p className="text-sm text-brand-navy font-medium">🔧 Maintenance Status — 3 Critical Items:</p>
+      <p className="text-sm text-brand-navy font-medium">🔧 Predictive Maintenance Report — 3 Critical, 2 Upcoming:</p>
       <div className="space-y-1.5">
-        <MaintenanceRow vehicle="NEX-107" item="Tire replacement" urgency="IMMEDIATE" cost="₱12,800" />
-        <MaintenanceRow vehicle="NEX-104" item="Reefer compressor" urgency="7 days" cost="₱8,400" />
-        <MaintenanceRow vehicle="NEX-110" item="Registration renewal" urgency="14 days" cost="₱10,000" />
+        <MaintenanceRow vehicle="NEX-107" item="Tire replacement (front axle)" urgency="IMMEDIATE" cost="₱12,800" />
+        <MaintenanceRow vehicle="NEX-104" item="Reefer compressor service" urgency="7 days" cost="₱8,400" />
+        <MaintenanceRow vehicle="NEX-110" item="Registration renewal (LTO)" urgency="14 days" cost="₱10,000" />
       </div>
       <div className="p-2 bg-sky-50 rounded-lg mt-2">
         <p className="text-sm text-sky-700">Estimated total cost: <span className="font-bold">₱31,200</span></p>
       </div>
       <div className="mt-2">
-        <p className="text-xs font-medium text-brand-navy mb-1">Upcoming (non-critical):</p>
+        <p className="text-xs font-medium text-brand-navy mb-1">📅 Predicted (next 30 days):</p>
         <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
-          <li><VehicleBadge plate="NEX-102" /> — Brake pad inspection (21 days)</li>
-          <li><VehicleBadge plate="NEX-105" /> — Transmission fluid change (28 days)</li>
+          <li><VehicleBadge plate="NEX-102" /> — Brake pad replacement (est. 21 days)</li>
+          <li><VehicleBadge plate="NEX-105" /> — Transmission fluid change (est. 28 days)</li>
+          <li><VehicleBadge plate="NEX-109" /> — Oil change due at 45,000 km (est. 18 days)</li>
         </ul>
+      </div>
+      <div className="p-2 bg-emerald-50 rounded-lg mt-1">
+        <p className="text-xs text-emerald-700">💡 <span className="font-bold">Tip:</span> Scheduling NEX-107 and NEX-104 together at Manila depot saves ₱2,800 in logistics and downtime costs.</p>
       </div>
     </div>
   );
@@ -177,58 +272,34 @@ function buildMaintenanceResponse(): React.ReactNode {
 function buildProfitResponse(): React.ReactNode {
   return (
     <div className="space-y-3">
-      <p className="text-sm text-brand-navy font-medium">💰 Q2 2026 Financial Summary:</p>
+      <p className="text-sm text-brand-navy font-medium">💰 Fleet Profit Analysis (Q2 2026):</p>
       <div className="grid grid-cols-2 gap-2">
-        <MiniStat label="Revenue" value="₱442,600" color="text-emerald-600" />
-        <MiniStat label="Expenses" value="₱88,430" color="text-red-500" />
+        <MiniStat label="Gross Revenue" value="₱442,600" color="text-emerald-600" />
+        <MiniStat label="Total Expenses" value="₱88,430" color="text-red-500" />
         <MiniStat label="Net Profit" value="₱354,170" color="text-emerald-600" />
-        <MiniStat label="Margin" value="80%" color="text-brand-teal" />
+        <MiniStat label="Profit Margin" value="80%" color="text-brand-teal" />
       </div>
       <div className="space-y-1.5 mt-2">
+        <p className="text-xs font-bold text-brand-navy">Revenue by Corridor:</p>
         <div className="flex items-center gap-2 text-sm">
           <span className="text-emerald-600">▲</span>
-          <span>Top earner: <VehicleBadge plate="NEX-109" /> — ₱38,500/trip</span>
+          <span>Manila–Pampanga: <span className="font-bold">₱187,500</span> (42%)</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-red-500">▼</span>
-          <span>Lowest: <VehicleBadge plate="NEX-108" /> — ₱7,400/trip</span>
+          <span className="text-emerald-600">▲</span>
+          <span>Cavite–Laguna: <span className="font-bold">₱128,000</span> (29%)</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-brand-teal">→</span>
+          <span>Batangas–QC: <span className="font-bold">₱127,100</span> (29%)</span>
         </div>
       </div>
       <div className="p-2 bg-amber-50 rounded-lg mt-2 flex items-center gap-2">
         <Fuel className="w-3.5 h-3.5 text-amber-600" />
-        <p className="text-xs text-amber-700">Fuel accounts for <span className="font-bold">76.7%</span> of total expenses</p>
+        <p className="text-xs text-amber-700">Fuel accounts for <span className="font-bold">76.7%</span> of total expenses (₱67,830)</p>
       </div>
-    </div>
-  );
-}
-
-function buildAlertResponse(): React.ReactNode {
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-brand-navy font-medium">⚠️ Active Alerts — 2 Critical, 3 Warnings:</p>
-      <div className="space-y-2">
-        <div className="p-2.5 bg-red-50 rounded-lg border border-red-200">
-          <div className="flex items-center gap-2">
-            <Badge className="bg-red-600 text-white border-0 text-[10px] px-1.5">CRITICAL</Badge>
-            <span className="text-sm font-medium text-red-700">NEX-107 tire tread below DOTr minimum</span>
-          </div>
-          <p className="text-xs text-red-600 mt-1 ml-[4.5rem]">DISPATCH BLOCKED until replacement</p>
-        </div>
-        <div className="p-2.5 bg-red-50 rounded-lg border border-red-200">
-          <div className="flex items-center gap-2">
-            <Badge className="bg-red-600 text-white border-0 text-[10px] px-1.5">CRITICAL</Badge>
-            <span className="text-sm font-medium text-red-700">Manila→Pampanga 38min avg delay</span>
-          </div>
-          <p className="text-xs text-red-600 mt-1 ml-[4.5rem]">REROUTE NEEDED — suggest NLEX bypass</p>
-        </div>
-      </div>
-      <div className="mt-2">
-        <p className="text-xs font-medium text-amber-700 mb-1">Warnings:</p>
-        <ul className="text-xs text-amber-600 space-y-0.5 list-disc list-inside">
-          <li><VehicleBadge plate="NEX-104" /> fuel consumption spike (+22%)</li>
-          <li>Edwin Ramos fatigue pattern (3 days &gt; 10hr)</li>
-          <li>Overtime costs trending +28% vs. last month</li>
-        </ul>
+      <div className="p-2 bg-sky-50 rounded-lg">
+        <p className="text-xs text-sky-700">💡 <span className="font-bold">Growth opportunity:</span> Adding 1 vehicle on Manila–Pampanga could yield ₱62,500/month additional revenue at current demand levels.</p>
       </div>
     </div>
   );
@@ -237,18 +308,91 @@ function buildAlertResponse(): React.ReactNode {
 function buildCostResponse(): React.ReactNode {
   return (
     <div className="space-y-3">
-      <p className="text-sm text-brand-navy font-medium">📈 Cost-Saving Opportunities Identified:</p>
+      <p className="text-sm text-brand-navy font-medium">📈 Cost Reduction Opportunities Identified:</p>
       <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-100 mb-2">
         <p className="text-sm font-bold text-emerald-700">Total Potential Savings: ₱248K/month</p>
+        <p className="text-xs text-emerald-600 mt-0.5">Based on analysis of 47 trips, 9 vehicles, and 12 drivers</p>
       </div>
       <div className="space-y-1.5">
-        <SavingRow label="Route optimization" amount="₱126K" pct="51%" />
-        <SavingRow label="Fuel efficiency training" amount="₱54K" pct="22%" />
+        <SavingRow label="Route optimization (batch Laguna trips)" amount="₱126K" pct="51%" />
+        <SavingRow label="Fuel efficiency training (3 drivers)" amount="₱54K" pct="22%" />
         <SavingRow label="Batched corridor dispatch" amount="₱38K" pct="15%" />
-        <SavingRow label="Weekend OT reduction" amount="₱30K" pct="12%" />
+        <SavingRow label="Weekend overtime reduction" amount="₱30K" pct="12%" />
       </div>
       <div className="p-2 bg-sky-50 rounded-lg mt-2">
-        <p className="text-xs text-sky-700">ROI timeline: <span className="font-bold">2–4 weeks</span> for full implementation</p>
+        <p className="text-xs font-bold text-sky-800 mb-1">📋 Implementation Plan:</p>
+        <ul className="text-xs text-sky-700 space-y-0.5 list-disc list-inside">
+          <li>Week 1: Implement batched Laguna dispatch (immediate ₱38K/mo)</li>
+          <li>Week 2: Enroll drivers in fuel coaching (₱54K/mo in 30 days)</li>
+          <li>Week 3-4: Route optimization rollout (₱126K/mo full effect)</li>
+        </ul>
+        <p className="text-xs font-medium text-emerald-700 mt-1.5">ROI timeline: <span className="font-bold">2–4 weeks</span> for full implementation</p>
+      </div>
+    </div>
+  );
+}
+
+function buildSafetyResponse(): React.ReactNode {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-brand-navy font-medium">⚠️ Driver Safety Scores (Fleet Average: 84/100):</p>
+      <div className="space-y-1.5">
+        <DriverRow rank={1} name="Mark Santos" onTime="96%" rating="92/100" status="excellent" />
+        <DriverRow rank={2} name="Allan Reyes" onTime="94%" rating="89/100" status="excellent" />
+        <DriverRow rank={3} name="John Cruz" onTime="91%" rating="85/100" status="good" />
+      </div>
+      <div className="p-2.5 bg-red-50 rounded-lg border border-red-100 mt-2">
+        <p className="text-xs font-bold text-red-700 mb-1">⚠️ Drivers Below Safety Threshold (80/100):</p>
+        <ul className="text-xs text-red-600 space-y-0.5 list-disc list-inside">
+          <li>Edwin Ramos — 72/100 (fatigue violations, 3 consecutive days &gt; 10hr)</li>
+          <li>Roberto Villanueva — 76/100 (2 hard-braking events this week)</li>
+        </ul>
+      </div>
+      <div className="p-2 bg-sky-50 rounded-lg mt-1">
+        <p className="text-xs font-bold text-sky-800 mb-1">📋 Safety Actions Required:</p>
+        <ul className="text-xs text-sky-700 space-y-0.5 list-disc list-inside">
+          <li>Mandatory rest day for Edwin Ramos (DOTr compliance)</li>
+          <li>Defensive driving refresher for Roberto Villanueva</li>
+          <li>Fleet-wide safety briefing scheduled for Monday 7:00 AM</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function buildDeliveryPredictionResponse(): React.ReactNode {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-brand-navy font-medium">⏱️ Delivery Time Predictions (Today):</p>
+      <div className="space-y-1.5">
+        <div className="p-2 bg-white rounded-lg border text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-muted-foreground">04:30</span>
+            <span className="font-medium text-brand-navy">Manila → Pampanga</span>
+          </div>
+          <Badge className="bg-emerald-50 text-emerald-700 border-0 text-[10px]">On Time (ETA 06:45)</Badge>
+        </div>
+        <div className="p-2 bg-white rounded-lg border text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-muted-foreground">05:30</span>
+            <span className="font-medium text-brand-navy">Cavite → Laguna</span>
+          </div>
+          <Badge className="bg-emerald-50 text-emerald-700 border-0 text-[10px]">On Time (ETA 07:15)</Badge>
+        </div>
+        <div className="p-2 bg-amber-50 rounded-lg border border-amber-100 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-muted-foreground">07:00</span>
+            <span className="font-medium text-amber-700">Makati → Quezon City</span>
+          </div>
+          <Badge className="bg-amber-100 text-amber-700 border-0 text-[10px]">Delayed +25min</Badge>
+        </div>
+      </div>
+      <div className="p-2 bg-amber-50 rounded-lg flex items-center gap-2 mt-1">
+        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+        <p className="text-xs text-amber-700">EDSA congestion predicted 07:00–09:30. Recommend NLEX bypass for northbound trips.</p>
+      </div>
+      <div className="p-2 bg-sky-50 rounded-lg">
+        <p className="text-xs text-sky-700">📊 <span className="font-bold">Weekly prediction accuracy:</span> 91.4% (based on 47 deliveries)</p>
       </div>
     </div>
   );
@@ -262,9 +406,9 @@ function buildDefaultResponse(): React.ReactNode {
         <MiniStat label="Revenue (Q2)" value="₱442,600" color="text-emerald-600" />
         <MiniStat label="Profit Margin" value="80%" color="text-brand-teal" />
         <MiniStat label="Maintenance Due" value="3 items" color="text-amber-600" />
-        <MiniStat label="Top Drivers" value="2 ★★★" color="text-brand-teal" />
+        <MiniStat label="Safety Score" value="84/100" color="text-brand-teal" />
       </div>
-      <p className="text-xs text-muted-foreground">What would you like to explore further? Try asking about fuel, routes, drivers, or maintenance.</p>
+      <p className="text-xs text-muted-foreground">What would you like to explore further? Try asking about fuel efficiency, route optimization, driver safety, or maintenance predictions.</p>
     </div>
   );
 }
@@ -283,15 +427,33 @@ function buildDeepAnalysisReport(): React.ReactNode {
         <MiniStat label="Revenue" value="₱442,600" color="text-emerald-600" />
         <MiniStat label="Expenses" value="₱88,430" color="text-red-500" />
         <MiniStat label="Profit Margin" value="80%" color="text-brand-teal" />
-        <MiniStat label="Active Vehicles" value="9" color="text-brand-navy" />
+        <MiniStat label="Safety Score" value="84/100" color="text-brand-navy" />
       </div>
       <div className="mt-2 space-y-2">
-        <p className="text-xs font-bold text-brand-navy">Actionable Findings:</p>
-        <FindingRow severity="critical" text="NEX-107 tires below DOTr minimum — dispatch blocked" />
-        <FindingRow severity="critical" text="Manila→Pampanga route avg 38min delay — reroute needed" />
-        <FindingRow severity="warning" text="NEX-104 fuel 22% above fleet average — ECU diagnostic required" />
-        <FindingRow severity="warning" text="Edwin Ramos fatigue pattern — 3 days exceeding 10hr" />
-        <FindingRow severity="positive" text="Batched Laguna dispatch can save ₱38K/month" />
+        <p className="text-xs font-bold text-brand-navy">🎯 Categorized Findings:</p>
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold text-red-700 uppercase tracking-wider">Safety & Compliance</p>
+          <FindingRow severity="critical" text="NEX-107 tires below DOTr minimum — dispatch blocked" />
+          <FindingRow severity="warning" text="Edwin Ramos fatigue pattern — 3 days exceeding 10hr" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Operational Efficiency</p>
+          <FindingRow severity="critical" text="Manila→Pampanga route avg 38min delay — reroute via NLEX" />
+          <FindingRow severity="warning" text="NEX-104 fuel 22% above fleet average — ECU diagnostic required" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Growth Opportunities</p>
+          <FindingRow severity="positive" text="Batched Laguna dispatch can save ₱38K/month" />
+        </div>
+      </div>
+      <div className="p-2.5 bg-sky-50 rounded-lg border border-sky-100 mt-2">
+        <p className="text-xs font-bold text-sky-800 mb-1">📋 Recommended Action Items:</p>
+        <ul className="text-xs text-sky-700 space-y-0.5 list-disc list-inside">
+          <li>Replace NEX-107 front tires immediately (₱12,800)</li>
+          <li>Enforce mandatory rest for Edwin Ramos</li>
+          <li>Schedule ECU diagnostic for NEX-104</li>
+          <li>Implement batched Laguna dispatch starting Monday</li>
+        </ul>
       </div>
     </div>
   );
@@ -303,26 +465,29 @@ function getAiResponse(query: string): { content: string; richContent: React.Rea
   if (q.includes("fleet") || q.includes("performing") || q.includes("performance")) {
     return { content: "fleet", richContent: buildFleetResponse() };
   }
-  if (q.includes("fuel") || q.includes("anomal") || q.includes("consumption")) {
+  if (q.includes("fuel") || q.includes("anomal") || q.includes("consumption") || q.includes("efficiency report")) {
     return { content: "fuel", richContent: buildFuelResponse() };
   }
-  if (q.includes("route") || q.includes("tomorrow") || q.includes("deliver")) {
+  if (q.includes("route") || q.includes("optimization") || q.includes("deliver")) {
     return { content: "route", richContent: buildRouteResponse() };
   }
-  if (q.includes("driver") || q.includes("top") || q.includes("performing")) {
+  if (q.includes("driver") || q.includes("attention") || q.includes("who")) {
     return { content: "driver", richContent: buildDriverResponse() };
   }
-  if (q.includes("maintenance") || q.includes("overdue") || q.includes("pms")) {
+  if (q.includes("maintenance") || q.includes("predict") || q.includes("pms")) {
     return { content: "maintenance", richContent: buildMaintenanceResponse() };
   }
   if (q.includes("profit") || q.includes("margin") || q.includes("money")) {
     return { content: "profit", richContent: buildProfitResponse() };
   }
-  if (q.includes("alert") || q.includes("critical") || q.includes("urgent")) {
-    return { content: "alert", richContent: buildAlertResponse() };
-  }
-  if (q.includes("cost") || q.includes("saving") || q.includes("opportunit")) {
+  if (q.includes("cost") || q.includes("saving") || q.includes("reduction") || q.includes("opportunit")) {
     return { content: "cost", richContent: buildCostResponse() };
+  }
+  if (q.includes("safety") || q.includes("score")) {
+    return { content: "safety", richContent: buildSafetyResponse() };
+  }
+  if (q.includes("time") || q.includes("prediction") || q.includes("eta") || q.includes("delivery time")) {
+    return { content: "delivery", richContent: buildDeliveryPredictionResponse() };
   }
   return { content: "default", richContent: buildDefaultResponse() };
 }
@@ -331,7 +496,7 @@ function getAiResponse(query: string): { content: string; richContent: React.Rea
 const ANALYSIS_STEPS = [
   "Scanning fleet data...",
   "Analyzing patterns...",
-  "Generating insights...",
+  "Generating recommendations...",
   "Complete!",
 ];
 
@@ -351,7 +516,7 @@ export default function AiInsightsPage() {
   const storeInsights = useUiStore((s) => s.insights);
   const [sidebarInsights] = useState<AiInsight[]>([...SIDEBAR_INSIGHTS, ...storeInsights]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(PRELOADED_MESSAGES);
   const [query, setQuery] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -402,18 +567,16 @@ export default function AiInsightsPage() {
     sendMessage(chip);
   }, [sendMessage]);
 
-  // Deep Analysis
+  // Deep Analysis with progress stepper
   const handleRunAnalysis = useCallback(() => {
     setIsAnalyzing(true);
     setAnalysisStep(0);
 
-    // Step through analysis phases
-    const stepDuration = 800;
+    const stepDuration = 1000;
     for (let i = 1; i <= ANALYSIS_STEPS.length; i++) {
       setTimeout(() => {
         setAnalysisStep(i);
         if (i === ANALYSIS_STEPS.length) {
-          // Final step: add message to chat
           setTimeout(() => {
             const aiMsg: ChatMessage = {
               id: `analysis-${Date.now()}`,
@@ -425,7 +588,7 @@ export default function AiInsightsPage() {
             setMessages((prev) => [...prev, aiMsg]);
             setIsAnalyzing(false);
             setAnalysisStep(0);
-            toast.success("Deep analysis complete", { description: "5 actionable findings generated" });
+            toast.success("Deep analysis complete", { description: "5 actionable findings generated across 3 categories" });
           }, 400);
         }
       }, stepDuration * i);
@@ -449,7 +612,7 @@ export default function AiInsightsPage() {
         breadcrumbs={[{ label: "Reports" }, { label: "AI Insights" }]}
       />
 
-      {/* Condensed Hero Stats Bar */}
+      {/* Hero Stats Bar */}
       <Card className="bg-gradient-to-r from-brand-navy to-brand-teal-dark text-white border-0">
         <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -471,13 +634,13 @@ export default function AiInsightsPage() {
               disabled={isAnalyzing}
               size="sm"
             >
-              {isAnalyzing ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Analyzing...</> : <><Zap className="w-3.5 h-3.5 mr-1" /> Deep Analysis</>}
+              {isAnalyzing ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Analyzing...</> : <><Zap className="w-3.5 h-3.5 mr-1" /> Run Deep Analysis</>}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Deep Analysis Progress */}
+      {/* Deep Analysis Progress Stepper */}
       <AnimatePresence>
         {isAnalyzing && (
           <motion.div
@@ -529,27 +692,6 @@ export default function AiInsightsPage() {
 
             {/* Messages Area */}
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.length === 0 && !isThinking && (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-teal/20 to-brand-navy/10 flex items-center justify-center mb-4">
-                    <Brain className="w-8 h-8 text-brand-teal" />
-                  </div>
-                  <h3 className="text-lg font-bold text-brand-navy mb-1">Ask me anything about your fleet</h3>
-                  <p className="text-sm text-muted-foreground mb-6 max-w-sm">I can analyze performance, detect anomalies, recommend routes, and surface cost-saving opportunities.</p>
-                  <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-                    {SUGGESTION_CHIPS.map((chip) => (
-                      <button
-                        key={chip}
-                        onClick={() => handleChipClick(chip)}
-                        className="px-3 py-1.5 text-xs bg-gray-50 hover:bg-brand-teal/10 border border-gray-200 hover:border-brand-teal/30 rounded-full text-brand-navy transition-colors"
-                      >
-                        {chip}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <AnimatePresence initial={false}>
                 {messages.map((msg) => (
                   <motion.div
@@ -608,21 +750,19 @@ export default function AiInsightsPage() {
               <div ref={chatEndRef} />
             </div>
 
-            {/* Input Area */}
+            {/* Suggestion Chips + Input Area */}
             <div className="p-4 border-t bg-white">
-              {messages.length > 0 && (
-                <div className="flex gap-1.5 mb-2 overflow-x-auto pb-1 scrollbar-hide">
-                  {SUGGESTION_CHIPS.slice(0, 4).map((chip) => (
-                    <button
-                      key={chip}
-                      onClick={() => handleChipClick(chip)}
-                      className="px-2.5 py-1 text-[10px] bg-gray-50 hover:bg-brand-teal/10 border border-gray-200 hover:border-brand-teal/30 rounded-full text-brand-navy transition-colors whitespace-nowrap shrink-0"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1 scrollbar-hide">
+                {SUGGESTION_CHIPS.map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => handleChipClick(chip)}
+                    className="px-2.5 py-1.5 text-[11px] bg-gray-50 hover:bg-brand-teal/10 border border-gray-200 hover:border-brand-teal/30 rounded-full text-brand-navy transition-colors whitespace-nowrap shrink-0"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
               <div className="flex gap-2">
                 <Input
                   placeholder="Ask about your fleet..."
