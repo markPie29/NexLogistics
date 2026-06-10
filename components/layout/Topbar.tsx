@@ -1,4 +1,5 @@
 "use client";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bell,
@@ -21,6 +22,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { useUiStore } from "@/lib/store";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import AnimatedDropdown from "@/components/ui/animated-dropdown";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +46,41 @@ export function Topbar() {
   const darkMode = useUiStore((s) => s.darkMode);
   const toggleDarkMode = useUiStore((s) => s.toggleDarkMode);
   const unread = notifications.filter((n) => !n.read).length;
+
+  const [notificationSearch, setNotificationSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
+
+  const notificationFilters = [
+    { value: "all", label: "All Notifications" },
+    { value: "unread", label: "Unread" },
+    { value: "trips", label: "Trip Alerts" },
+    { value: "maintenance", label: "Vehicle & Maintenance" },
+    { value: "payroll", label: "Payroll" },
+    { value: "documents", label: "Documents" },
+    { value: "route", label: "Route & Delays" },
+  ] as const;
+
+  const filterLabel = notificationFilters.find((option) => option.value === activeFilter)?.label ?? "Filter";
+
+  const filteredNotifications = useMemo(() => {
+    const normalizedSearch = notificationSearch.trim().toLowerCase();
+
+    return notifications.filter((notification) => {
+      const content = `${notification.title} ${notification.message}`.toLowerCase();
+      const matchesSearch = normalizedSearch ? content.includes(normalizedSearch) : true;
+      if (!matchesSearch) return false;
+
+      if (activeFilter === "all") return true;
+      if (activeFilter === "unread") return !notification.read;
+      if (activeFilter === "trips") return /trip|trp|delivery|assigned|completed|delay|route/.test(content);
+      if (activeFilter === "maintenance") return /pms|oil|insurance|vehicle|license|maintenance|fuel|engine/.test(content);
+      if (activeFilter === "payroll") return /payroll|salary|pay|period/.test(content);
+      if (activeFilter === "documents") return /document|pod|uploaded|proof of delivery/.test(content);
+      if (activeFilter === "route") return /route|delay|traffic|on-time|on time|streak/.test(content);
+
+      return true;
+    });
+  }, [activeFilter, notifications, notificationSearch]);
 
   const onLogout = () => {
     logout();
@@ -133,31 +170,58 @@ export function Topbar() {
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-96 p-0 max-h-[480px] overflow-y-auto scrollbar-thin">
-            <div className="flex items-center justify-between p-4 border-b border-brand-border">
-              <div className="font-semibold text-brand-navy dark:text-white">Notifications</div>
-              <button onClick={markAllRead} className="text-xs text-brand-teal hover:underline">
-                Mark all read
-              </button>
-            </div>
-            <div className="divide-y divide-brand-border/60">
-              {notifications.slice(0, 8).map((n) => (
-                <div key={n.id} className="p-3 hover:bg-gray-50 dark:hover:bg-white/5 flex gap-3">
-                  <div
-                    className={`w-2 h-2 rounded-full mt-2 shrink-0 ${
-                      n.type === "danger" ? "bg-status-danger" : n.type === "warning" ? "bg-status-warning" : n.type === "success" ? "bg-status-success" : "bg-status-info"
-                    }`}
+          <PopoverContent align="end" className="w-[32rem] p-0 max-h-[560px] overflow-y-auto scrollbar-thin">
+            <div className="flex flex-col gap-3 p-4 border-b border-brand-border">
+              <div className="flex items-center justify-between">
+                <div className="font-semibold text-brand-navy dark:text-white">Notifications</div>
+                <button onClick={markAllRead} className="text-xs text-brand-teal hover:underline">
+                  Mark all read
+                </button>
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <AnimatedDropdown
+                    text={filterLabel}
+                    items={notificationFilters.map((option) => ({ name: option.label, value: option.value }))}
+                    onSelect={(value) => setActiveFilter(value)}
+                    className="w-full md:w-auto"
                   />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-brand-navy dark:text-white">{n.title}</div>
-                    <div className="text-xs text-muted-foreground line-clamp-2">{n.message}</div>
-                    <div className="text-[10px] text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(n.at), { addSuffix: true })}
-                    </div>
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      value={notificationSearch}
+                      onChange={(event) => setNotificationSearch(event.target.value)}
+                      placeholder="Search notifications"
+                      className="w-full h-10 pl-10 pr-3 rounded-lg bg-gray-50 dark:bg-white/5 border border-transparent hover:border-brand-border dark:hover:border-white/20 focus:border-brand-teal focus:bg-white dark:focus:bg-white/10 text-sm outline-none text-brand-navy dark:text-white placeholder:text-muted-foreground transition"
+                    />
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
+            {filteredNotifications.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                No matching notifications. Try a different search term or filter.
+              </div>
+            ) : (
+              <div className="divide-y divide-brand-border/60">
+                {filteredNotifications.map((n) => (
+                  <div key={n.id} className="p-3 hover:bg-gray-50 dark:hover:bg-white/5 flex gap-3">
+                    <div
+                      className={`w-2 h-2 rounded-full mt-2 shrink-0 ${
+                        n.type === "danger" ? "bg-status-danger" : n.type === "warning" ? "bg-status-warning" : n.type === "success" ? "bg-status-success" : "bg-status-info"
+                      }`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-brand-navy dark:text-white">{n.title}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-2">{n.message}</div>
+                      <div className="text-[10px] text-muted-foreground mt-1">
+                        {formatDistanceToNow(new Date(n.at), { addSuffix: true })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </PopoverContent>
         </Popover>
 
