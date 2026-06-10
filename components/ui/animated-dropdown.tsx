@@ -58,14 +58,14 @@ export default function AnimatedDropdown({
           aria-expanded={isOpen}
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+            'inline-flex items-center justify-between rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
             'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
-            'h-10 px-4 py-2',
+            'h-10 px-3 py-2 w-full',
           )}
         >
-          <span>{text}</span>
-          <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2, ease: 'easeInOut' }}>
-            <ChevronDown className='h-5 w-5 ml-2' />
+          <span className="truncate pr-1">{text}</span>
+          <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2, ease: 'easeInOut' }} className="flex-shrink-0">
+            <ChevronDown className="h-4 w-4 ml-1" />
           </motion.div>
         </button>
 

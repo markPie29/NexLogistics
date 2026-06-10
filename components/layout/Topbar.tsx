@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bell,
-  Inbox,
   Maximize2,
   Search,
   ChevronDown,
@@ -21,7 +20,6 @@ import {
 import { useAuthStore } from "@/lib/store/auth";
 import { useUiStore } from "@/lib/store";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import AnimatedDropdown from "@/components/ui/animated-dropdown";
 import {
   DropdownMenu,
@@ -170,7 +168,7 @@ export function Topbar() {
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-[40rem] p-0 min-h-[560px] max-h-[560px] overflow-y-auto scrollbar-thin">
+          <PopoverContent align="end" className="w-[calc(100vw-2rem)] sm:w-[40rem] p-0 min-h-0 sm:min-h-[560px] max-h-[calc(100vh-120px)] sm:max-h-[560px] overflow-y-auto scrollbar-thin">
             <div className="flex flex-col gap-3 p-4 border-b border-brand-border">
               <div className="flex items-center justify-between">
                 <div className="font-semibold text-brand-navy dark:text-white">Notifications</div>
@@ -178,9 +176,10 @@ export function Topbar() {
                   Mark all read
                 </button>
               </div>
-                <div className="flex flex-col gap-3">
-                  <div className="relative flex items-center w-full">
-                    
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row gap-2 w-full">
+                  {/* Search Input Container */}
+                  <div className="relative flex-1">
                     {/* Search Icon */}
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
 
@@ -190,7 +189,7 @@ export function Topbar() {
                       onChange={(event) => setNotificationSearch(event.target.value)}
                       placeholder="Search notifications"
                       className="
-                        w-full h-10 pl-10 pr-36
+                        w-full h-10 pl-10 pr-4 sm:pr-36
                         rounded-lg
                         bg-gray-50 dark:bg-white/5
                         border border-transparent
@@ -203,11 +202,11 @@ export function Topbar() {
                       "
                     />
 
-                    {/* Divider */}
-                    <div className="absolute right-28 top-1/2 -translate-y-1/2 h-5 w-px bg-brand-border dark:bg-white/10" />
+                    {/* Divider (only visible on sm and up) */}
+                    <div className="hidden sm:block absolute right-28 top-1/2 -translate-y-1/2 h-5 w-px bg-brand-border dark:bg-white/10" />
 
-                    {/* Animated Dropdown INSIDE input */}
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                    {/* Animated Dropdown INSIDE input on sm and up */}
+                    <div className="hidden sm:block absolute right-0 top-1/2 -translate-y-1/2">
                       <AnimatedDropdown
                         text={filterLabel}
                         items={notificationFilters.map((option) => ({
@@ -215,11 +214,25 @@ export function Topbar() {
                           value: option.value,
                         }))}
                         onSelect={(value) => setActiveFilter(value)}
-                        className="w-300px"
+                        className="w-40"
                       />
                     </div>
                   </div>
+
+                  {/* Animated Dropdown OUTSIDE input on mobile screens (less than sm) */}
+                  <div className="block sm:hidden w-full">
+                    <AnimatedDropdown
+                      text={filterLabel}
+                      items={notificationFilters.map((option) => ({
+                        name: option.label,
+                        value: option.value,
+                      }))}
+                      onSelect={(value) => setActiveFilter(value)}
+                      className="w-full"
+                    />
+                  </div>
                 </div>
+              </div>
             </div>
             {filteredNotifications.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
@@ -230,9 +243,8 @@ export function Topbar() {
                 {filteredNotifications.map((n) => (
                   <div key={n.id} className="p-3 hover:bg-gray-50 dark:hover:bg-white/5 flex gap-3">
                     <div
-                      className={`w-2 h-2 rounded-full mt-2 shrink-0 ${
-                        n.type === "danger" ? "bg-status-danger" : n.type === "warning" ? "bg-status-warning" : n.type === "success" ? "bg-status-success" : "bg-status-info"
-                      }`}
+                      className={`w-2 h-2 rounded-full mt-2 shrink-0 ${n.type === "danger" ? "bg-status-danger" : n.type === "warning" ? "bg-status-warning" : n.type === "success" ? "bg-status-success" : "bg-status-info"
+                        }`}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-brand-navy dark:text-white">{n.title}</div>
