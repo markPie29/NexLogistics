@@ -47,7 +47,7 @@ interface LiveMapProps {
   zoom?: number;
 }
 
-export default function LiveMap({ height = 320, showLegend = true, zoom = 11 }: LiveMapProps) {
+export default function LiveMap({ height = "100%", showLegend = true, zoom = 11 }: LiveMapProps) {
   const vehicles = useFleetStore((s) => s.vehicles);
   const drivers = useDriverStore((s) => s.drivers);
   const trips = useTripStore((s) => s.trips);
