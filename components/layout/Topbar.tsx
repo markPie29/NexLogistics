@@ -170,7 +170,7 @@ export function Topbar() {
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-[32rem] p-0 max-h-[560px] overflow-y-auto scrollbar-thin">
+          <PopoverContent align="end" className="w-[40rem] p-0 min-h-[560px] max-h-[560px] overflow-y-auto scrollbar-thin">
             <div className="flex flex-col gap-3 p-4 border-b border-brand-border">
               <div className="flex items-center justify-between">
                 <div className="font-semibold text-brand-navy dark:text-white">Notifications</div>
