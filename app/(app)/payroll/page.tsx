@@ -130,7 +130,7 @@ export default function PayrollHubPage() {
     if (latest.status === "ready_for_review") return 1;
     if (latest.status === "approved") return 2;
     if (latest.status === "paid") return 3;
-    if (latest.status === "closed") return 4;
+    if (latest.status === "closed") return 5; // All steps done — past the last step index (4)
     return 0;
   }, [periods]);
 
@@ -138,7 +138,16 @@ export default function PayrollHubPage() {
   const monthlyStatus = useMemo(() => {
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const thisMonthPeriods = periods.filter((p) => p.startDate.startsWith(currentMonth));
+    // Check current month first; if none found, check across all periods for the most recent month
+    let thisMonthPeriods = periods.filter((p) => p.startDate.startsWith(currentMonth));
+    
+    // Fallback: if no periods exist for the current calendar month, use the latest month that has periods
+    if (thisMonthPeriods.length === 0 && periods.length > 0) {
+      const latestPeriod = periods[0];
+      const latestMonth = latestPeriod.startDate.slice(0, 7); // "YYYY-MM"
+      thisMonthPeriods = periods.filter((p) => p.startDate.startsWith(latestMonth));
+    }
+
     const completedThisMonth = thisMonthPeriods.filter((p) => ["paid", "closed"].includes(p.status)).length;
     const expectedCutoffs = payFrequency === "semi_monthly" ? 2 : payFrequency === "weekly" ? 4 : 1;
     const allDone = completedThisMonth >= expectedCutoffs;

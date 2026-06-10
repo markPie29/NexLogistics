@@ -24,6 +24,7 @@ import {
   Building2,
   Handshake,
   CheckCircle2,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -79,6 +80,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Fuel & Expenses", href: "/expenses", icon: Fuel, group: "finance", roles: ["super_admin", "company_admin", "accounting"], featureKey: "fuel_expenses" },
   { label: "Payroll", href: "/payroll", icon: Wallet, group: "finance", roles: ["super_admin", "company_admin", "accounting"], featureKey: "payroll" },
   { label: "Attendance", href: "/attendance", icon: CalendarClock, group: "finance", roles: ["super_admin", "company_admin", "accounting"], featureKey: "attendance" },
+  { label: "Profit Center", href: "/profit-center", icon: TrendingUp, group: "finance", roles: ["super_admin", "company_admin", "accounting"] },
   { label: "Department Calendar", href: "/calendar", icon: CalendarClock, group: "others", roles: ["super_admin", "company_admin", "dispatcher", "accounting"], featureKey: "department_calendar" },
   { label: "Billing & Invoices", href: "/billing", icon: Receipt, group: "finance", roles: ["super_admin", "company_admin", "accounting"], featureKey: "billing_invoices" },
 
