@@ -178,25 +178,48 @@ export function Topbar() {
                   Mark all read
                 </button>
               </div>
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <AnimatedDropdown
-                    text={filterLabel}
-                    items={notificationFilters.map((option) => ({ name: option.label, value: option.value }))}
-                    onSelect={(value) => setActiveFilter(value)}
-                    className="w-full md:w-auto"
-                  />
-                  <div className="relative flex-1">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <div className="flex flex-col gap-3">
+                  <div className="relative flex items-center w-full">
+                    
+                    {/* Search Icon */}
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+
+                    {/* Input */}
                     <input
                       value={notificationSearch}
                       onChange={(event) => setNotificationSearch(event.target.value)}
                       placeholder="Search notifications"
-                      className="w-full h-10 pl-10 pr-3 rounded-lg bg-gray-50 dark:bg-white/5 border border-transparent hover:border-brand-border dark:hover:border-white/20 focus:border-brand-teal focus:bg-white dark:focus:bg-white/10 text-sm outline-none text-brand-navy dark:text-white placeholder:text-muted-foreground transition"
+                      className="
+                        w-full h-10 pl-10 pr-36
+                        rounded-lg
+                        bg-gray-50 dark:bg-white/5
+                        border border-transparent
+                        hover:border-brand-border dark:hover:border-white/20
+                        focus:border-brand-teal focus:bg-white dark:focus:bg-white/10
+                        text-sm outline-none
+                        text-brand-navy dark:text-white
+                        placeholder:text-muted-foreground
+                        transition
+                      "
                     />
+
+                    {/* Divider */}
+                    <div className="absolute right-28 top-1/2 -translate-y-1/2 h-5 w-px bg-brand-border dark:bg-white/10" />
+
+                    {/* Animated Dropdown INSIDE input */}
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                      <AnimatedDropdown
+                        text={filterLabel}
+                        items={notificationFilters.map((option) => ({
+                          name: option.label,
+                          value: option.value,
+                        }))}
+                        onSelect={(value) => setActiveFilter(value)}
+                        className="w-300px"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
             </div>
             {filteredNotifications.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
