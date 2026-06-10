@@ -106,6 +106,10 @@ export interface Helper {
   commissionPercent?: number;        // % of fare
   notes?: string;
   createdAt: string;
+  // Performance metrics
+  rating?: number;          // 0–5, default 0
+  onTimePercent?: number;   // 0–100, default 100
+  totalTrips?: number;      // >= 0, default 0
 }
 
 export interface Client {
@@ -170,6 +174,7 @@ export interface Trip {
   status: TripStatus;
   statusLogs: TripStatusLog[];
   podId?: string;
+  podSubmittedAt?: string;        // ISO timestamp when POD was submitted
   createdAt: string;
   eta?: string;
   // ── Operational extensions (client requirement) ──
@@ -701,5 +706,56 @@ export interface OfficeEmployee {
   status: "active" | "resigned" | "on_leave";
   hireDate: string;
   notes?: string;
+}
+
+// ─── Vehicle Documents & Permits ─────────────────────────────
+
+export type DocumentCategory =
+  | "OR/CR"
+  | "Insurance"
+  | "LTFRB Franchise"
+  | "LTO Registration";
+
+export type PermitCategory =
+  | "City Permit"
+  | "Barangay Clearance"
+  | "Mayor's Permit"
+  | "Special Permit (Hazmat)"
+  | "Special Permit (Overweight)"
+  | "Special Permit (Oversized)";
+
+export interface FileAttachment {
+  fileName: string;
+  fileSize: number; // bytes
+  uploadedAt: string; // ISO date
+}
+
+export interface VehicleDocument {
+  id: string;
+  vehicleId: string;
+  category: DocumentCategory;
+  documentNumber: string;
+  issuedDate: string; // ISO date
+  expiryDate: string; // ISO date
+  issuingAuthority: string;
+  notes?: string;
+  fileAttachment?: FileAttachment;
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
+}
+
+export interface VehiclePermit {
+  id: string;
+  vehicleId: string;
+  category: PermitCategory;
+  permitNumber: string;
+  issuedDate: string; // ISO date
+  expiryDate: string; // ISO date
+  issuingAuthority: string;
+  coverageArea?: string;
+  notes?: string;
+  fileAttachment?: FileAttachment;
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
 }
 
