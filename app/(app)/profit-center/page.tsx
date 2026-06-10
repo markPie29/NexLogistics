@@ -30,7 +30,7 @@ import { ExportButton } from "@/components/profit-center/ExportButton";
 
 export default function ProfitCenterPage() {
   // ── UI State ──
-  const [period, setPeriod] = useState<PeriodPreset>("this_month");
+  const [period, setPeriod] = useState<PeriodPreset>("this_quarter");
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
 
