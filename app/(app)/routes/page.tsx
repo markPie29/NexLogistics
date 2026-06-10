@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import {
   GitBranch,
@@ -11,6 +12,7 @@ import {
   Search,
   Zap,
   CheckCircle2,
+  Map,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,18 @@ import { KpiCard } from "@/components/dashboard/KpiCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+
+const RouteMapDynamic = dynamic(
+  () => import("@/components/routes/RouteMap"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[480px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-sm text-muted-foreground">
+        Loading map…
+      </div>
+    ),
+  }
+);
 
 // ─── Seed Data ────────────────────────────────────────────────────────────────
 
@@ -172,6 +186,10 @@ export default function RoutesPage() {
         <TabsList>
           <TabsTrigger value="corridors">Route Corridors</TabsTrigger>
           <TabsTrigger value="optimization">Optimization</TabsTrigger>
+          <TabsTrigger value="map-view" className="gap-1.5">
+            <Map className="w-3.5 h-3.5" />
+            Map View
+          </TabsTrigger>
         </TabsList>
 
         {/* ─── Route Corridors Tab ─── */}
@@ -384,6 +402,14 @@ export default function RoutesPage() {
               </motion.div>
             )}
           </div>
+        </TabsContent>
+        {/* ─── Map View Tab ─── */}
+        <TabsContent value="map-view">
+          <Card>
+            <CardContent className="p-4">
+              <RouteMapDynamic />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
