@@ -1,9 +1,13 @@
 "use client";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, Truck, User as UserIcon, Package, Clock, CheckCircle2, FileText, Handshake, Receipt, AlertTriangle, Users } from "lucide-react";
+import { ArrowLeft, MapPin, Truck, User as UserIcon, Package, Clock, CheckCircle2, FileText, Handshake, Receipt, AlertTriangle, Users, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Input, Textarea, Label } from "@/components/ui/input";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { useTripStore, useDriverStore, useFleetStore, useClientStore, usePodStore, usePartnerStore, useHelperStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -25,12 +29,25 @@ export default function TripDetailPage() {
   const router = useRouter();
   const trip = useTripStore((s) => s.trips.find((t) => t.id === params.id));
   const setStatus = useTripStore((s) => s.setStatus);
+  const updateTrip = useTripStore((s) => s.updateTrip);
+  const deleteTrip = useTripStore((s) => s.deleteTrip);
   const drivers = useDriverStore((s) => s.drivers);
   const vehicles = useFleetStore((s) => s.vehicles);
   const clients = useClientStore((s) => s.clients);
   const partners = usePartnerStore((s) => s.partners);
   const pods = usePodStore((s) => s.pods);
   const helpers = useHelperStore((s) => s.helpers);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    documentNo: "",
+    customerName: "",
+    customerContact: "",
+    notes: "",
+    fare: 0,
+    distanceKm: 0,
+    eta: "",
+  });
 
   if (!trip) {
     return (
@@ -57,6 +74,39 @@ export default function TripDetailPage() {
     toast.success(`Status → ${next.replace(/_/g, " ")}`);
   };
 
+  const openEdit = () => {
+    setEditForm({
+      documentNo: trip.documentNo || "",
+      customerName: trip.customerName || "",
+      customerContact: trip.customerContact || "",
+      notes: trip.notes || "",
+      fare: trip.fare,
+      distanceKm: trip.distanceKm,
+      eta: trip.eta ? trip.eta.slice(0, 16) : "",
+    });
+    setEditOpen(true);
+  };
+
+  const saveEdit = () => {
+    updateTrip(trip.id, {
+      documentNo: editForm.documentNo,
+      customerName: editForm.customerName,
+      customerContact: editForm.customerContact,
+      notes: editForm.notes,
+      fare: editForm.fare,
+      distanceKm: editForm.distanceKm,
+      eta: editForm.eta ? new Date(editForm.eta).toISOString() : undefined,
+    });
+    setEditOpen(false);
+    toast.success("Trip updated successfully");
+  };
+
+  const handleDelete = () => {
+    deleteTrip(trip.id);
+    toast.success("Trip deleted");
+    router.push("/trips");
+  };
+
   return (
     <div className="space-y-6">
       {trip.approvalStatus === "pending_rate_approval" && (
@@ -72,8 +122,24 @@ export default function TripDetailPage() {
         actions={
           <>
             <Button variant="outline" onClick={() => router.push("/trips")}><ArrowLeft className="w-4 h-4" /> Back</Button>
+            <Button variant="outline" onClick={openEdit}><Pencil className="w-4 h-4" /> Edit</Button>
             {next && <Button onClick={advance}><CheckCircle2 className="w-4 h-4" /> Advance to {next.replace(/_/g, " ")}</Button>}
             <Button variant="outline" asChild><Link href={`/pod/${trip.id}`}>Capture POD</Link></Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive"><Trash2 className="w-4 h-4" /> Delete</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Trip</AlertDialogTitle>
+                  <AlertDialogDescription>Are you sure you want to delete trip {trip.id}? This action cannot be undone.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         }
       />
@@ -231,6 +297,49 @@ export default function TripDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Trip Sheet */}
+      <Sheet open={editOpen} onOpenChange={setEditOpen}>
+        <SheetContent side="right">
+          <SheetHeader>
+            <SheetTitle>Edit Trip</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-documentNo">Document Number</Label>
+              <Input id="edit-documentNo" value={editForm.documentNo} onChange={(e) => setEditForm((f) => ({ ...f, documentNo: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-customerName">Customer Name</Label>
+              <Input id="edit-customerName" value={editForm.customerName} onChange={(e) => setEditForm((f) => ({ ...f, customerName: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-customerContact">Customer Contact</Label>
+              <Input id="edit-customerContact" value={editForm.customerContact} onChange={(e) => setEditForm((f) => ({ ...f, customerContact: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-notes">Notes</Label>
+              <Textarea id="edit-notes" value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={3} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-fare">Fare</Label>
+              <Input id="edit-fare" type="number" min={0} step={0.01} value={editForm.fare} onChange={(e) => setEditForm((f) => ({ ...f, fare: parseFloat(e.target.value) || 0 }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-distanceKm">Distance KM</Label>
+              <Input id="edit-distanceKm" type="number" min={0} step={0.1} value={editForm.distanceKm} onChange={(e) => setEditForm((f) => ({ ...f, distanceKm: parseFloat(e.target.value) || 0 }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-eta">ETA</Label>
+              <Input id="edit-eta" type="datetime-local" value={editForm.eta} onChange={(e) => setEditForm((f) => ({ ...f, eta: e.target.value }))} />
+            </div>
+          </div>
+          <SheetFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={saveEdit}>Save Changes</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
