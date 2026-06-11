@@ -83,15 +83,15 @@ export default function ExpensesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-brand-navy">Fuel & Expenses</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-brand-navy dark:text-white">Fuel & Expenses</h1>
           <p className="text-muted-foreground text-sm mt-1">Track and manage all fuel transactions and other operating expenses.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" className="bg-white border-brand-border shadow-sm font-medium">
+          <Button variant="outline" className="border-brand-border shadow-sm font-medium">
             May 24 – May 30, 2024
             <CalendarIcon className="w-4 h-4 ml-2 text-muted-foreground" />
           </Button>
-          <Button variant="outline" className="bg-white border-brand-border shadow-sm font-medium">
+          <Button variant="outline" className="border-brand-border shadow-sm font-medium">
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
@@ -182,22 +182,22 @@ export default function ExpensesPage() {
       </div>
 
       {/* Main Tabs */}
-      <div className="border-b border-brand-border pt-2 shrink-0">
+      <div className="border-b border-brand-border dark:border-white/10 pt-2 shrink-0">
         <div className="flex gap-6 -mb-px px-1">
           <button 
-            className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${tab === 'overview' ? 'border-brand-teal text-brand-teal' : 'border-transparent text-muted-foreground hover:text-brand-navy'}`}
+            className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${tab === 'overview' ? 'border-brand-teal text-brand-teal' : 'border-transparent text-muted-foreground hover:text-brand-navy dark:hover:text-white'}`}
             onClick={() => setTab('overview')}
           >
             Overview
           </button>
           <button 
-            className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${tab === 'fuel' ? 'border-brand-teal text-brand-teal' : 'border-transparent text-muted-foreground hover:text-brand-navy'}`}
+            className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${tab === 'fuel' ? 'border-brand-teal text-brand-teal' : 'border-transparent text-muted-foreground hover:text-brand-navy dark:hover:text-white'}`}
             onClick={() => setTab('fuel')}
           >
             Fuel Transactions
           </button>
           <button 
-            className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${tab === 'expenses' ? 'border-brand-teal text-brand-teal' : 'border-transparent text-muted-foreground hover:text-brand-navy'}`}
+            className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${tab === 'expenses' ? 'border-brand-teal text-brand-teal' : 'border-transparent text-muted-foreground hover:text-brand-navy dark:hover:text-white'}`}
             onClick={() => setTab('expenses')}
           >
             Expenses
@@ -208,15 +208,15 @@ export default function ExpensesPage() {
       {/* Filter Row */}
       <div className="flex flex-wrap items-center gap-3 shrink-0">
         <Select defaultValue="all-vehicles">
-          <SelectTrigger className="w-[180px] bg-white h-9 text-sm"><SelectValue placeholder="All Vehicles" /></SelectTrigger>
+          <SelectTrigger className="w-[180px] h-9 text-sm"><SelectValue placeholder="All Vehicles" /></SelectTrigger>
           <SelectContent><SelectItem value="all-vehicles">All Vehicles</SelectItem></SelectContent>
         </Select>
         <Select defaultValue="all-categories">
-          <SelectTrigger className="w-[180px] bg-white h-9 text-sm"><SelectValue placeholder="All Categories" /></SelectTrigger>
+          <SelectTrigger className="w-[180px] h-9 text-sm"><SelectValue placeholder="All Categories" /></SelectTrigger>
           <SelectContent><SelectItem value="all-categories">All Categories</SelectItem></SelectContent>
         </Select>
         <Select defaultValue="all-payment">
-          <SelectTrigger className="w-[200px] bg-white h-9 text-sm"><SelectValue placeholder="All Payment Methods" /></SelectTrigger>
+          <SelectTrigger className="w-[200px] h-9 text-sm"><SelectValue placeholder="All Payment Methods" /></SelectTrigger>
           <SelectContent><SelectItem value="all-payment">All Payment Methods</SelectItem></SelectContent>
         </Select>
         
@@ -377,7 +377,7 @@ export default function ExpensesPage() {
                   />
                 </tbody>
               </table>
-              <div className="p-4 border-t border-brand-border/60 flex items-center justify-between text-[13px] text-muted-foreground bg-gray-50/30">
+              <div className="p-4 border-t border-brand-border/60 dark:border-white/10 flex items-center justify-between text-[13px] text-muted-foreground bg-gray-50/30 dark:bg-white/[0.02]">
                 <span>Showing 1 to 5 of 186 transactions</span>
                 <div className="flex items-center gap-1">
                   <Button variant="outline" size="sm" className="h-8 px-2.5 shadow-sm text-xs font-medium"><span className="sr-only">Prev</span>&lt;</Button>
@@ -390,7 +390,7 @@ export default function ExpensesPage() {
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-xs font-medium">38</Button>
                   <Button variant="outline" size="sm" className="h-8 px-2.5 shadow-sm text-xs font-medium"><span className="sr-only">Next</span>&gt;</Button>
                   <Select defaultValue="10">
-                    <SelectTrigger className="h-8 ml-2 w-[90px] text-xs bg-white"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 ml-2 w-[90px] text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="10">10 / page</SelectItem></SelectContent>
                   </Select>
                 </div>
@@ -409,23 +409,23 @@ export default function ExpensesPage() {
             <CardContent className="p-4 space-y-3.5 text-sm">
               <div className="flex justify-between items-center text-muted-foreground text-[13px]">
                 <span>Opening Balance</span>
-                <span className="font-semibold text-brand-navy">₱1,248,000.00</span>
+                <span className="font-semibold text-brand-navy dark:text-white">₱1,248,000.00</span>
               </div>
               <div className="flex justify-between items-center text-muted-foreground text-[13px]">
                 <span>Total Fuel Cost</span>
-                <span className="font-semibold text-brand-navy">₱1,248,765.40</span>
+                <span className="font-semibold text-brand-navy dark:text-white">₱1,248,765.40</span>
               </div>
               <div className="flex justify-between items-center text-muted-foreground text-[13px]">
                 <span>Total Expenses</span>
-                <span className="font-semibold text-brand-navy">₱832,540.75</span>
+                <span className="font-semibold text-brand-navy dark:text-white">₱832,540.75</span>
               </div>
               <div className="flex justify-between items-center text-muted-foreground text-[13px]">
                 <span>Total Cost</span>
-                <span className="font-semibold text-brand-navy">₱2,081,306.15</span>
+                <span className="font-semibold text-brand-navy dark:text-white">₱2,081,306.15</span>
               </div>
-              <div className="border-t border-dashed border-gray-200 pt-3 flex justify-between items-center font-bold text-[14px]">
-                <span className="text-brand-navy">Closing Balance</span>
-                <span className="text-green-600">₱414,459.25</span>
+              <div className="border-t border-dashed border-gray-200 dark:border-white/10 pt-3 flex justify-between items-center font-bold text-[14px]">
+                <span className="text-brand-navy dark:text-white">Closing Balance</span>
+                <span className="text-green-600 dark:text-emerald-400">₱414,459.25</span>
               </div>
             </CardContent>
           </Card>
@@ -452,35 +452,35 @@ export default function ExpensesPage() {
             <CardContent className="p-4 space-y-4 text-xs xl:text-[13px]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-teal-50 flex items-center justify-center text-teal-600 border border-teal-100 shrink-0">
+                  <div className="w-8 h-8 rounded-md bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center text-teal-600 dark:text-teal-400 border border-teal-100 dark:border-teal-900/30 shrink-0">
                     <Banknote className="w-4 h-4" />
                   </div>
-                  <span className="font-semibold text-brand-navy">Cash</span>
+                  <span className="font-semibold text-brand-navy dark:text-white">Cash</span>
                 </div>
                 <div className="text-right">
-                  <div className="font-semibold text-brand-navy tabular-nums">₱1,245,450.25 <span className="text-muted-foreground font-medium text-[11px] ml-1">(59.8%)</span></div>
+                  <div className="font-semibold text-brand-navy dark:text-white tabular-nums">₱1,245,450.25 <span className="text-muted-foreground font-medium text-[11px] ml-1">(59.8%)</span></div>
                 </div>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200 shrink-0">
+                  <div className="w-8 h-8 rounded-md bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 shrink-0">
                     <CreditCard className="w-4 h-4" />
                   </div>
-                  <span className="font-semibold text-brand-navy">Card</span>
+                  <span className="font-semibold text-brand-navy dark:text-white">Card</span>
                 </div>
                 <div className="text-right">
-                  <div className="font-semibold text-brand-navy tabular-nums">₱512,780.00 <span className="text-muted-foreground font-medium text-[11px] ml-1">(24.6%)</span></div>
+                  <div className="font-semibold text-brand-navy dark:text-white tabular-nums">₱512,780.00 <span className="text-muted-foreground font-medium text-[11px] ml-1">(24.6%)</span></div>
                 </div>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-purple-50 flex items-center justify-center text-purple-600 border border-purple-100 shrink-0">
+                  <div className="w-8 h-8 rounded-md bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-900/30 shrink-0">
                     <Wallet className="w-4 h-4" />
                   </div>
-                  <span className="font-semibold text-brand-navy">Fuel Card</span>
+                  <span className="font-semibold text-brand-navy dark:text-white">Fuel Card</span>
                 </div>
                 <div className="text-right">
-                  <div className="font-semibold text-brand-navy tabular-nums">₱323,075.90 <span className="text-muted-foreground font-medium text-[11px] ml-1">(15.6%)</span></div>
+                  <div className="font-semibold text-brand-navy dark:text-white tabular-nums">₱323,075.90 <span className="text-muted-foreground font-medium text-[11px] ml-1">(15.6%)</span></div>
                 </div>
               </div>
             </CardContent>

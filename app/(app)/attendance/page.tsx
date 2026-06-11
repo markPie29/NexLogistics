@@ -418,15 +418,15 @@ export default function AttendancePage() {
       </div>
 
       {/* View Toggle */}
-      <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg w-fit">
+      <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-white/5 rounded-lg w-fit">
         {(["week", "2weeks", "month"] as ViewMode[]).map((mode) => (
           <button
             key={mode}
             onClick={() => setViewMode(mode)}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
               viewMode === mode
-                ? "bg-white text-brand-navy shadow-sm"
-                : "text-muted-foreground hover:text-brand-navy"
+                ? "bg-white dark:bg-white/10 text-brand-navy dark:text-white shadow-sm"
+                : "text-muted-foreground hover:text-brand-navy dark:hover:text-white"
             }`}
           >
             {mode === "week" ? "Week" : mode === "2weeks" ? "2 Weeks" : "Month"}
@@ -488,7 +488,7 @@ export default function AttendancePage() {
               <Button variant="outline" size="sm" onClick={goNext} className="h-9 w-9 p-0">
                 <ChevronRight className="w-4 h-4" />
               </Button>
-              <span className="text-sm font-medium text-brand-navy ml-2 hidden sm:inline">
+              <span className="text-sm font-medium text-brand-navy dark:text-white ml-2 hidden sm:inline">
                 {dateRangeLabel}
               </span>
             </div>
@@ -512,8 +512,8 @@ export default function AttendancePage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px]">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-[200px] sticky left-0 bg-white z-10">
+                <tr className="border-b border-gray-100 dark:border-white/10">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-[200px] sticky left-0 bg-white dark:bg-card z-10">
                     Employee
                   </th>
                   {dayColumns.map((col) => (
@@ -535,14 +535,14 @@ export default function AttendancePage() {
               </thead>
               <tbody>
                 {filteredEmployees.map((emp) => (
-                  <tr key={emp.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3 sticky left-0 bg-white z-10">
+                  <tr key={emp.id} className="border-b border-gray-50 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors">
+                    <td className="px-4 py-3 sticky left-0 bg-white dark:bg-card z-10">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-brand-navy text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                           {emp.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-brand-navy truncate">
+                          <div className="text-sm font-semibold text-brand-navy dark:text-white truncate">
                             {emp.name}
                           </div>
                           <div className="text-[11px] text-muted-foreground">
@@ -570,7 +570,7 @@ export default function AttendancePage() {
                             disabled={!isClickable}
                             className={`inline-flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all ${
                               isClickable
-                                ? "hover:bg-gray-100 hover:shadow-sm cursor-pointer"
+                                ? "hover:bg-gray-100 dark:hover:bg-white/10 hover:shadow-sm cursor-pointer"
                                 : "cursor-default opacity-60"
                             }`}
                             title={`${emp.name} · ${cfg.label} · ${new Date(dateStr).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}`}
@@ -616,13 +616,13 @@ export default function AttendancePage() {
           {editingCell && (
             <div className="space-y-5">
               {/* Employee Info */}
-              <div className="rounded-xl bg-gray-50 p-3 space-y-1">
+              <div className="rounded-xl bg-gray-50 dark:bg-white/[0.04] p-3 space-y-1">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-brand-navy text-white text-[10px] font-bold flex items-center justify-center">
                     {editingCell.employee.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-brand-navy">
+                    <div className="text-sm font-semibold text-brand-navy dark:text-white">
                       {editingCell.employee.name}
                     </div>
                     <div className="text-xs text-muted-foreground">
@@ -630,7 +630,7 @@ export default function AttendancePage() {
                     </div>
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground mt-2 pt-2 border-t border-gray-200">
+                <div className="text-xs text-muted-foreground mt-2 pt-2 border-t border-gray-200 dark:border-white/10">
                   <span className="font-medium">{editingCell.employee.shift}</span>
                   {" · "}
                   {editingCell.employee.shiftStart} – {editingCell.employee.shiftEnd}
@@ -643,7 +643,7 @@ export default function AttendancePage() {
 
               {/* Status */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-brand-navy">Status</label>
+                <label className="text-sm font-medium text-brand-navy dark:text-white">Status</label>
                 <Select value={editStatus} onValueChange={(v) => setEditStatus(v as AttStatus)}>
                   <SelectTrigger className="h-9">
                     <SelectValue />
@@ -662,7 +662,7 @@ export default function AttendancePage() {
               {/* Time inputs */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-brand-navy">Check In</label>
+                  <label className="text-sm font-medium text-brand-navy dark:text-white">Check In</label>
                   <Input
                     type="time"
                     value={editCheckIn}
@@ -671,7 +671,7 @@ export default function AttendancePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-brand-navy">Check Out</label>
+                  <label className="text-sm font-medium text-brand-navy dark:text-white">Check Out</label>
                   <Input
                     type="time"
                     value={editCheckOut}
@@ -685,13 +685,13 @@ export default function AttendancePage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">Late Minutes</label>
-                  <div className="h-9 flex items-center px-3 rounded-lg border border-brand-border bg-gray-50 text-sm font-medium text-brand-navy">
+                  <div className="h-9 flex items-center px-3 rounded-lg border border-brand-border dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] text-sm font-medium text-brand-navy dark:text-white">
                     {computedLateMinutes} min
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">Hours Worked</label>
-                  <div className="h-9 flex items-center px-3 rounded-lg border border-brand-border bg-gray-50 text-sm font-medium text-brand-navy">
+                  <div className="h-9 flex items-center px-3 rounded-lg border border-brand-border dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] text-sm font-medium text-brand-navy dark:text-white">
                     {computedHoursWorked} hrs
                   </div>
                 </div>
@@ -699,7 +699,7 @@ export default function AttendancePage() {
 
               {/* OT Description */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-brand-navy">OT Description (optional)</label>
+                <label className="text-sm font-medium text-brand-navy dark:text-white">OT Description (optional)</label>
                 <Input
                   placeholder="e.g., Extended delivery to Pampanga"
                   value={editOtDesc}
@@ -709,7 +709,7 @@ export default function AttendancePage() {
               </div>
 
               {/* Footer note */}
-              <p className="text-[11px] text-muted-foreground italic border-t border-gray-100 pt-3">
+              <p className="text-[11px] text-muted-foreground italic border-t border-gray-100 dark:border-white/10 pt-3">
                 This change will be logged for audit purposes.
               </p>
             </div>
