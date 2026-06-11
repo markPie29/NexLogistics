@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Calendar,
   Truck, Calculator, Plus, Trash2, Wallet, ArrowLeft, Sparkles,
+  Settings, ExternalLink, RefreshCw, Shield,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,18 @@ import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { toast } from "sonner";
 import type { Driver, IncentiveType, DeductionType, PayrollSummary, TripPayroll } from "@/lib/types";
+import {
+  detectNextPeriodFromHistory,
+  detectPeriodFromDate,
+  formatPeriodName,
+  computePayDate,
+  detectPeriodOverlap,
+  isBlockedByPendingTrips,
+  computeAdjustmentImpact,
+  generateSmartWarnings,
+  detectCrossPeriodDuplicates,
+  computeGrandTotal,
+} from "@/lib/payroll/wizard-utils";
 
 const STEPS = [
   { id: 1, label: "Period", icon: Calendar },
@@ -45,25 +58,6 @@ const DEDUCTION_LABEL: Record<DeductionType, string> = {
   vehicle_damage: "Vehicle Damage", violation: "Violation", uniform: "Uniform",
   sss: "SSS", philhealth: "PhilHealth", pagibig: "Pag-IBIG", tax: "Withholding Tax", other: "Other",
 };
-
-function defaultPeriod() {
-  const today = new Date();
-  const day = today.getDate();
-  const start = new Date(today.getFullYear(), today.getMonth(), day <= 15 ? 1 : 16);
-  const end = new Date(today.getFullYear(), today.getMonth(), day <= 15 ? 15 : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate());
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  const half = day <= 15 ? "A" : "B";
-  const month = start.toLocaleString("en-US", { month: "long" });
-  const year = start.getFullYear();
-  const startDay = start.getDate();
-  const endDay = end.getDate();
-  return {
-    name: `${month} ${startDay}-${endDay}, ${year} · Cut-off ${half}`,
-    startDate: fmt(start),
-    endDate: fmt(end),
-    payDate: fmt(new Date(end.getTime() + 5 * 86400000)),
-  };
-}
 
 export default function PayrollRunWizard() {
   const router = useRouter();
@@ -87,6 +81,8 @@ export default function PayrollRunWizard() {
   const addDeduction = useDeductionStore((s) => s.addDeduction);
   const lockDeductionsToPeriod = useDeductionStore((s) => s.lockToPeriod);
 
+  const periods = usePayrollPeriodStore((s) => s.periods);
+  const summaries = usePayrollPeriodStore((s) => s.summaries);
   const addPeriod = usePayrollPeriodStore((s) => s.addPeriod);
   const setSummariesForPeriod = usePayrollPeriodStore((s) => s.setSummariesForPeriod);
   const user = useAuthStore((s) => s.user);
@@ -96,8 +92,18 @@ export default function PayrollRunWizard() {
     [fleet]
   );
 
+  // ── Smart period detection ──
+  const smartDefault = useMemo(() => {
+    try {
+      return detectNextPeriodFromHistory(periods);
+    } catch {
+      return detectPeriodFromDate(new Date());
+    }
+  }, [periods]);
+
   const [step, setStep] = useState(1);
-  const [period, setPeriod] = useState(defaultPeriod());
+  const [period, setPeriod] = useState(smartDefault);
+  const [blockingThreshold, setBlockingThreshold] = useState(5);
   const [computed, setComputed] = useState<{ summary: PayrollSummary; tripPayrolls: TripPayroll[]; driver: Driver }[]>([]);
   const [helperComputed, setHelperComputed] = useState<{ summary: PayrollSummary; tripPayrolls: TripPayroll[]; helperName: string }[]>([]);
   const [officeComputed, setOfficeComputed] = useState<OfficePayrollResult[]>([]);
@@ -107,6 +113,14 @@ export default function PayrollRunWizard() {
   const [incentiveForm, setIncentiveForm] = useState({ driverId: "", type: "on_time_delivery" as IncentiveType, amount: 0, notes: "" });
   const [deductionForm, setDeductionForm] = useState({ driverId: "", type: "cash_advance" as DeductionType, amount: 0, reason: "" });
   const [generating, setGenerating] = useState(false);
+  const [netPayOverrides, setNetPayOverrides] = useState<Record<string, number>>({});
+  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
+
+  // ── Overlap detection ──
+  const overlapResult = useMemo(
+    () => detectPeriodOverlap(period.startDate, period.endDate, periods),
+    [period.startDate, period.endDate, periods]
+  );
 
   // ── Derived: eligible trips per driver ──
   const driverEligibility = useMemo(() => {
@@ -126,10 +140,18 @@ export default function PayrollRunWizard() {
     });
   }, [drivers, allTrips, profiles, period.startDate, period.endDate]);
 
+  const totalPendingTrips = useMemo(
+    () => driverEligibility.reduce((sum, x) => sum + x.pending.length, 0),
+    [driverEligibility]
+  );
+
   const driversWithProfilesAndWork = driverEligibility.filter((x) => x.profile && (x.approved.length > 0 || x.profile.payrollMode === "fixed_salary" || x.profile.payrollMode === "fixed_plus_trip"));
 
   // ── Step 1: validate period ──
-  const canProceedStep1 = period.name.trim() && period.startDate && period.endDate && new Date(period.startDate) <= new Date(period.endDate);
+  const canProceedStep1 = period.name.trim() && period.startDate && period.endDate && new Date(period.startDate) <= new Date(period.endDate) && !overlapResult.isBlocking;
+
+  // ── Step 2: validate blocking threshold ──
+  const canProceedStep2 = !isBlockedByPendingTrips(totalPendingTrips, blockingThreshold) && driversWithProfilesAndWork.length > 0;
 
   // ── Step 3: compute earnings ──
   const computeAll = () => {
@@ -168,12 +190,68 @@ export default function PayrollRunWizard() {
     // Partner Payouts
     const partnerResults = computePartnerPayouts(allTrips, partners, period.startDate, period.endDate);
     setPartnerComputed(partnerResults);
+
+    // Reset overrides on re-compute
+    setNetPayOverrides({});
   };
+
+  // ── Smart warnings (Step 3) ──
+  const smartWarnings = useMemo(() => {
+    if (computed.length === 0) return [];
+    return generateSmartWarnings(
+      computed.map((c) => ({
+        driverId: c.driver.id,
+        driverName: c.driver.name,
+        summary: c.summary,
+      })),
+      allTrips,
+      profiles,
+      drivers
+    );
+  }, [computed, allTrips, profiles, drivers]);
+
+  // ── Adjustment impact (Step 4) ──
+  const adjustmentImpact = useMemo(
+    () => computeAdjustmentImpact(incentives, deductions, period.startDate, period.endDate),
+    [incentives, deductions, period.startDate, period.endDate]
+  );
+
+  // ── Cross-period duplicates (Step 5) ──
+  const crossPeriodDuplicates = useMemo(() => {
+    if (computed.length === 0) return [];
+    const computedIds = [
+      ...computed.map((c) => c.driver.id),
+      ...helperComputed.map((h) => h.summary.driverId),
+      ...officeComputed.map((o) => o.employee.id),
+    ];
+    const nameMap: Record<string, string> = {};
+    computed.forEach((c) => { nameMap[c.driver.id] = c.driver.name; });
+    helperComputed.forEach((h) => { nameMap[h.summary.driverId] = h.helperName; });
+    officeComputed.forEach((o) => { nameMap[o.employee.id] = o.employee.name; });
+
+    return detectCrossPeriodDuplicates(
+      period.startDate, period.endDate, computedIds, periods, summaries, nameMap
+    );
+  }, [computed, helperComputed, officeComputed, period.startDate, period.endDate, periods, summaries]);
+
+  // ── Grand total ──
+  const grandTotal = useMemo(
+    () => computeGrandTotal(
+      computed.map((c) => c.summary),
+      helperComputed.map((h) => h.summary),
+      officeComputed,
+      partnerComputed
+    ),
+    [computed, helperComputed, officeComputed, partnerComputed]
+  );
 
   // ── Step 5: generate payroll ──
   const generate = async () => {
     setGenerating(true);
     try {
+      const employeeCount = computed.length + helperComputed.length + officeComputed.length;
+      const auditNotes = `${computed.length} drivers, ${helperComputed.length} helpers, ${officeComputed.length} office, ${partnerComputed.length} partners. Grand total: ₱${grandTotal.toLocaleString()}`;
+
       const newPeriod = addPeriod({
         name: period.name,
         startDate: period.startDate,
@@ -182,6 +260,7 @@ export default function PayrollRunWizard() {
         status: "ready_for_review",
         generatedBy: user?.name ?? "admin",
         generatedAt: new Date().toISOString(),
+        notes: auditNotes,
       });
 
       // Re-compute drivers against the real period id
@@ -200,12 +279,18 @@ export default function PayrollRunWizard() {
         .filter((r) => r.summary.tripsCount > 0 || r.summary.baseSalary > 0);
 
       const allSummaries = [
-        ...realResults.map((r) => r.summary),
+        ...realResults.map((r) => {
+          // Apply net pay override if exists
+          const override = netPayOverrides[r.driver.id];
+          if (override !== undefined) {
+            return { ...r.summary, netPay: override };
+          }
+          return r.summary;
+        }),
         ...realHelperResults.map((r) => r.summary),
-        // Office staff as PayrollSummary records (fixed monthly)
         ...officeComputed.map((oc): PayrollSummary => ({
           id: `ps-oe-${oc.employee.id}-${newPeriod.id}`,
-          driverId: oc.employee.id, // reuse field for office employee ID
+          driverId: oc.employee.id,
           payrollPeriodId: newPeriod.id,
           payrollMode: "fixed_salary",
           tripsCount: 0,
@@ -251,11 +336,7 @@ export default function PayrollRunWizard() {
       ).map((d) => d.id);
       if (activeDeductionIds.length) lockDeductionsToPeriod(activeDeductionIds, newPeriod.id);
 
-      const totalNet = allSummaries.reduce((a, b) => a + b.netPay, 0) +
-        officeComputed.reduce((a, b) => a + b.netPay, 0) +
-        partnerComputed.reduce((a, b) => a + b.totalPayout, 0);
-
-      toast.success(`Payroll generated — ${realResults.length} drivers, ${realHelperResults.length} helpers, ${officeComputed.length} office, ${partnerComputed.length} partners — ₱${totalNet.toLocaleString()}`);
+      toast.success(`Payroll generated — ${realResults.length} drivers, ${realHelperResults.length} helpers, ${officeComputed.length} office, ${partnerComputed.length} partners — ₱${grandTotal.toLocaleString()}`);
       router.push(`/payroll/${newPeriod.id}`);
     } catch (e) {
       toast.error("Failed to generate payroll");
@@ -264,6 +345,15 @@ export default function PayrollRunWizard() {
       setGenerating(false);
     }
   };
+
+  // ── All employees for adjustment dialogs ──
+  const allEmployeesForSelect = useMemo(() => {
+    const list: { id: string; name: string; type: string }[] = [];
+    drivers.forEach((d) => list.push({ id: d.id, name: d.name, type: "Driver" }));
+    helpers.filter((h) => h.status === "active").forEach((h) => list.push({ id: h.id, name: h.name, type: "Helper" }));
+    officeStaff.filter((o) => o.status === "active").forEach((o) => list.push({ id: o.id, name: o.name, type: "Office" }));
+    return list;
+  }, [drivers, helpers, officeStaff]);
 
   return (
     <div className="space-y-6">
@@ -322,30 +412,44 @@ export default function PayrollRunWizard() {
               </div>
               <div><Label>Start Date</Label><Input type="date" value={period.startDate} onChange={(e) => {
                 const newStart = e.target.value;
-                const s = new Date(newStart);
-                const endVal = period.endDate;
-                const eDate = endVal ? new Date(endVal) : s;
-                const month = s.toLocaleString("en-US", { month: "long" });
-                const year = s.getFullYear();
-                const half = s.getDate() <= 15 ? "A" : "B";
-                const autoName = `${month} ${s.getDate()}-${eDate.getDate()}, ${year} · Cut-off ${half}`;
-                setPeriod({ ...period, startDate: newStart, name: autoName });
+                const endVal = period.endDate || newStart;
+                const autoName = formatPeriodName(newStart, endVal);
+                const autoPayDate = computePayDate(endVal);
+                setPeriod({ ...period, startDate: newStart, name: autoName, payDate: autoPayDate });
               }} /></div>
               <div><Label>End Date</Label><Input type="date" value={period.endDate} onChange={(e) => {
                 const newEnd = e.target.value;
-                const eDate = new Date(newEnd);
-                const s = period.startDate ? new Date(period.startDate) : eDate;
-                const month = s.toLocaleString("en-US", { month: "long" });
-                const year = s.getFullYear();
-                const half = s.getDate() <= 15 ? "A" : "B";
-                const autoName = `${month} ${s.getDate()}-${eDate.getDate()}, ${year} · Cut-off ${half}`;
-                setPeriod({ ...period, endDate: newEnd, name: autoName });
+                const startVal = period.startDate || newEnd;
+                const autoName = formatPeriodName(startVal, newEnd);
+                const autoPayDate = computePayDate(newEnd);
+                setPeriod({ ...period, endDate: newEnd, name: autoName, payDate: autoPayDate });
               }} /></div>
               <div><Label>Pay Date</Label><Input type="date" value={period.payDate} onChange={(e) => setPeriod({ ...period, payDate: e.target.value })} /></div>
             </div>
+
+            {/* Overlap Warning */}
+            {overlapResult.hasOverlap && overlapResult.overlappingPeriod && (
+              <div className={`flex items-start gap-2 p-3 rounded-lg border text-sm ${
+                overlapResult.isBlocking
+                  ? "bg-red-50 border-red-200 text-red-800"
+                  : "bg-amber-50 border-amber-200 text-amber-800"
+              }`}>
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">
+                    {overlapResult.isBlocking ? "Blocking overlap detected" : "Overlap warning"}
+                  </p>
+                  <p className="text-xs mt-0.5">
+                    Period &quot;{overlapResult.overlappingPeriod.name}&quot; ({overlapResult.overlappingPeriod.status}) has overlapping dates.
+                    {overlapResult.isBlocking && " Select a different date range to proceed."}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 text-xs text-sky-900 flex gap-2">
               <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>The wizard will automatically pull all <b>completed trips</b> in this date range for review and computation.</span>
+              <span>The wizard will automatically pull all <b>completed trips</b> in this date range for review and computation. Philippine semi-monthly standard: Cutoff A (1st–15th) and Cutoff B (16th–last day). Pay date is computed as 5 days after the cutoff end date.</span>
             </div>
           </CardContent>
         </Card>
@@ -355,12 +459,48 @@ export default function PayrollRunWizard() {
       {step === 2 && (
         <Card>
           <CardContent className="p-6 space-y-4">
-            <div>
-              <h3 className="font-bold text-brand-navy text-lg flex items-center gap-2"><Truck className="w-5 h-5" /> Review & Approve Trips</h3>
-              <p className="text-sm text-muted-foreground">Only <b>approved</b> trips will be paid. Approve pending ones now.</p>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h3 className="font-bold text-brand-navy text-lg flex items-center gap-2"><Truck className="w-5 h-5" /> Review & Approve Trips</h3>
+                <p className="text-sm text-muted-foreground">Only <b>approved</b> trips will be paid. Approve pending ones now.</p>
+              </div>
+              {/* Blocking threshold settings */}
+              <div className="flex items-center gap-2 text-xs">
+                <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">Block at:</span>
+                <Input
+                  type="number"
+                  min={0}
+                  className="w-16 h-7 text-xs"
+                  value={blockingThreshold}
+                  onChange={(e) => setBlockingThreshold(Math.max(0, +e.target.value))}
+                />
+                <span className="text-muted-foreground">pending</span>
+              </div>
             </div>
+
+            {/* Pending trips banner */}
+            {totalPendingTrips > 0 && (
+              <div className={`flex items-center justify-between p-3 rounded-lg border ${
+                isBlockedByPendingTrips(totalPendingTrips, blockingThreshold)
+                  ? "bg-red-50 border-red-200 text-red-800"
+                  : "bg-amber-50 border-amber-200 text-amber-800"
+              }`}>
+                <div className="flex items-center gap-2 text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>
+                    <b>{totalPendingTrips}</b> pending trip{totalPendingTrips !== 1 ? "s" : ""} across all employees.
+                    {isBlockedByPendingTrips(totalPendingTrips, blockingThreshold) && " Exceeds threshold — resolve before proceeding."}
+                  </span>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/approvals"><ExternalLink className="w-3 h-3" /> Go to Trip Approvals</Link>
+                </Button>
+              </div>
+            )}
+
             <div className="space-y-3">
-              {driverEligibility.map(({ driver, profile, approved, pending, total }) => (
+              {driverEligibility.filter((x) => x.total > 0 || (x.profile && (x.profile.payrollMode === "fixed_salary" || x.profile.payrollMode === "fixed_plus_trip"))).map(({ driver, profile, approved, pending, total }) => (
                 <div key={driver.id} className="border border-brand-border rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div>
@@ -392,8 +532,8 @@ export default function PayrollRunWizard() {
                   )}
                 </div>
               ))}
-              {driverEligibility.every((x) => x.total === 0) && (
-                <div className="text-center py-8 text-muted-foreground text-sm">No trips found in this period range.</div>
+              {driverEligibility.every((x) => x.total === 0) && driversWithProfilesAndWork.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground text-sm">No employees qualify for payroll in this period range.</div>
               )}
             </div>
           </CardContent>
@@ -410,7 +550,7 @@ export default function PayrollRunWizard() {
                 <p className="text-sm text-muted-foreground">Apply trip rates × payroll modes to each approved trip.</p>
               </div>
               <Button onClick={computeAll} disabled={driversWithProfilesAndWork.length === 0}>
-                <Calculator className="w-4 h-4" /> {computed.length ? "Re-compute" : "Compute Now"}
+                <RefreshCw className="w-4 h-4" /> {computed.length ? "Re-compute" : "Compute Now"}
               </Button>
             </div>
 
@@ -434,7 +574,7 @@ export default function PayrollRunWizard() {
                       </thead>
                       <tbody>
                         {computed.map(({ driver, summary }) => (
-                          <tr key={driver.id} className="border-b border-brand-border/60">
+                          <tr key={driver.id} className={`border-b border-brand-border/60 ${summary.netPay <= 0 ? "bg-red-50" : ""}`}>
                             <td className="py-2 px-3 font-medium">{driver.name}</td>
                             <td className="py-2 px-3 text-right">{summary.tripsCount}</td>
                             <td className="py-2 px-3 text-right">{formatCurrency(summary.baseSalary)}</td>
@@ -541,72 +681,32 @@ export default function PayrollRunWizard() {
                 {/* Grand Total */}
                 <div className="bg-brand-teal/5 border border-brand-teal/30 rounded-lg p-4 flex items-center justify-between">
                   <span className="font-bold text-brand-navy">GRAND TOTAL (All Categories)</span>
-                  <span className="font-bold text-brand-teal text-xl">
-                    {formatCurrency(
-                      computed.reduce((a, b) => a + b.summary.netPay, 0) +
-                      helperComputed.reduce((a, b) => a + b.summary.netPay, 0) +
-                      officeComputed.reduce((a, b) => a + b.netPay, 0) +
-                      partnerComputed.reduce((a, b) => a + b.totalPayout, 0)
-                    )}
-                  </span>
+                  <span className="font-bold text-brand-teal text-xl">{formatCurrency(grandTotal)}</span>
                 </div>
 
                 {/* ── Smart Payroll Warnings ── */}
-                {(() => {
-                  const warnings: { type: "error" | "warning" | "info"; msg: string }[] = [];
-                  // Zero net pay
-                  computed.filter((c) => c.summary.netPay <= 0).forEach((c) =>
-                    warnings.push({ type: "error", msg: `${c.driver.name}: Net pay is ₱0 or negative (₱${c.summary.netPay.toLocaleString()})` })
-                  );
-                  // Zero gross pay (driver has profile but no earnings)
-                  computed.filter((c) => c.summary.grossPay === 0).forEach((c) =>
-                    warnings.push({ type: "warning", msg: `${c.driver.name}: Zero gross pay — no trips and no base salary in this period` })
-                  );
-                  // Duplicate entries (same driverId appearing more than once)
-                  const driverIds = computed.map((c) => c.driver.id);
-                  const dupes = driverIds.filter((id, i) => driverIds.indexOf(id) !== i);
-                  dupes.forEach((id) => {
-                    const name = computed.find((c) => c.driver.id === id)?.driver.name;
-                    warnings.push({ type: "error", msg: `Duplicate entry detected: ${name} appears more than once` });
-                  });
-                  // Drivers with no payroll profile
-                  const driversWithoutProfile = allTrips
-                    .filter((t) => t.status === "completed" && t.driverId && !profiles.find((p) => p.driverId === t.driverId))
-                    .map((t) => t.driverId)
-                    .filter((id, i, arr) => arr.indexOf(id) === i);
-                  driversWithoutProfile.forEach((id) => {
-                    const d = drivers.find((x) => x.id === id);
-                    if (d) warnings.push({ type: "info", msg: `${d.name}: Has completed trips but no payroll profile configured` });
-                  });
-                  // BIR compliance note
-                  if (computed.some((c) => c.summary.taxDeduction > 0)) {
-                    warnings.push({ type: "info", msg: "BIR 2026: Withholding tax computed per TRAIN Law monthly brackets. Ensure BIR Form 1601-C is filed." });
-                  }
-
-                  if (warnings.length === 0) return null;
-                  return (
-                    <div className="space-y-2 mt-4">
-                      <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                        <AlertCircle className="w-3.5 h-3.5" /> Smart Payroll Checks ({warnings.length})
-                      </h4>
-                      {warnings.map((w, i) => (
-                        <div key={i} className={`flex items-start gap-2 p-2.5 rounded-lg border text-xs ${
-                          w.type === "error" ? "bg-red-50 border-red-200 text-red-800" :
-                          w.type === "warning" ? "bg-amber-50 border-amber-200 text-amber-800" :
-                          "bg-sky-50 border-sky-200 text-sky-800"
-                        }`}>
-                          <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                          <span>{w.msg}</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
+                {smartWarnings.length > 0 && (
+                  <div className="space-y-2 mt-4">
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5" /> Smart Payroll Checks ({smartWarnings.length})
+                    </h4>
+                    {smartWarnings.map((w, i) => (
+                      <div key={i} className={`flex items-start gap-2 p-2.5 rounded-lg border text-xs ${
+                        w.severity === "error" ? "bg-red-50 border-red-200 text-red-800" :
+                        w.severity === "warning" ? "bg-amber-50 border-amber-200 text-amber-800" :
+                        "bg-sky-50 border-sky-200 text-sky-800"
+                      }`}>
+                        <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                        <span>{w.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-12 border-2 border-dashed border-brand-border rounded-lg">
                 <Calculator className="w-12 h-12 mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-muted-foreground">Click "Compute Now" to calculate earnings.</p>
+                <p className="text-sm text-muted-foreground">Click &quot;Compute Now&quot; to calculate earnings.</p>
               </div>
             )}
           </CardContent>
@@ -621,6 +721,29 @@ export default function PayrollRunWizard() {
               <h3 className="font-bold text-brand-navy text-lg flex items-center gap-2"><Plus className="w-5 h-5" /> Add Period Incentives & Deductions</h3>
               <p className="text-sm text-muted-foreground">Add rewards or deductions that apply to this period only.</p>
             </div>
+
+            {/* Adjustment impact summary */}
+            {adjustmentImpact.itemCount > 0 && (
+              <div className="flex items-center gap-4 p-3 bg-gray-50 border border-brand-border rounded-lg text-sm">
+                <div className="flex-1 grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Incentives</div>
+                    <div className="font-bold text-emerald-600">+{formatCurrency(adjustmentImpact.totalIncentives)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Deductions</div>
+                    <div className="font-bold text-red-600">−{formatCurrency(adjustmentImpact.totalDeductions)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Net Impact</div>
+                    <div className={`font-bold ${adjustmentImpact.netImpact >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {adjustmentImpact.netImpact >= 0 ? "+" : ""}{formatCurrency(adjustmentImpact.netImpact)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Incentives */}
               <div>
@@ -629,15 +752,18 @@ export default function PayrollRunWizard() {
                   <Button size="sm" variant="outline" onClick={() => setShowIncentiveDialog(true)}><Plus className="w-3 h-3" /> Add</Button>
                 </div>
                 <div className="space-y-1.5 max-h-80 overflow-y-auto">
-                  {incentives.filter((i) => !i.payrollPeriodId && new Date(i.createdAt) >= new Date(period.startDate) && new Date(i.createdAt) <= new Date(period.endDate + "T23:59:59")).map((i) => (
-                    <div key={i.id} className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2 text-xs">
-                      <div>
-                        <div className="font-medium">{drivers.find((d) => d.id === i.driverId)?.name}</div>
-                        <div className="text-muted-foreground">{INCENTIVE_LABEL[i.type]}{i.notes ? ` · ${i.notes}` : ""}</div>
+                  {incentives.filter((i) => !i.payrollPeriodId && new Date(i.createdAt) >= new Date(period.startDate) && new Date(i.createdAt) <= new Date(period.endDate + "T23:59:59")).map((i) => {
+                    const emp = allEmployeesForSelect.find((e) => e.id === i.driverId);
+                    return (
+                      <div key={i.id} className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2 text-xs">
+                        <div>
+                          <div className="font-medium">{emp?.name ?? i.driverId}</div>
+                          <div className="text-muted-foreground">{INCENTIVE_LABEL[i.type]}{i.notes ? ` · ${i.notes}` : ""}</div>
+                        </div>
+                        <div className="font-bold text-emerald-600">+{formatCurrency(i.amount)}</div>
                       </div>
-                      <div className="font-bold text-emerald-600">+{formatCurrency(i.amount)}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
               {/* Deductions */}
@@ -647,21 +773,24 @@ export default function PayrollRunWizard() {
                   <Button size="sm" variant="outline" onClick={() => setShowDeductionDialog(true)}><Plus className="w-3 h-3" /> Add</Button>
                 </div>
                 <div className="space-y-1.5 max-h-80 overflow-y-auto">
-                  {deductions.filter((d) => !d.payrollPeriodId && d.status !== "waived" && new Date(d.createdAt) >= new Date(period.startDate) && new Date(d.createdAt) <= new Date(period.endDate + "T23:59:59")).map((d) => (
-                    <div key={d.id} className="flex items-center justify-between bg-rose-50 border border-rose-200 rounded-md px-3 py-2 text-xs">
-                      <div>
-                        <div className="font-medium">{drivers.find((x) => x.id === d.driverId)?.name}</div>
-                        <div className="text-muted-foreground">{DEDUCTION_LABEL[d.type]} · {d.reason}</div>
+                  {deductions.filter((d) => !d.payrollPeriodId && d.status !== "waived" && new Date(d.createdAt) >= new Date(period.startDate) && new Date(d.createdAt) <= new Date(period.endDate + "T23:59:59")).map((d) => {
+                    const emp = allEmployeesForSelect.find((e) => e.id === d.driverId);
+                    return (
+                      <div key={d.id} className="flex items-center justify-between bg-rose-50 border border-rose-200 rounded-md px-3 py-2 text-xs">
+                        <div>
+                          <div className="font-medium">{emp?.name ?? d.driverId}</div>
+                          <div className="text-muted-foreground">{DEDUCTION_LABEL[d.type]} · {d.reason}</div>
+                        </div>
+                        <div className="font-bold text-red-600">−{formatCurrency(d.amount)}</div>
                       </div>
-                      <div className="font-bold text-red-600">−{formatCurrency(d.amount)}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 flex gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>Click <b>Re-Compute</b> in the next step (back to Step 3) if you add new items here, so they reflect in totals.</span>
+              <RefreshCw className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>If you added new items, go back to <b>Step 3</b> and click <b>Re-compute</b> so updated totals reflect in the final review.</span>
             </div>
           </CardContent>
         </Card>
@@ -679,7 +808,7 @@ export default function PayrollRunWizard() {
             {/* BIR Compliance Badge */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
               <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <Shield className="w-4 h-4 text-emerald-600" />
               </div>
               <div className="flex-1">
                 <p className="text-xs font-bold text-emerald-800">BIR 2026 Compliant</p>
@@ -687,10 +816,11 @@ export default function PayrollRunWizard() {
               </div>
             </div>
 
+            {/* Summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-gray-50 border border-brand-border rounded-lg p-3">
                 <div className="text-xs uppercase text-muted-foreground">Period</div>
-                <div className="font-bold text-brand-navy">{period.name}</div>
+                <div className="font-bold text-brand-navy text-sm">{period.name}</div>
               </div>
               <div className="bg-gray-50 border border-brand-border rounded-lg p-3">
                 <div className="text-xs uppercase text-muted-foreground">Drivers / Helpers</div>
@@ -702,14 +832,63 @@ export default function PayrollRunWizard() {
               </div>
               <div className="bg-brand-teal/10 border border-brand-teal/40 rounded-lg p-3">
                 <div className="text-xs uppercase text-brand-teal">Grand Total</div>
-                <div className="font-bold text-brand-teal text-xl">{formatCurrency(
-                  computed.reduce((a, b) => a + b.summary.netPay, 0) +
-                  helperComputed.reduce((a, b) => a + b.summary.netPay, 0) +
-                  officeComputed.reduce((a, b) => a + b.netPay, 0) +
-                  partnerComputed.reduce((a, b) => a + b.totalPayout, 0)
-                )}</div>
+                <div className="font-bold text-brand-teal text-xl">{formatCurrency(grandTotal)}</div>
               </div>
             </div>
+
+            {/* Cross-period duplicate warnings */}
+            {crossPeriodDuplicates.length > 0 && (
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold uppercase text-amber-700 tracking-wider flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" /> Cross-Period Duplicate Flags ({crossPeriodDuplicates.length})
+                </h4>
+                {crossPeriodDuplicates.map((d, i) => (
+                  <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg border bg-amber-50 border-amber-200 text-xs text-amber-800">
+                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    <span><b>{d.employeeName}</b> also appears in &quot;{d.conflictingPeriodName}&quot;</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Employee list with override capability */}
+            {computed.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Employee Breakdown (click to override)</h4>
+                <div className="space-y-1 max-h-60 overflow-y-auto">
+                  {computed.map(({ driver, summary }) => (
+                    <div key={driver.id} className="flex items-center justify-between px-3 py-2 rounded-md border border-brand-border/60 text-xs hover:bg-gray-50 cursor-pointer" onClick={() => setEditingEmployeeId(editingEmployeeId === driver.id ? null : driver.id)}>
+                      <span className="font-medium">{driver.name}</span>
+                      {editingEmployeeId === driver.id ? (
+                        <Input
+                          type="number"
+                          className="w-28 h-6 text-xs text-right"
+                          defaultValue={netPayOverrides[driver.id] ?? summary.netPay}
+                          onClick={(e) => e.stopPropagation()}
+                          onBlur={(e) => {
+                            const val = +e.target.value;
+                            if (val !== summary.netPay) {
+                              setNetPayOverrides((prev) => ({ ...prev, [driver.id]: val }));
+                            } else {
+                              setNetPayOverrides((prev) => { const n = { ...prev }; delete n[driver.id]; return n; });
+                            }
+                            setEditingEmployeeId(null);
+                          }}
+                          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span className={`font-bold ${netPayOverrides[driver.id] !== undefined ? "text-amber-600" : "text-brand-teal"}`}>
+                          {formatCurrency(netPayOverrides[driver.id] ?? summary.netPay)}
+                          {netPayOverrides[driver.id] !== undefined && <span className="ml-1 text-[10px]">(overridden)</span>}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {computed.length === 0 ? (
               <div className="text-center py-8 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg">
                 Go back to Step 3 and click <b>Compute Now</b> first.
@@ -733,21 +912,27 @@ export default function PayrollRunWizard() {
         {step < 5 ? (
           <Button
             onClick={() => {
-              if (step === 1 && !canProceedStep1) { toast.error("Set a valid period"); return; }
+              if (step === 1 && !canProceedStep1) {
+                if (overlapResult.isBlocking) { toast.error("Blocking overlap — select a different date range"); return; }
+                toast.error("Set a valid period"); return;
+              }
+              if (step === 2 && !canProceedStep2) {
+                if (isBlockedByPendingTrips(totalPendingTrips, blockingThreshold)) { toast.error(`Too many pending trips (${totalPendingTrips}) — resolve before proceeding`); return; }
+                if (driversWithProfilesAndWork.length === 0) { toast.error("No employees qualify for payroll in this period"); return; }
+                return;
+              }
               if (step === 3 && computed.length === 0) { toast.error("Compute earnings first"); return; }
               if (step === 3) {
-                // Smart payroll check — block if critical issues found
-                const hasZeroNet = computed.some((c) => c.summary.netPay <= 0);
-                const hasZeroGross = computed.some((c) => c.summary.grossPay === 0 && c.summary.baseSalary === 0 && c.summary.tripEarnings === 0);
-                const driverIds = computed.map((c) => c.driver.id);
-                const hasDuplicates = driverIds.some((id, i) => driverIds.indexOf(id) !== i);
-                if (hasDuplicates) { toast.error("Duplicate employees detected — cannot proceed. Fix payroll profiles first."); return; }
-                if (hasZeroNet) { toast.error("One or more employees have zero or negative net pay. Review the Smart Payroll Checks above before proceeding."); return; }
-                if (hasZeroGross) { toast.warning("Warning: Some employees have zero gross pay. Check their payroll profiles."); }
+                const hasErrors = smartWarnings.some((w) => w.severity === "error");
+                if (hasErrors) {
+                  const hasDupes = smartWarnings.some((w) => w.message.includes("Duplicate"));
+                  if (hasDupes) { toast.error("Duplicate employees detected — cannot proceed. Fix payroll profiles first."); return; }
+                  toast.error("Critical issues found — review Smart Payroll Checks before proceeding."); return;
+                }
               }
               setStep(step + 1);
             }}
-            disabled={step === 1 && !canProceedStep1}
+            disabled={(step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2)}
           >
             Next <ChevronRight className="w-4 h-4" />
           </Button>
@@ -759,10 +944,10 @@ export default function PayrollRunWizard() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Add Incentive</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Driver</Label>
+            <div><Label>Employee</Label>
               <Select value={incentiveForm.driverId} onValueChange={(v) => setIncentiveForm({ ...incentiveForm, driverId: v })}>
-                <SelectTrigger><SelectValue placeholder="Select driver" /></SelectTrigger>
-                <SelectContent>{drivers.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                <SelectContent>{allEmployeesForSelect.map((e) => <SelectItem key={e.id} value={e.id}>{e.name} ({e.type})</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Type</Label>
@@ -777,7 +962,7 @@ export default function PayrollRunWizard() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowIncentiveDialog(false)}>Cancel</Button>
             <Button onClick={() => {
-              if (!incentiveForm.driverId || incentiveForm.amount <= 0) { toast.error("Driver and amount required"); return; }
+              if (!incentiveForm.driverId || incentiveForm.amount <= 0) { toast.error("Employee and amount required"); return; }
               addIncentive({
                 ...incentiveForm,
                 createdBy: user?.name ?? "admin",
@@ -795,10 +980,10 @@ export default function PayrollRunWizard() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Add Deduction</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Driver</Label>
+            <div><Label>Employee</Label>
               <Select value={deductionForm.driverId} onValueChange={(v) => setDeductionForm({ ...deductionForm, driverId: v })}>
-                <SelectTrigger><SelectValue placeholder="Select driver" /></SelectTrigger>
-                <SelectContent>{drivers.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                <SelectContent>{allEmployeesForSelect.map((e) => <SelectItem key={e.id} value={e.id}>{e.name} ({e.type})</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Type</Label>
@@ -813,7 +998,7 @@ export default function PayrollRunWizard() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeductionDialog(false)}>Cancel</Button>
             <Button onClick={() => {
-              if (!deductionForm.driverId || deductionForm.amount <= 0 || !deductionForm.reason.trim()) { toast.error("Driver, amount and reason required"); return; }
+              if (!deductionForm.driverId || deductionForm.amount <= 0 || !deductionForm.reason.trim()) { toast.error("Employee, amount and reason required"); return; }
               addDeduction({ ...deductionForm, status: "pending", createdBy: user?.name ?? "admin" });
               toast.success("Deduction added");
               setShowDeductionDialog(false);

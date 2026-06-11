@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFleetStore, useDriverStore, useTripStore, useMaintenanceStore, useExpenseStore } from "@/lib/store";
 import { formatCurrency, initials, relativeTime } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { VehicleDocumentsTab } from "@/components/fleet/VehicleDocumentsTab";
 
 export default function VehicleDetailPage() {
   const params = useParams<{ id: string }>();
@@ -157,10 +158,7 @@ export default function VehicleDetailPage() {
         </TabsContent>
 
         <TabsContent value="docs">
-          <Card><CardContent className="p-6 text-muted-foreground">
-            <FileText className="w-10 h-10 mb-3 text-brand-teal" />
-            Vehicle documents (OR/CR, Insurance, Permits) will appear here.
-          </CardContent></Card>
+          <VehicleDocumentsTab vehicleId={params.id} />
         </TabsContent>
       </Tabs>
     </div>

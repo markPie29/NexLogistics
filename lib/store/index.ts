@@ -471,7 +471,7 @@ export function resetAllDemoData() {
     `${p}-credit-notes`, `${p}-recurring`, `${p}-trip-rates`,
     `${p}-driver-payroll-profiles`, `${p}-incentives`, `${p}-deductions`,
     `${p}-payroll-periods`, `${p}-partners`, `${p}-helpers`, `${p}-calendar`,
-    `${p}-feature-flags`, `${p}-office-staff`,
+    `${p}-feature-flags`, `${p}-office-staff`, `${p}-vehicle-documents`,
   ].forEach((k) => localStorage.removeItem(k));
   window.location.reload();
 }
@@ -513,3 +513,6 @@ export { useOfficeStaffStore, computeOfficeDeductions } from "./office-staff";
 // Platform Feature Flags
 export { useFeatureStore } from "./features";
 export type { FeatureKey } from "./features";
+
+// Vehicle Documents & Permits
+export { useVehicleDocumentStore } from "./vehicle-documents";
