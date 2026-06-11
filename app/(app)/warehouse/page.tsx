@@ -8,8 +8,10 @@ import { AddItemModal } from "@/components/warehouse/AddItemModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 
@@ -119,8 +121,19 @@ export default function WarehousePage() {
   const pendingInbound = DOCK_SCHEDULE.filter((d) => d.type === "Inbound" && d.status !== "Completed").length;
   const pendingOutbound = DOCK_SCHEDULE.filter((d) => d.type === "Outbound" && d.status !== "Completed").length;
 
-  const handleAddItem = (item: InventoryItem) => {
-    setInventory((prev) => [item, ...prev]);
+  const handleAddItem = () => {
+    setAddModalOpen(true);
+  };
+
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newItem, setNewItem] = useState({ name: "", category: "Parcels" as Category, location: "Warehouse A" as WarehouseLocation, qty: 0 });
+
+  const handleSubmitItem = () => {
+    if (!newItem.name.trim()) { toast.error("Item name is required"); return; }
+    if (newItem.qty <= 0) { toast.error("Quantity must be greater than 0"); return; }
+    toast.success(`Item "${newItem.name}" added to ${newItem.location}`, { description: `${newItem.qty} units · ${newItem.category}` });
+    setAddModalOpen(false);
+    setNewItem({ name: "", category: "Parcels", location: "Warehouse A", qty: 0 });
   };
 
   return (
@@ -318,6 +331,64 @@ export default function WarehousePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add Item Modal */}
+      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-brand-navy">Add Inventory Item</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Item Name *</Label>
+              <Input
+                placeholder="e.g. Samsung Galaxy A15 (Bulk)"
+                value={newItem.name}
+                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Category</Label>
+                <Select value={newItem.category} onValueChange={(v) => setNewItem({ ...newItem, category: v as Category })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Parcels">Parcels</SelectItem>
+                    <SelectItem value="Pallets">Pallets</SelectItem>
+                    <SelectItem value="Containers">Containers</SelectItem>
+                    <SelectItem value="Documents">Documents</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Location</Label>
+                <Select value={newItem.location} onValueChange={(v) => setNewItem({ ...newItem, location: v as WarehouseLocation })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Warehouse A">Warehouse A – Manila</SelectItem>
+                    <SelectItem value="Warehouse B">Warehouse B – Cavite</SelectItem>
+                    <SelectItem value="Warehouse C">Warehouse C – Laguna</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>Quantity *</Label>
+              <Input
+                type="number"
+                min={1}
+                placeholder="Enter quantity"
+                value={newItem.qty || ""}
+                onChange={(e) => setNewItem({ ...newItem, qty: +e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setAddModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmitItem} className="bg-brand-navy hover:bg-brand-navy/90">Add Item</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
