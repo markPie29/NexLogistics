@@ -199,7 +199,7 @@ export default function WarehousePage() {
                       placeholder="Search SKU or item name..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9 w-[240px]"
+                      className="pl-9 w-[300px]"
                     />
                   </div>
                   <Button size="sm" onClick={() => setAddModalOpen(true)} className="p-5 bg-brand-navy hover:bg-brand-navy/90 dark:bg-brand-teal dark:hover:bg-brand-teal/90 dark:text-brand-navy">

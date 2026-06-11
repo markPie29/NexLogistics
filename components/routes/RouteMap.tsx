@@ -12,8 +12,8 @@ import {
 import L from "leaflet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Truck, Play } from "lucide-react";
+import { useUiStore } from "@/lib/store";
 
 // ─── Coordinate Data ──────────────────────────────────────────────────────────
 
@@ -139,6 +139,7 @@ function AnimatedMarker({ position }: { position: Coordinate }) {
 type SimStatus = "Departing" | "In Transit" | "Arriving" | "Delivered";
 
 export default function RouteMap() {
+  const darkMode = useUiStore((s) => s.darkMode);
   const [selectedVehicle, setSelectedVehicle] = useState(VEHICLES[0]);
   const [selectedRouteIdx, setSelectedRouteIdx] = useState(0);
   const [simulating, setSimulating] = useState(false);
@@ -217,14 +218,14 @@ export default function RouteMap() {
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-brand-navy">Select Vehicle:</label>
+          <label className="text-sm font-medium text-brand-navy dark:text-white">Select Vehicle:</label>
           <select
             value={selectedVehicle}
             onChange={(e) => setSelectedVehicle(e.target.value)}
-            className="text-sm border border-brand-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30"
+            className="text-sm border border-brand-border dark:border-white/10 rounded-lg px-3 py-1.5 bg-white dark:bg-brand-navy text-brand-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30"
           >
             {VEHICLES.map((v) => (
-              <option key={v} value={v}>
+              <option key={v} value={v} className="bg-white dark:bg-brand-navy text-brand-navy dark:text-white">
                 {v}
               </option>
             ))}
@@ -232,15 +233,15 @@ export default function RouteMap() {
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-brand-navy">Route:</label>
+          <label className="text-sm font-medium text-brand-navy dark:text-white">Route:</label>
           <select
             value={selectedRouteIdx}
             onChange={(e) => handleRouteSelect(Number(e.target.value))}
             disabled={simulating}
-            className="text-sm border border-brand-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30"
+            className="text-sm border border-brand-border dark:border-white/10 rounded-lg px-3 py-1.5 bg-white dark:bg-brand-navy text-brand-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30"
           >
             {ROUTES.map((r, i) => (
-              <option key={r.id} value={i}>
+              <option key={r.id} value={i} className="bg-white dark:bg-brand-navy text-brand-navy dark:text-white">
                 {r.id}: {r.origin} → {r.destination}
               </option>
             ))}
@@ -259,7 +260,7 @@ export default function RouteMap() {
       </div>
 
       {/* Map */}
-      <div className="rounded-xl overflow-hidden border border-brand-border" style={{ height: 480 }}>
+      <div className="rounded-xl overflow-hidden border border-brand-border dark:border-white/10" style={{ height: 480 }}>
         <MapContainer
           center={[14.5995, 120.9842]}
           zoom={9}
@@ -267,8 +268,16 @@ export default function RouteMap() {
           style={{ height: "100%", width: "100%" }}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution={
+              darkMode
+                ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }
+            url={
+              darkMode
+                ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            }
           />
 
           {/* Route Polylines */}
@@ -327,7 +336,7 @@ export default function RouteMap() {
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-        <span className="font-medium text-brand-navy">Legend:</span>
+        <span className="font-medium text-brand-navy dark:text-white">Legend:</span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 bg-emerald-500 rounded" /> Excellent
         </span>
@@ -338,10 +347,10 @@ export default function RouteMap() {
           <span className="w-3 h-0.5 bg-red-500 rounded" /> Needs Attention
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" /> Origin
+          <span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-brand-navy" /> Origin
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-red-500 border-2 border-white" /> Destination
+          <span className="w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-brand-navy" /> Destination
         </span>
       </div>
 
@@ -349,28 +358,28 @@ export default function RouteMap() {
       {simStatus && (
         <Card>
           <CardContent className="p-4">
-            <h4 className="text-sm font-bold text-brand-navy mb-3 flex items-center gap-2">
+            <h4 className="text-sm font-bold text-brand-navy dark:text-white mb-3 flex items-center gap-2">
               <Truck className="w-4 h-4 text-brand-teal" />
               Route Simulation
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground">Vehicle</p>
-                <p className="font-semibold text-brand-navy">{selectedVehicle}</p>
+                <p className="font-semibold text-brand-navy dark:text-white">{selectedVehicle}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Route</p>
-                <p className="font-semibold text-brand-navy">
+                <p className="font-semibold text-brand-navy dark:text-white">
                   {selectedRoute.origin} → {selectedRoute.destination}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Distance</p>
-                <p className="font-semibold text-brand-navy">{selectedRoute.distanceKm} km</p>
+                <p className="font-semibold text-brand-navy dark:text-white">{selectedRoute.distanceKm} km</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">ETA</p>
-                <p className="font-semibold text-brand-navy">
+                <p className="font-semibold text-brand-navy dark:text-white">
                   {simStatus === "Delivered"
                     ? "Arrived"
                     : `~${Math.round(((100 - simProgress) / 100) * (selectedRoute.distanceKm / 50) * 60)} min`}
@@ -384,7 +393,7 @@ export default function RouteMap() {
 
             {/* Progress bar */}
             <div className="mt-3">
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-brand-teal rounded-full transition-all duration-100"
                   style={{ width: `${simProgress}%` }}
