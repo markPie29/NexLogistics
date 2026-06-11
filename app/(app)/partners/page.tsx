@@ -208,12 +208,12 @@ export default function PartnersPage() {
         <CardContent className="p-4 space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-semibold text-brand-navy">Partner Requests (Diesel / Cash Advance / Others)</h3>
+              <h3 className="text-sm font-semibold text-brand-navy dark:text-white">Partner Requests (Diesel / Cash Advance / Others)</h3>
               <p className="text-xs text-muted-foreground">Track and approve partner funding requests before release.</p>
             </div>
             <div className="text-xs text-muted-foreground">
-              Pending: <span className="font-semibold text-brand-navy">{requestSummary.pendingCount}</span> ·
-              Amount: <span className="font-semibold text-brand-navy"> {formatCurrency(requestSummary.pendingAmount)}</span>
+              Pending: <span className="font-semibold text-brand-navy dark:text-white">{requestSummary.pendingCount}</span> ·
+              Amount: <span className="font-semibold text-brand-navy dark:text-white"> {formatCurrency(requestSummary.pendingAmount)}</span>
             </div>
           </div>
 
@@ -288,65 +288,153 @@ export default function PartnersPage() {
         </Select>
       </div>
 
-      {/* Partner Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filtered.map((p) => {
-          const pTrips = trips.filter((t) => t.partnerId === p.id);
-          const pendingTrips = pTrips.filter((t) => t.partnerPayoutStatus === "pending").length;
-          return (
-            <Card key={p.id} className="border-brand-border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
-              <CardContent className="p-5">
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-brand-navy flex items-center justify-center shrink-0">
-                    <Building2 className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-brand-navy dark:text-white truncate">{p.name}</div>
-                    <div className="text-xs text-muted-foreground">{p.vehicleTypes.join(", ")}</div>
-                  </div>
-                  <Badge variant={STATUS_VARIANT[p.status]}>{p.status}</Badge>
-                </div>
+      {/* Partners Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50/50 dark:bg-white/[0.02]">
+                  <th className="text-left font-semibold text-brand-navy dark:text-white px-4 py-3">Partner</th>
+                  <th className="text-left font-semibold text-brand-navy dark:text-white px-4 py-3">Contact</th>
+                  <th className="text-left font-semibold text-brand-navy dark:text-white px-4 py-3">Vehicle Types</th>
+                  <th className="text-left font-semibold text-brand-navy dark:text-white px-4 py-3">Rate</th>
+                  <th className="text-right font-semibold text-brand-navy dark:text-white px-4 py-3">Trips</th>
+                  <th className="text-right font-semibold text-brand-navy dark:text-white px-4 py-3">Unpaid</th>
+                  <th className="text-left font-semibold text-brand-navy dark:text-white px-4 py-3">Status</th>
+                  <th className="text-right font-semibold text-brand-navy dark:text-white px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((p) => {
+                  const pTrips = trips.filter((t) => t.partnerId === p.id);
+                  const pendingTrips = pTrips.filter((t) => t.partnerPayoutStatus === "pending").length;
+                  const rateLabel = p.defaultRate
+                    ? formatCurrency(p.defaultRate) + "/trip"
+                    : p.ratePerKm
+                    ? `₱${p.ratePerKm}/km`
+                    : "—";
+                  return (
+                    <tr
+                      key={p.id}
+                      className="border-b last:border-0 hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors"
+                    >
+                      {/* Partner name + address */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-brand-navy flex items-center justify-center shrink-0">
+                            <Building2 className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-brand-navy dark:text-white truncate max-w-[180px]">{p.name}</div>
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              <MapPin className="w-3 h-3 shrink-0" />
+                              <span className="truncate max-w-[160px]">{p.address || "—"}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
 
-                <div className="space-y-1.5 mb-4">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground"><Mail className="w-3.5 h-3.5" />{p.email || "—"}</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground"><Phone className="w-3.5 h-3.5" />{p.phone}</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground"><MapPin className="w-3.5 h-3.5" /><span className="truncate">{p.address}</span></div>
-                </div>
+                      {/* Contact */}
+                      <td className="px-4 py-3">
+                        <div className="text-xs font-medium text-brand-navy dark:text-white">{p.contactPerson}</div>
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+                          <Phone className="w-3 h-3 shrink-0" />{p.phone || "—"}
+                        </div>
+                        {p.email && (
+                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <Mail className="w-3 h-3 shrink-0" />{p.email}
+                          </div>
+                        )}
+                      </td>
 
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  <div className="rounded-lg bg-gray-50 p-2 text-center">
-                    <div className="text-base font-extrabold text-brand-navy">{pTrips.length}</div>
-                    <div className="text-[10px] text-muted-foreground">Trips</div>
-                  </div>
-                  <div className="rounded-lg bg-amber-50 p-2 text-center">
-                    <div className="text-base font-extrabold text-amber-700">{pendingTrips}</div>
-                    <div className="text-[10px] text-muted-foreground">Unpaid</div>
-                  </div>
-                  <div className="rounded-lg bg-sky-50 p-2 text-center">
-                    <div className="text-xs font-extrabold text-sky-700">{p.defaultRate ? formatCurrency(p.defaultRate) : p.ratePerKm ? `₱${p.ratePerKm}/km` : "—"}</div>
-                    <div className="text-[10px] text-muted-foreground">Rate</div>
-                  </div>
-                </div>
+                      {/* Vehicle types */}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1 max-w-[160px]">
+                          {p.vehicleTypes.length > 0
+                            ? p.vehicleTypes.map((vt) => (
+                                <Badge key={vt} variant="neutral" className="text-[10px] border-0">
+                                  {vt}
+                                </Badge>
+                              ))
+                            : <span className="text-muted-foreground text-xs">—</span>}
+                        </div>
+                      </td>
 
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(p)}>
-                    <Pencil className="w-3.5 h-3.5" /> Edit
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50 hover:border-red-200" onClick={() => handleDelete(p)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-        {filtered.length === 0 && (
-          <div className="col-span-3 py-16 text-center text-muted-foreground">
-            <Handshake className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-            No partners found
+                      {/* Rate */}
+                      <td className="px-4 py-3 text-xs font-medium text-brand-navy dark:text-white whitespace-nowrap">
+                        {rateLabel}
+                      </td>
+
+                      {/* Trips */}
+                      <td className="px-4 py-3 text-right font-semibold text-brand-navy dark:text-white">
+                        {pTrips.length}
+                      </td>
+
+                      {/* Unpaid */}
+                      <td className="px-4 py-3 text-right">
+                        {pendingTrips > 0 ? (
+                          <span className="font-semibold text-amber-600 dark:text-amber-400">{pendingTrips}</span>
+                        ) : (
+                          <span className="text-muted-foreground">0</span>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <Badge variant={STATUS_VARIANT[p.status]}>{p.status}</Badge>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2.5"
+                            onClick={() => openEdit(p)}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span className="ml-1 hidden sm:inline">Edit</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2.5 text-red-600 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-900/20 dark:text-red-400 dark:border-white/10"
+                            onClick={() => handleDelete(p)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-16 text-center">
+                      <Handshake className="w-10 h-10 mx-auto mb-2 text-gray-300 dark:text-white/10" />
+                      <p className="text-muted-foreground font-medium">No partners found</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {search || statusFilter !== "all"
+                          ? "Try adjusting your search or filter"
+                          : "Add your first subcon partner to get started"}
+                      </p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+
+          {/* Footer count */}
+          {filtered.length > 0 && (
+            <div className="px-4 py-2.5 border-t border-brand-border dark:border-white/10 text-xs text-muted-foreground">
+              Showing {filtered.length} of {partners.length} partner{partners.length !== 1 ? "s" : ""}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* New Partner Request Dialog */}
       <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
