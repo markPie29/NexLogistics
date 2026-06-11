@@ -202,8 +202,8 @@ export default function WarehousePage() {
                       className="pl-9 w-[240px]"
                     />
                   </div>
-                  <Button size="sm" onClick={() => setAddModalOpen(true)} className="p-5 bg-brand-navy hover:bg-brand-navy/90 dark:bg-brand-navy-light dark:hover:bg-brand-navy-light/90">
-                    <Plus className="w-4 h-4 mr-1 text-white" />
+                  <Button size="sm" onClick={() => setAddModalOpen(true)} className="p-5 bg-brand-navy hover:bg-brand-navy/90 dark:bg-brand-teal dark:hover:bg-brand-teal/90 dark:text-brand-navy">
+                    <Plus className="w-4 h-4 mr-1 text-white dark:text-brand-navy" />
                     Add Item
                   </Button>
                 </div>
