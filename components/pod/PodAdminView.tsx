@@ -201,7 +201,7 @@ export function PodAdminView({ trips, pods, drivers }: PodAdminViewProps) {
 
   // ─── Render ──────────────────────────────────────────────────
   return (
-    <div className={cn("space-y-6 min-w-0 overflow-hidden dark:bg-brand-navy")}>
+    <div className={cn("space-y-6 min-w-0 overflow-hidden")}>
       <PageHeader
         breadcrumbs={[
           { label: "Operations" },

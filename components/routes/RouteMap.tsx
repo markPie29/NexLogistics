@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -12,8 +12,8 @@ import {
 import L from "leaflet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Truck, Play } from "lucide-react";
+import { useUiStore } from "@/lib/store";
 
 // ─── Coordinate Data ──────────────────────────────────────────────────────────
 
@@ -23,15 +23,15 @@ interface Coordinate {
 }
 
 const LOCATIONS: Record<string, Coordinate> = {
-  "Manila Port": { lat: 14.5995, lng: 120.9642 },
-  Pampanga: { lat: 15.0286, lng: 120.693 },
-  "Cavite Industrial": { lat: 14.4275, lng: 120.91 },
-  Laguna: { lat: 14.2114, lng: 121.1645 },
-  Makati: { lat: 14.5547, lng: 121.0244 },
-  Batangas: { lat: 13.7565, lng: 121.0583 },
-  "Quezon City": { lat: 14.676, lng: 121.0437 },
-  Bulacan: { lat: 14.8433, lng: 120.8093 },
-  Rizal: { lat: 14.5864, lng: 121.1761 },
+  "Manila Port":      { lat: 14.5995, lng: 120.9642 },
+  Pampanga:           { lat: 15.0286, lng: 120.693  },
+  "Cavite Industrial":{ lat: 14.4275, lng: 120.91   },
+  Laguna:             { lat: 14.2114, lng: 121.1645 },
+  Makati:             { lat: 14.5547, lng: 121.0244 },
+  Batangas:           { lat: 13.7565, lng: 121.0583 },
+  "Quezon City":      { lat: 14.676,  lng: 121.0437 },
+  Bulacan:            { lat: 14.8433, lng: 120.8093 },
+  Rizal:              { lat: 14.5864, lng: 121.1761 },
 };
 
 interface RouteData {
@@ -43,20 +43,32 @@ interface RouteData {
 }
 
 const ROUTES: RouteData[] = [
-  { id: "RT-001", origin: "Manila Port", destination: "Pampanga", distanceKm: 96, performance: "Excellent" },
-  { id: "RT-002", origin: "Cavite Industrial", destination: "Laguna", distanceKm: 62, performance: "Good" },
-  { id: "RT-003", origin: "Makati", destination: "Batangas", distanceKm: 88, performance: "Excellent" },
-  { id: "RT-004", origin: "Quezon City", destination: "Bulacan", distanceKm: 47, performance: "Good" },
-  { id: "RT-005", origin: "Makati", destination: "Rizal", distanceKm: 38, performance: "Good" },
+  { id: "RT-001", origin: "Manila Port",       destination: "Pampanga", distanceKm: 96, performance: "Excellent" },
+  { id: "RT-002", origin: "Cavite Industrial", destination: "Laguna",   distanceKm: 62, performance: "Good"      },
+  { id: "RT-003", origin: "Makati",            destination: "Batangas", distanceKm: 88, performance: "Excellent" },
+  { id: "RT-004", origin: "Quezon City",       destination: "Bulacan",  distanceKm: 47, performance: "Good"      },
+  { id: "RT-005", origin: "Makati",            destination: "Rizal",    distanceKm: 38, performance: "Good"      },
 ];
 
 const PERFORMANCE_COLORS: Record<string, string> = {
-  Excellent: "#10B981",
-  Good: "#F59E0B",
+  Excellent:         "#10B981",
+  Good:              "#F59E0B",
   "Needs Attention": "#EF4444",
 };
 
 const VEHICLES = ["NEX-101", "NEX-102", "NEX-103", "NEX-104", "NEX-105"];
+
+// ─── Tile layer URLs ──────────────────────────────────────────────────────────
+
+const TILE_LIGHT = {
+  url:         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+};
+
+const TILE_DARK = {
+  url:         "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -105,7 +117,7 @@ function makeTruckIcon() {
   });
 }
 
-// ─── Animated Marker Component ────────────────────────────────────────────────
+// ─── Animated Marker ──────────────────────────────────────────────────────────
 
 function AnimatedMarker({ position }: { position: Coordinate }) {
   const map = useMap();
@@ -138,26 +150,36 @@ function AnimatedMarker({ position }: { position: Coordinate }) {
 
 type SimStatus = "Departing" | "In Transit" | "Arriving" | "Delivered";
 
+// Shared select classes — fully dark-mode aware
+const selectCls =
+  "text-sm border border-brand-border dark:border-white/10 rounded-lg px-3 py-1.5 " +
+  "bg-white dark:bg-white/5 text-brand-navy dark:text-white " +
+  "focus:outline-none focus:ring-2 focus:ring-brand-teal/30 " +
+  "disabled:opacity-50 disabled:cursor-not-allowed";
+
 export default function RouteMap() {
-  const [selectedVehicle, setSelectedVehicle] = useState(VEHICLES[0]);
+  // Read dark mode from the global UI store so tile layer reacts to toggles
+  const darkMode = useUiStore((s) => s.darkMode);
+
+  const [selectedVehicle,  setSelectedVehicle]  = useState(VEHICLES[0]);
   const [selectedRouteIdx, setSelectedRouteIdx] = useState(0);
-  const [simulating, setSimulating] = useState(false);
-  const [simPosition, setSimPosition] = useState<Coordinate | null>(null);
-  const [simStatus, setSimStatus] = useState<SimStatus | null>(null);
-  const [simProgress, setSimProgress] = useState(0);
+  const [simulating,       setSimulating]       = useState(false);
+  const [simPosition,      setSimPosition]      = useState<Coordinate | null>(null);
+  const [simStatus,        setSimStatus]        = useState<SimStatus | null>(null);
+  const [simProgress,      setSimProgress]      = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const selectedRoute = ROUTES[selectedRouteIdx];
-  const originCoord = LOCATIONS[selectedRoute.origin];
-  const destCoord = LOCATIONS[selectedRoute.destination];
+  const originCoord   = LOCATIONS[selectedRoute.origin];
+  const destCoord     = LOCATIONS[selectedRoute.destination];
 
   const handleSimulate = useCallback(() => {
     if (simulating) return;
 
-    const steps = 50;
-    const totalDuration = 5000; // 5 seconds
-    const intervalMs = totalDuration / steps;
-    const points = interpolatePoints(originCoord, destCoord, steps);
+    const steps         = 50;
+    const totalDuration = 5000;
+    const intervalMs    = totalDuration / steps;
+    const points        = interpolatePoints(originCoord, destCoord, steps);
 
     setSimulating(true);
     setSimPosition(points[0]);
@@ -181,20 +203,14 @@ export default function RouteMap() {
       const progress = Math.round((currentStep / steps) * 100);
       setSimProgress(progress);
 
-      if (progress < 15) {
-        setSimStatus("Departing");
-      } else if (progress < 80) {
-        setSimStatus("In Transit");
-      } else {
-        setSimStatus("Arriving");
-      }
+      if      (progress < 15) setSimStatus("Departing");
+      else if (progress < 80) setSimStatus("In Transit");
+      else                    setSimStatus("Arriving");
     }, intervalMs);
   }, [simulating, originCoord, destCoord]);
 
   useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, []);
 
   const handleRouteSelect = (idx: number) => {
@@ -206,38 +222,43 @@ export default function RouteMap() {
   };
 
   const statusColor: Record<SimStatus, string> = {
-    Departing: "text-blue-600",
-    "In Transit": "text-amber-600",
-    Arriving: "text-purple-600",
-    Delivered: "text-emerald-600",
+    Departing:   "text-blue-600   dark:text-blue-400",
+    "In Transit":"text-amber-600  dark:text-amber-400",
+    Arriving:    "text-purple-600 dark:text-purple-400",
+    Delivered:   "text-emerald-600 dark:text-emerald-400",
   };
+
+  const tile = darkMode ? TILE_DARK : TILE_LIGHT;
 
   return (
     <div className="space-y-4">
-      {/* Controls */}
+
+      {/* ── Controls ──────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-brand-navy">Select Vehicle:</label>
+          <label className="text-sm font-medium text-brand-navy dark:text-white">
+            Select Vehicle:
+          </label>
           <select
             value={selectedVehicle}
             onChange={(e) => setSelectedVehicle(e.target.value)}
-            className="text-sm border border-brand-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30"
+            className={selectCls}
           >
             {VEHICLES.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
+              <option key={v} value={v}>{v}</option>
             ))}
           </select>
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-brand-navy">Route:</label>
+          <label className="text-sm font-medium text-brand-navy dark:text-white">
+            Route:
+          </label>
           <select
             value={selectedRouteIdx}
             onChange={(e) => handleRouteSelect(Number(e.target.value))}
             disabled={simulating}
-            className="text-sm border border-brand-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30"
+            className={selectCls}
           >
             {ROUTES.map((r, i) => (
               <option key={r.id} value={i}>
@@ -247,64 +268,65 @@ export default function RouteMap() {
           </select>
         </div>
 
-        <Button
-          onClick={handleSimulate}
-          disabled={simulating}
-          size="sm"
-          className="gap-2"
-        >
+        <Button onClick={handleSimulate} disabled={simulating} size="sm" className="gap-2">
           <Play className="w-3.5 h-3.5" />
           {simulating ? "Simulating..." : "Simulate Route"}
         </Button>
       </div>
 
-      {/* Map */}
-      <div className="rounded-xl overflow-hidden border border-brand-border" style={{ height: 480 }}>
+      {/* ── Map ───────────────────────────────────────────────────────────── */}
+      <div
+        className="rounded-xl overflow-hidden border border-brand-border dark:border-white/10"
+        style={{ height: 480 }}
+      >
         <MapContainer
-          center={[14.5995, 120.9842]}
+          center={[14.5995, 120.9642]}
           zoom={9}
           scrollWheelZoom={true}
           style={{ height: "100%", width: "100%" }}
         >
+          {/*
+           * key forces a full remount of TileLayer when dark mode changes.
+           * react-leaflet v4 does not hot-swap tile URLs on prop changes —
+           * the key is the only reliable way to switch tile providers.
+           */}
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            key={darkMode ? "dark" : "light"}
+            url={tile.url}
+            attribution={tile.attribution}
           />
 
           {/* Route Polylines */}
           {ROUTES.map((route, idx) => {
             const start = LOCATIONS[route.origin];
-            const end = LOCATIONS[route.destination];
+            const end   = LOCATIONS[route.destination];
             if (!start || !end) return null;
             return (
               <Polyline
                 key={route.id}
-                positions={[
-                  [start.lat, start.lng],
-                  [end.lat, end.lng],
-                ]}
+                positions={[[start.lat, start.lng],[end.lat, end.lng]]}
                 pathOptions={{
-                  color: PERFORMANCE_COLORS[route.performance],
-                  weight: idx === selectedRouteIdx ? 4 : 2,
-                  opacity: idx === selectedRouteIdx ? 1 : 0.5,
+                  color:     PERFORMANCE_COLORS[route.performance],
+                  weight:    idx === selectedRouteIdx ? 4 : 2,
+                  opacity:   idx === selectedRouteIdx ? 1 : 0.5,
                   dashArray: idx === selectedRouteIdx ? undefined : "5, 10",
                 }}
               />
             );
           })}
 
-          {/* Origin & Destination Markers */}
+          {/* Origin & Destination Markers — Fragment wrapper, not <span> */}
           {ROUTES.map((route) => {
             const start = LOCATIONS[route.origin];
-            const end = LOCATIONS[route.destination];
+            const end   = LOCATIONS[route.destination];
             if (!start || !end) return null;
             return (
-              <span key={`markers-${route.id}`}>
+              <React.Fragment key={`markers-${route.id}`}>
                 <Marker position={[start.lat, start.lng]} icon={makeOriginIcon()}>
                   <Popup>
                     <div className="text-xs font-sans">
                       <div className="font-bold">{route.origin}</div>
-                      <div className="text-muted-foreground">Origin - {route.id}</div>
+                      <div className="text-muted-foreground">Origin – {route.id}</div>
                     </div>
                   </Popup>
                 </Marker>
@@ -312,65 +334,55 @@ export default function RouteMap() {
                   <Popup>
                     <div className="text-xs font-sans">
                       <div className="font-bold">{route.destination}</div>
-                      <div className="text-muted-foreground">Destination - {route.id}</div>
+                      <div className="text-muted-foreground">Destination – {route.id}</div>
                     </div>
                   </Popup>
                 </Marker>
-              </span>
+              </React.Fragment>
             );
           })}
 
-          {/* Animated Truck Marker */}
           {simPosition && <AnimatedMarker position={simPosition} />}
         </MapContainer>
       </div>
 
-      {/* Legend */}
+      {/* ── Legend ────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-        <span className="font-medium text-brand-navy">Legend:</span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-0.5 bg-emerald-500 rounded" /> Excellent
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-0.5 bg-amber-500 rounded" /> Good
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-0.5 bg-red-500 rounded" /> Needs Attention
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" /> Origin
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-red-500 border-2 border-white" /> Destination
-        </span>
+        <span className="font-medium text-brand-navy dark:text-white">Legend:</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-emerald-500 rounded inline-block" /> Excellent</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-amber-500  rounded inline-block" /> Good</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-red-500    rounded inline-block" /> Needs Attention</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-card inline-block" /> Origin</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500    border-2 border-white dark:border-card inline-block" /> Destination</span>
       </div>
 
-      {/* Simulation Info Panel */}
+      {/* ── Simulation Info Panel ─────────────────────────────────────────── */}
       {simStatus && (
         <Card>
           <CardContent className="p-4">
-            <h4 className="text-sm font-bold text-brand-navy mb-3 flex items-center gap-2">
+            <h4 className="text-sm font-bold text-brand-navy dark:text-white mb-3 flex items-center gap-2">
               <Truck className="w-4 h-4 text-brand-teal" />
               Route Simulation
             </h4>
+
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground">Vehicle</p>
-                <p className="font-semibold text-brand-navy">{selectedVehicle}</p>
+                <p className="font-semibold text-brand-navy dark:text-white">{selectedVehicle}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Route</p>
-                <p className="font-semibold text-brand-navy">
+                <p className="font-semibold text-brand-navy dark:text-white">
                   {selectedRoute.origin} → {selectedRoute.destination}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Distance</p>
-                <p className="font-semibold text-brand-navy">{selectedRoute.distanceKm} km</p>
+                <p className="font-semibold text-brand-navy dark:text-white">{selectedRoute.distanceKm} km</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">ETA</p>
-                <p className="font-semibold text-brand-navy">
+                <p className="font-semibold text-brand-navy dark:text-white">
                   {simStatus === "Delivered"
                     ? "Arrived"
                     : `~${Math.round(((100 - simProgress) / 100) * (selectedRoute.distanceKm / 50) * 60)} min`}
@@ -382,9 +394,8 @@ export default function RouteMap() {
               </div>
             </div>
 
-            {/* Progress bar */}
             <div className="mt-3">
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-brand-teal rounded-full transition-all duration-100"
                   style={{ width: `${simProgress}%` }}

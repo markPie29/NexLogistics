@@ -145,7 +145,7 @@ export function AddHelperSheet({ open, onOpenChange, editHelper }: AddHelperShee
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-[540px] overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-[540px] overflow-y-auto dark:text-foreground">
         <SheetHeader>
           <SheetTitle>{isEditMode ? "Edit Helper" : "Add Helper"}</SheetTitle>
           <SheetDescription>
@@ -155,7 +155,7 @@ export function AddHelperSheet({ open, onOpenChange, editHelper }: AddHelperShee
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-6 dark:text-foreground">
           {/* Name & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Name" error={errors.name?.message}>
@@ -311,7 +311,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <Label className="text-white dark:text-foreground" >{label}</Label>
       {children}
       {error && <p className="text-xs text-status-danger">{error}</p>}
     </div>
