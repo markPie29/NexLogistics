@@ -30,21 +30,21 @@ export function DriverPerformanceChart() {
 
   const tooltipStyle = darkMode
     ? {
-        background: "#2a3a4f",
-        border: "1px solid #3a4a5f",
-        borderRadius: 12,
-        fontSize: 12,
-        boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
-        color: "#f3f5f7",
-      }
+      background: "#2a3a4f",
+      border: "1px solid #3a4a5f",
+      borderRadius: 12,
+      fontSize: 12,
+      boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
+      color: "#f3f5f7",
+    }
     : {
-        background: "white",
-        border: "1px solid #E5E7EB",
-        borderRadius: 12,
-        fontSize: 12,
-        boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
-        color: "#0F172A",
-      };
+      background: "white",
+      border: "1px solid #E5E7EB",
+      borderRadius: 12,
+      fontSize: 12,
+      boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
+      color: "#0F172A",
+    };
 
   return (
     <>
@@ -121,7 +121,7 @@ export function DriverPerformanceChart() {
             <Bar
               dataKey="onTime"
               fill="#66B2B2"
-              radius={[6, 6, 0, 0]}
+              radius={[0, 0, 0, 0]}
               barSize={14}
               stackId="perf"
             />
