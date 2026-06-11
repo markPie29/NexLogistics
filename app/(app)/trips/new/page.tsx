@@ -125,11 +125,35 @@ export default function NewTripPage() {
         <div className="flex items-center justify-between mb-6">
           {STEPS.map((s, i) => (
             <div key={i} className="flex-1 flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${i <= step ? "bg-brand-teal text-white" : "bg-gray-100 text-muted-foreground"}`}>
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                  i <= step
+                    ? "bg-brand-teal text-white"
+                    : "bg-gray-100 text-muted-foreground dark:bg-neutral-800 dark:text-neutral-400"
+                }`}
+              >
                 {i < step ? <Check className="w-4 h-4" /> : i + 1}
               </div>
-              <span className={`ml-2 text-xs font-medium hidden sm:inline ${i === step ? "text-brand-navy" : "text-muted-foreground"}`}>{s}</span>
-              {i < STEPS.length - 1 && <div className={`flex-1 h-px mx-3 ${i < step ? "bg-brand-teal" : "bg-gray-200"}`} />}
+
+              <span
+                className={`ml-2 text-xs font-medium hidden sm:inline transition-colors ${
+                  i === step
+                    ? "text-brand-navy dark:text-white"
+                    : "text-muted-foreground dark:text-neutral-400"
+                }`}
+              >
+                {s}
+              </span>
+
+              {i < STEPS.length - 1 && (
+                <div
+                  className={`flex-1 h-px mx-3 transition-colors ${
+                    i < step
+                      ? "bg-brand-teal"
+                      : "bg-gray-200 dark:bg-neutral-700"
+                  }`}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -137,7 +161,7 @@ export default function NewTripPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {step === 0 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 dark:text-foreground">
                 <Field label="Client" error={errors.clientId?.message}>
                   <Select onValueChange={(v) => setValue("clientId", v)}>
                     <SelectTrigger><SelectValue placeholder="Select client..." /></SelectTrigger>
@@ -155,7 +179,7 @@ export default function NewTripPage() {
 
           {step === 1 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 text-foreground">
                 <Field label="Item / Cargo Type" error={errors.cargoType?.message}><Input placeholder="Frozen Goods" {...register("cargoType")} /></Field>
                 <Field label="DR# / Document #"><Input placeholder="DR-2026-0042" {...register("documentNo")} /></Field>
               </div>
@@ -175,14 +199,16 @@ export default function NewTripPage() {
           {step === 2 && (
             <div className="space-y-4">
               {/* Subcon toggle */}
-              <div className="rounded-lg border border-brand-border/60 bg-gray-50 p-3 space-y-2">
-                <p className="text-sm font-bold text-brand-navy">Assignment Mode</p>
+              <div className="rounded-lg border border-brand-border/60 bg-gray-50 p-3 space-y-2 dark:border-white/10 dark:bg-white/5">
+                <p className="text-sm font-bold text-brand-navy dark:text-foreground">Assignment Mode</p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setUseSubcon(false)}
                     className={`rounded-md border px-3 py-2 text-left text-sm flex items-center gap-2 transition ${
-                      !useSubcon ? "border-brand-teal bg-brand-teal/10 text-brand-navy" : "border-brand-border/60 bg-white text-muted-foreground"
+                      !useSubcon
+                        ? "border-brand-teal bg-brand-teal/10 text-brand-navy dark:text-foreground"
+                        : "border-brand-border/60 bg-white text-muted-foreground dark:border-white/10 dark:bg-white/5 dark:text-foreground/80"
                     }`}
                   >
                     <UserIcon className="w-4 h-4" /> In-House Driver
@@ -191,7 +217,9 @@ export default function NewTripPage() {
                     type="button"
                     onClick={() => setUseSubcon(true)}
                     className={`rounded-md border px-3 py-2 text-left text-sm flex items-center gap-2 transition ${
-                      useSubcon ? "border-brand-teal bg-brand-teal/10 text-brand-navy" : "border-brand-border/60 bg-white text-muted-foreground"
+                      useSubcon
+                        ? "border-brand-teal bg-brand-teal/10 text-brand-navy dark:text-foreground"
+                        : "border-brand-border/60 bg-white text-muted-foreground dark:border-white/10 dark:bg-white/5 dark:text-foreground/80"
                     }`}
                   >
                     <Handshake className="w-4 h-4" /> Subcon Partner
@@ -251,7 +279,7 @@ export default function NewTripPage() {
               <div className="rounded-lg border border-brand-border/60 p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold text-brand-navy">Other Fees</p>
+                    <p className="text-sm font-bold text-brand-navy dark:text-foreground">Other Fees</p>
                     <p className="text-xs text-muted-foreground">Toll, parking, helper, etc. Itemized on payslip & invoice.</p>
                   </div>
                   <Button type="button" size="sm" variant="outline" onClick={addFeeRow}><Plus className="w-3 h-3" /> Add Row</Button>
@@ -269,7 +297,7 @@ export default function NewTripPage() {
                     ))}
                     <div className="flex justify-between border-t border-brand-border/60 pt-2 text-sm">
                       <span className="font-medium text-muted-foreground">Subtotal Other Fees</span>
-                      <span className="font-bold text-brand-navy">{formatCurrency(otherFeesTotal)}</span>
+                      <span className="font-bold text-brand-navy dark:text-foreground">{formatCurrency(otherFeesTotal)}</span>
                     </div>
                   </div>
                 )}
@@ -279,7 +307,7 @@ export default function NewTripPage() {
 
           {step === 3 && (
             <div className="space-y-3 text-sm">
-              <h3 className="font-bold text-brand-navy text-lg">Review</h3>
+              <h3 className="text-lg font-bold text-brand-navy dark:text-foreground">Review</h3>
               <ReviewRow label="Client" value={clients.find(c => c.id === watch("clientId"))?.name} />
               <ReviewRow label="DR# / Document" value={watch("documentNo")} />
               <ReviewRow label="Pickup" value={`${watch("pickupAddress")} · ${watch("pickupAt")}`} />
@@ -325,8 +353,8 @@ export default function NewTripPage() {
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label>{label}</Label>{children}{error && <p className="text-xs text-status-danger">{error}</p>}</div>;
+  return <div className="space-y-1.5"><Label className="text-brand-gray dark:text-foreground">{label}</Label>{children}{error && <p className="text-xs text-status-danger dark:text-red-400">{error}</p>}</div>;
 }
 function ReviewRow({ label, value }: { label: string; value?: string | null }) {
-  return <div className="flex justify-between border-b border-brand-border/60 py-2 gap-3"><span className="text-muted-foreground shrink-0">{label}</span><span className="font-medium text-brand-navy text-right">{value || "—"}</span></div>;
+  return <div className="flex justify-between border-b border-brand-border/60 py-2 gap-3"><span className="text-muted-foreground shrink-0">{label}</span><span className="text-right font-medium text-brand-navy dark:text-foreground">{value || "—"}</span></div>;
 }
