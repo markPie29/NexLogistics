@@ -107,6 +107,50 @@ export const seedInvoices: Invoice[] = [
     subtotal: 66964.29, vatRate: 12, vatAmount: 8035.71, totalAmount: 75000,
     paidAmount: 0, balance: 0, salesperson: sp[0], paymentTerms: "Net 15",
   },
+  {
+    id: "inv-011", invoiceNumber: "INV-2024-0570", clientId: "c-001", referenceNo: "PO-12550",
+    invoiceDate: "2026-05-02", dueDate: "2026-05-16", status: "sent",
+    items: [
+      { description: "Trucking Service – Manila to Pampanga (20T Load)", quantity: 2, unitPrice: 72000, amount: 144000 },
+      { description: "Fuel Surcharge", quantity: 2, unitPrice: 9500, amount: 19000 },
+      { description: "Handling Fee", quantity: 1, unitPrice: 2535.71, amount: 2535.71 },
+    ],
+    subtotal: 165535.71, vatRate: 12, vatAmount: 19864.29, totalAmount: 185400,
+    paidAmount: 0, balance: 185400, salesperson: sp[0], paymentTerms: "Net 15",
+  },
+  {
+    id: "inv-012", invoiceNumber: "INV-2024-0571", clientId: "c-001", referenceNo: "PO-12551",
+    invoiceDate: "2026-04-20", dueDate: "2026-05-04", status: "overdue",
+    items: [
+      { description: "Trucking Service – Makati to Laguna (10T Load)", quantity: 3, unitPrice: 24000, amount: 72000 },
+      { description: "Fuel Surcharge", quantity: 3, unitPrice: 2800, amount: 8400 },
+      { description: "Handling Fee", quantity: 1, unitPrice: 2412.50, amount: 2412.50 },
+    ],
+    subtotal: 82812.50, vatRate: 12, vatAmount: 9937.50, totalAmount: 92750,
+    paidAmount: 0, balance: 92750, salesperson: sp[1], paymentTerms: "Net 15",
+  },
+  {
+    id: "inv-013", invoiceNumber: "INV-2024-0572", clientId: "c-001", referenceNo: "PO-12552",
+    invoiceDate: "2026-04-25", dueDate: "2026-05-25", status: "partially_paid",
+    items: [
+      { description: "Heavy Equipment Transport – Quezon City to Batangas", quantity: 2, unitPrice: 115000, amount: 230000 },
+      { description: "Crane-assist Loading/Unloading", quantity: 2, unitPrice: 15000, amount: 30000 },
+      { description: "Escort Vehicle Service", quantity: 2, unitPrice: 8482.14, amount: 16964.29 },
+    ],
+    subtotal: 276964.29, vatRate: 12, vatAmount: 33235.71, totalAmount: 310200,
+    paidAmount: 150000, balance: 160200, salesperson: sp[2], paymentTerms: "Net 30",
+  },
+  {
+    id: "inv-014", invoiceNumber: "INV-2024-0573", clientId: "c-001", referenceNo: "PO-12553",
+    invoiceDate: "2026-04-15", dueDate: "2026-04-30", status: "paid",
+    items: [
+      { description: "Trucking Service – Taguig to Bulacan (15T Load)", quantity: 4, unitPrice: 28000, amount: 112000 },
+      { description: "Fuel Surcharge", quantity: 4, unitPrice: 2500, amount: 10000 },
+      { description: "Documentation Fee", quantity: 1, unitPrice: 1866.07, amount: 1866.07 },
+    ],
+    subtotal: 123866.07, vatRate: 12, vatAmount: 14863.93, totalAmount: 138730,
+    paidAmount: 138730, balance: 0, salesperson: sp[0], paymentTerms: "Net 15",
+  },
 ];
 
 /* ─── 10 Payments ─── */

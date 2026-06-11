@@ -1,47 +1,12 @@
 ﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { BRAND } from "@/lib/config/brand";
+import type { PortalDocument, DocumentCategory } from "@/lib/utils/client-portal";
 
-export type PortalShipmentStatus = "in_transit" | "delivered" | "pending" | "exception";
-export type PortalInvoiceStatus = "paid" | "unpaid" | "overdue";
 export type PortalTicketStatus = "open" | "resolved" | "in_progress";
 export type PortalPriority = "low" | "medium" | "high";
 
-export interface PortalShipment {
-  id: string;
-  trackingNumber: string;
-  origin: string;
-  destination: string;
-  status: PortalShipmentStatus;
-  eta: string;
-  deliveredAt?: string;
-  cargoType: string;
-  weightKg: number;
-  currentLocation: string;
-  lastUpdate: string;
-}
-
-export interface PortalDocument {
-  id: string;
-  name: string;
-  type: "PDF" | "DOCX" | "XLSX";
-  category: "Compliance" | "Delivery" | "Insurance" | "Rate";
-  uploadedAt: string;
-  uploadedBy: string;
-  sizeKb: number;
-  isNew?: boolean;
-  notes?: string;
-}
-
-export interface PortalInvoice {
-  id: string;
-  invoiceNumber: string;
-  issueDate: string;
-  dueDate: string;
-  amount: number;
-  balance: number;
-  status: PortalInvoiceStatus;
-}
+export { type PortalDocument } from "@/lib/utils/client-portal";
 
 export interface PortalTicket {
   id: string;
@@ -50,9 +15,12 @@ export interface PortalTicket {
   category: "Shipment" | "Billing" | "Documents" | "System";
   priority: PortalPriority;
   status: PortalTicketStatus;
+  shipmentRef?: string;
+  invoiceRef?: string;
   createdAt: string;
   updatedAt: string;
   messageCount: number;
+  assignedTo?: string;
 }
 
 export interface PortalReportExport {
@@ -71,14 +39,11 @@ export interface PortalPreferences {
 }
 
 interface ClientPortalState {
-  shipments: PortalShipment[];
-  documents: PortalDocument[];
-  invoices: PortalInvoice[];
   tickets: PortalTicket[];
+  documents: PortalDocument[];
   exports: PortalReportExport[];
   preferences: PortalPreferences;
 
-  markInvoicePaid: (invoiceId: string) => void;
   addTicket: (payload: Omit<PortalTicket, "id" | "createdAt" | "updatedAt" | "messageCount" | "status">) => void;
   updateTicketStatus: (ticketId: string, status: PortalTicketStatus) => void;
   addReportExport: (reportName: string, format: "CSV" | "PDF") => void;
@@ -86,213 +51,167 @@ interface ClientPortalState {
   reset: () => void;
 }
 
-const SEEDED_SHIPMENTS: PortalShipment[] = [
-  {
-    id: "sh-1",
-    trackingNumber: "NEX-TRK-000124",
-    origin: "Los Angeles, CA",
-    destination: "Phoenix, AZ",
-    status: "in_transit",
-    eta: "2026-05-31T10:30:00.000Z",
-    cargoType: "Construction Tools",
-    weightKg: 1240,
-    currentLocation: "Riverside, CA",
-    lastUpdate: "2026-05-11T10:10:00.000Z",
-  },
-  {
-    id: "sh-2",
-    trackingNumber: "NEX-TRK-000123",
-    origin: "Houston, TX",
-    destination: "Dallas, TX",
-    status: "in_transit",
-    eta: "2026-05-31T02:45:00.000Z",
-    cargoType: "Steel Sheets",
-    weightKg: 2180,
-    currentLocation: "Corsicana, TX",
-    lastUpdate: "2026-05-11T08:40:00.000Z",
-  },
-  {
-    id: "sh-3",
-    trackingNumber: "NEX-TRK-000122",
-    origin: "Chicago, IL",
-    destination: "Detroit, MI",
-    status: "delivered",
-    eta: "2026-05-29T11:20:00.000Z",
-    deliveredAt: "2026-05-29T11:20:00.000Z",
-    cargoType: "Industrial Components",
-    weightKg: 930,
-    currentLocation: "Delivered",
-    lastUpdate: "2026-05-29T11:20:00.000Z",
-  },
-  {
-    id: "sh-4",
-    trackingNumber: "NEX-TRK-000121",
-    origin: "Miami, FL",
-    destination: "Atlanta, GA",
-    status: "delivered",
-    eta: "2026-05-28T09:10:00.000Z",
-    deliveredAt: "2026-05-28T09:10:00.000Z",
-    cargoType: "Safety Equipment",
-    weightKg: 510,
-    currentLocation: "Delivered",
-    lastUpdate: "2026-05-28T09:10:00.000Z",
-  },
-  {
-    id: "sh-5",
-    trackingNumber: "NEX-TRK-000120",
-    origin: "Seattle, WA",
-    destination: "Portland, OR",
-    status: "pending",
-    eta: "2026-06-02T17:00:00.000Z",
-    cargoType: "Electrical Supplies",
-    weightKg: 740,
-    currentLocation: "Seattle Hub",
-    lastUpdate: "2026-05-10T17:05:00.000Z",
-  },
-];
-
 const SEEDED_DOCUMENTS: PortalDocument[] = [
   {
     id: "doc-1",
-    name: "Bill of Lading",
+    name: "Bill of Lading – Manila to Pampanga",
     type: "PDF",
     category: "Delivery",
-    uploadedAt: "2026-05-30T09:10:00.000Z",
-    uploadedBy: "NEX-TRK-000124",
-    sizeKb: 821,
-    isNew: true,
-    notes: "Signed by receiving supervisor",
+    uploadedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago → triggers "New" badge
+    uploadedBy: "Maria Santos",
+    sizeKb: 452,
+    notes: "Signed by receiving supervisor at Clark Freeport Zone",
   },
   {
     id: "doc-2",
-    name: "Delivery Receipt",
-    type: "DOCX",
+    name: "Delivery Receipt – Makati to Laguna",
+    type: "PDF",
     category: "Delivery",
-    uploadedAt: "2026-05-30T08:42:00.000Z",
-    uploadedBy: "NEX-TRK-000123",
-    sizeKb: 302,
+    uploadedAt: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(), // 20 hours ago → triggers "New" badge
+    uploadedBy: "Juan dela Cruz",
+    sizeKb: 310,
+    notes: "Confirmed delivery to Laguna Technopark warehouse",
   },
   {
     id: "doc-3",
-    name: "Proof of Delivery",
-    type: "XLSX",
-    category: "Compliance",
-    uploadedAt: "2026-05-29T16:15:00.000Z",
-    uploadedBy: "NEX-TRK-000122",
-    sizeKb: 268,
+    name: "BIR 2307 – Withholding Tax Certificate Q1 2026",
+    type: "PDF",
+    category: "Financial",
+    uploadedAt: "2026-05-05T09:30:00+08:00",
+    uploadedBy: "Ana Reyes",
+    sizeKb: 186,
+    notes: "For BIR quarterly filing",
   },
   {
     id: "doc-4",
-    name: "Rate Confirmation",
+    name: "Certificate of Insurance – Fleet Coverage 2026",
     type: "PDF",
-    category: "Rate",
-    uploadedAt: "2026-05-28T14:05:00.000Z",
-    uploadedBy: "NEX-TRK-000121",
-    sizeKb: 442,
+    category: "Compliance",
+    uploadedAt: "2026-05-03T14:15:00+08:00",
+    uploadedBy: "Carlo Mendoza",
+    sizeKb: 724,
+    notes: "Valid until Dec 2026. Covers all assigned vehicles.",
   },
   {
     id: "doc-5",
-    name: "Insurance Certificate",
+    name: "OR/CR – Vehicle v-101 (Plate: NCR 1234)",
     type: "PDF",
-    category: "Insurance",
-    uploadedAt: "2026-05-25T11:35:00.000Z",
-    uploadedBy: "System",
-    sizeKb: 676,
-  },
-];
-
-const SEEDED_INVOICES: PortalInvoice[] = [
-  {
-    id: "inv-1",
-    invoiceNumber: "INV-2026-0158",
-    issueDate: "2026-05-30",
-    dueDate: "2026-06-15",
-    amount: 6250,
-    balance: 0,
-    status: "paid",
+    category: "Compliance",
+    uploadedAt: "2026-04-28T10:00:00+08:00",
+    uploadedBy: "Luz Ramos",
+    sizeKb: 548,
   },
   {
-    id: "inv-2",
-    invoiceNumber: "INV-2026-0157",
-    issueDate: "2026-05-28",
-    dueDate: "2026-06-12",
-    amount: 4820,
-    balance: 0,
-    status: "paid",
+    id: "doc-6",
+    name: "Rate Confirmation – May 2026 Rates",
+    type: "DOCX",
+    category: "Rate",
+    uploadedAt: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(), // 36 hours ago → triggers "New" badge
+    uploadedBy: "Pedro Garcia",
+    sizeKb: 128,
+    notes: "Approved rate schedule for all Metro Manila–Luzon routes",
   },
   {
-    id: "inv-3",
-    invoiceNumber: "INV-2026-0156",
-    issueDate: "2026-05-25",
-    dueDate: "2026-06-10",
-    amount: 7680.5,
-    balance: 7680.5,
-    status: "unpaid",
+    id: "doc-7",
+    name: "Delivery Receipt – QC to Batangas",
+    type: "DOCX",
+    category: "Delivery",
+    uploadedAt: "2026-05-06T16:45:00+08:00",
+    uploadedBy: "Maria Santos",
+    sizeKb: 95,
+    notes: "Steel rebar delivery to Batangas Container Port",
   },
   {
-    id: "inv-4",
-    invoiceNumber: "INV-2026-0155",
-    issueDate: "2026-05-20",
-    dueDate: "2026-06-05",
-    amount: 3930,
-    balance: 3930,
-    status: "unpaid",
+    id: "doc-8",
+    name: "BIR 2307 – Withholding Tax Certificate Q4 2025",
+    type: "PDF",
+    category: "Financial",
+    uploadedAt: "2026-04-15T08:20:00+08:00",
+    uploadedBy: "Ana Reyes",
+    sizeKb: 192,
   },
   {
-    id: "inv-5",
-    invoiceNumber: "INV-2026-0154",
-    issueDate: "2026-05-18",
-    dueDate: "2026-05-26",
-    amount: 2000,
-    balance: 2000,
-    status: "overdue",
+    id: "doc-9",
+    name: "Shipment Manifest – Weekly Consolidation Report",
+    type: "XLSX",
+    category: "Delivery",
+    uploadedAt: "2026-05-08T11:30:00+08:00",
+    uploadedBy: "Juan dela Cruz",
+    sizeKb: 67,
+    notes: "Consolidated manifests for 5 trips, May 5–9",
+  },
+  {
+    id: "doc-10",
+    name: "OR/CR – Vehicle v-102 (Plate: NCR 5678)",
+    type: "PDF",
+    category: "Compliance",
+    uploadedAt: "2026-04-20T09:45:00+08:00",
+    uploadedBy: "Carlo Mendoza",
+    sizeKb: 530,
   },
 ];
 
 const SEEDED_TICKETS: PortalTicket[] = [
   {
     id: "tkt-1",
-    subject: "Shipment delay on NEX-TRK-000123",
-    details: "Please provide updated ETA and reason for the delay warning seen this morning.",
+    subject: "EDSA Traffic Delay - Shipment DR-2026-00499",
+    details:
+      "Our shipment of plumbing fixtures from BGC to Bulacan is stuck along EDSA-Balintawak interchange due to heavy traffic. " +
+      "The driver reported over 2 hours of standstill near Trinoma. Please provide revised ETA and consider re-routing via NLEX Bocaue.",
     category: "Shipment",
     priority: "high",
     status: "open",
-    createdAt: "2026-05-30T08:15:00.000Z",
-    updatedAt: "2026-05-30T09:10:00.000Z",
+    shipmentRef: "DR-2026-00499",
+    createdAt: "2026-05-09T11:00:00+08:00",
+    updatedAt: "2026-05-09T11:45:00+08:00",
     messageCount: 3,
+    assignedTo: "Ate Grace Villanueva",
   },
   {
     id: "tkt-2",
-    subject: "Update delivery appointment",
-    details: "Need to move receiving window to 2PM due to site access schedule.",
+    subject: "MICT Port Congestion - Container Release",
+    details:
+      "Container 20ft shipment from Manila North Harbor to Clark Freeport Zone has been stuck at Manila International Container Terminal (MICT) " +
+      "for 3 days due to port congestion. Bureau of Customs clearance is complete but container yard is full. " +
+      "Please coordinate with port operations for priority release slot.",
     category: "Shipment",
-    priority: "medium",
-    status: "open",
-    createdAt: "2026-05-29T07:45:00.000Z",
-    updatedAt: "2026-05-29T07:50:00.000Z",
-    messageCount: 2,
+    priority: "high",
+    status: "in_progress",
+    shipmentRef: "DR-2026-00501",
+    createdAt: "2026-05-08T09:30:00+08:00",
+    updatedAt: "2026-05-09T14:20:00+08:00",
+    messageCount: 5,
+    assignedTo: "Miguel Fernandez",
   },
   {
     id: "tkt-3",
-    subject: "Invoice discrepancy on INV-2026-0156",
-    details: "Please validate line-item handling fee and resend corrected copy if needed.",
+    subject: "Incorrect Weight Declaration on INV-2024-0571",
+    details:
+      "Invoice INV-2024-0571 lists total cargo weight as 10T per trip but our warehouse records show actual loaded weight was only 8.5T " +
+      "for the Makati to Laguna deliveries. Please review the weighbridge tickets and issue a corrected invoice or credit note. " +
+      "This affects the fuel surcharge computation as well.",
     category: "Billing",
-    priority: "high",
+    priority: "medium",
     status: "resolved",
-    createdAt: "2026-05-28T10:30:00.000Z",
-    updatedAt: "2026-05-28T13:05:00.000Z",
-    messageCount: 5,
+    invoiceRef: "INV-2024-0571",
+    createdAt: "2026-05-05T10:15:00+08:00",
+    updatedAt: "2026-05-07T16:30:00+08:00",
+    messageCount: 7,
+    assignedTo: "Diana Torres",
   },
   {
     id: "tkt-4",
-    subject: "Access to delivery documents",
-    details: "Need all POD files consolidated in a single export for audit.",
+    subject: "Request for BIR 2307 - Q1 2026",
+    details:
+      "Please provide the BIR 2307 withholding tax certificate for all payments made in Q1 2026. " +
+      "Our accounting team needs this for our quarterly VAT filing deadline on May 25.",
     category: "Documents",
     priority: "low",
     status: "resolved",
-    createdAt: "2026-05-27T14:00:00.000Z",
-    updatedAt: "2026-05-27T16:20:00.000Z",
+    createdAt: "2026-05-03T08:00:00+08:00",
+    updatedAt: "2026-05-04T11:00:00+08:00",
     messageCount: 2,
+    assignedTo: "Ate Grace Villanueva",
   },
 ];
 
@@ -312,19 +231,10 @@ const SEEDED_PREFERENCES: PortalPreferences = {
 export const useClientPortalStore = create<ClientPortalState>()(
   persist(
     (set) => ({
-      shipments: SEEDED_SHIPMENTS,
-      documents: SEEDED_DOCUMENTS,
-      invoices: SEEDED_INVOICES,
       tickets: SEEDED_TICKETS,
+      documents: SEEDED_DOCUMENTS,
       exports: SEEDED_EXPORTS,
       preferences: SEEDED_PREFERENCES,
-
-      markInvoicePaid: (invoiceId) =>
-        set((state) => ({
-          invoices: state.invoices.map((inv) =>
-            inv.id === invoiceId ? { ...inv, status: "paid", balance: 0 } : inv
-          ),
-        })),
 
       addTicket: (payload) =>
         set((state) => ({
@@ -371,10 +281,8 @@ export const useClientPortalStore = create<ClientPortalState>()(
 
       reset: () =>
         set({
-          shipments: SEEDED_SHIPMENTS,
-          documents: SEEDED_DOCUMENTS,
-          invoices: SEEDED_INVOICES,
           tickets: SEEDED_TICKETS,
+          documents: SEEDED_DOCUMENTS,
           exports: SEEDED_EXPORTS,
           preferences: SEEDED_PREFERENCES,
         }),

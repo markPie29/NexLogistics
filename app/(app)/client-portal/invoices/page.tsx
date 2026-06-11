@@ -1,253 +1,264 @@
 ﻿"use client";
+
 import { useMemo, useState } from "react";
-import { Search, Download, Receipt, CreditCard, X } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useClientPortalStore, type PortalInvoice } from "@/lib/store/client-portal";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { useClientInvoices, useClientPayments } from "@/lib/hooks/client-portal";
+import {
+  STATUS_BADGE_VARIANT,
+  filterBySearchAndStatus,
+} from "@/lib/utils/client-portal";
 import { formatCurrency } from "@/lib/utils";
-import { toast } from "sonner";
+
+type InvoiceStatus = "paid" | "sent" | "overdue" | "partially_paid" | "draft";
 
 export default function ClientPortalInvoicesPage() {
-	const invoices = useClientPortalStore((s) => s.invoices);
-	const markInvoicePaid = useClientPortalStore((s) => s.markInvoicePaid);
+  const { invoices } = useClientInvoices();
+  const { payments } = useClientPayments();
 
-	const [query, setQuery] = useState("");
-	const [statusFilter, setStatusFilter] = useState<"all" | PortalInvoice["status"]>("all");
-	const [selectedId, setSelectedId] = useState<string | null>(invoices[0]?.id ?? null);
-	const [paying, setPaying] = useState<PortalInvoice | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | InvoiceStatus>("all");
+  const [selectedInvoice, setSelectedInvoice] = useState<(typeof invoices)[number] | null>(null);
 
-	const filtered = useMemo(() => {
-		return invoices.filter((invoice) => {
-			const q = query.trim().toLowerCase();
-			const byQuery =
-				!q ||
-				invoice.invoiceNumber.toLowerCase().includes(q) ||
-				invoice.id.toLowerCase().includes(q);
-			const byStatus = statusFilter === "all" || invoice.status === statusFilter;
-			return byQuery && byStatus;
-		});
-	}, [invoices, query, statusFilter]);
+  const filteredInvoices = useMemo(
+    () =>
+      filterBySearchAndStatus(
+        invoices,
+        searchQuery,
+        statusFilter,
+        (inv) => inv.status,
+        (inv) => [inv.invoiceNumber]
+      ),
+    [invoices, searchQuery, statusFilter]
+  );
 
-	const selected = filtered.find((i) => i.id === selectedId) ?? filtered[0] ?? null;
+  // Find payments for the selected invoice
+  const selectedInvoicePayments = useMemo(
+    () =>
+      selectedInvoice
+        ? payments.filter((p) => p.invoiceId === selectedInvoice.id)
+        : [],
+    [payments, selectedInvoice]
+  );
 
-	const stats = useMemo(() => {
-		const outstanding = invoices.filter((i) => i.balance > 0).reduce((sum, i) => sum + i.balance, 0);
-		const paid = invoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.amount, 0);
-		const overdue = invoices.filter((i) => i.status === "overdue").reduce((sum, i) => sum + i.balance, 0);
-		const draft = invoices.filter((i) => i.status === "unpaid").length;
-		return { outstanding, paid, overdue, draft };
-	}, [invoices]);
+  return (
+    <div className="space-y-6">
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative flex-1 min-w-[240px] max-w-sm">
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by invoice number"
+            className="h-10 focus-visible:ring-2 focus-visible:ring-brand-teal"
+            aria-label="Search invoices by invoice number"
+          />
+        </div>
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => setStatusFilter(value as "all" | InvoiceStatus)}
+        >
+          <SelectTrigger className="w-[180px] focus-visible:ring-2 focus-visible:ring-brand-teal" aria-label="Filter by status">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="overdue">Overdue</SelectItem>
+            <SelectItem value="partially_paid">Partially Paid</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-	const confirmPayment = () => {
-		if (!paying) return;
-		markInvoicePaid(paying.id);
-		toast.success(`${paying.invoiceNumber} marked as paid`);
-		setPaying(null);
-	};
+      {/* Invoices Table */}
+      {filteredInvoices.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">
+          No invoices found.
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col" className="px-4 py-3 text-xs">Invoice #</TableHead>
+              <TableHead scope="col" className="px-4 py-3 text-xs">Date</TableHead>
+              <TableHead scope="col" className="px-4 py-3 text-xs">Amount</TableHead>
+              <TableHead scope="col" className="px-4 py-3 text-xs">Status</TableHead>
+              <TableHead scope="col" className="px-4 py-3 text-xs">Balance</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredInvoices.map((invoice) => (
+              <TableRow
+                key={invoice.id}
+                className="h-12 cursor-pointer hover:bg-brand-teal-light focus-visible:ring-2 focus-visible:ring-brand-teal"
+                tabIndex={0}
+                onClick={() => setSelectedInvoice(invoice)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedInvoice(invoice);
+                  }
+                }}
+              >
+                <TableCell className="px-4 py-3 text-sm font-semibold text-brand-navy">
+                  {invoice.invoiceNumber}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-sm">
+                  {new Date(invoice.invoiceDate).toLocaleDateString("en-PH")}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-sm font-semibold">
+                  {formatCurrency(invoice.totalAmount)}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    {invoice.status === "overdue" && (
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-500" aria-hidden="true" />
+                    )}
+                    <Badge
+                      className={`text-[10px] uppercase font-bold ${STATUS_BADGE_VARIANT[invoice.status] ?? "bg-gray-100 text-gray-700"}`}
+                    >
+                      {invoice.status.replaceAll("_", " ")}
+                    </Badge>
+                  </div>
+                </TableCell>
+                <TableCell className="px-4 py-3 text-sm font-semibold">
+                  {formatCurrency(invoice.balance)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
-	return (
-		<div className="space-y-4">
-			<div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-				<StatCard label="Total Outstanding" value={formatCurrency(stats.outstanding)} color="text-blue-600" />
-				<StatCard label="Paid (This Period)" value={formatCurrency(stats.paid)} color="text-emerald-600" />
-				<StatCard label="Overdue" value={formatCurrency(stats.overdue)} color="text-red-600" />
-				<StatCard label="Unpaid Invoices" value={stats.draft} color="text-violet-600" />
-			</div>
+      {/* Invoice Detail Dialog */}
+      <Dialog
+        open={!!selectedInvoice}
+        onOpenChange={(open) => {
+          if (!open) setSelectedInvoice(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Invoice {selectedInvoice?.invoiceNumber}
+            </DialogTitle>
+          </DialogHeader>
 
-			<div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4">
-				<Card className="border-gray-200">
-					<CardContent className="p-4 space-y-3">
-						<div className="flex flex-wrap items-center gap-2">
-							<div className="relative flex-1 min-w-[240px]">
-								<Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-								<Input
-									value={query}
-									onChange={(e) => setQuery(e.target.value)}
-									className="h-9 pl-9 text-xs"
-									placeholder="Search by invoice number"
-								/>
-							</div>
-							<select
-								value={statusFilter}
-								onChange={(e) => setStatusFilter(e.target.value as "all" | PortalInvoice["status"])}
-								className="h-9 px-3 rounded-md border border-gray-200 text-xs"
-							>
-								<option value="all">All Status</option>
-								<option value="paid">Paid</option>
-								<option value="unpaid">Unpaid</option>
-								<option value="overdue">Overdue</option>
-							</select>
-							<Button
-								variant="outline"
-								className="h-9 text-xs"
-								onClick={() => toast.success("Invoice export generated")}
-							>
-								<Download className="w-3.5 h-3.5 mr-1.5" /> Export
-							</Button>
-						</div>
+          {selectedInvoice && (
+            <div className="space-y-6">
+              {/* Invoice metadata */}
+              <div className="flex items-center gap-3">
+                <Badge
+                  className={`text-[10px] uppercase font-bold ${STATUS_BADGE_VARIANT[selectedInvoice.status] ?? "bg-gray-100 text-gray-700"}`}
+                >
+                  {selectedInvoice.status.replaceAll("_", " ")}
+                </Badge>
+                {selectedInvoice.status === "overdue" && (
+                  <span className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Payment overdue
+                  </span>
+                )}
+              </div>
 
-						<div className="overflow-x-auto">
-							<table className="w-full text-xs">
-								<thead>
-									<tr className="text-left border-b border-gray-100 text-gray-600">
-										<th className="py-3 px-2">Invoice Number</th>
-										<th className="py-3 px-2">Issue Date</th>
-										<th className="py-3 px-2">Due Date</th>
-										<th className="py-3 px-2">Amount</th>
-										<th className="py-3 px-2">Status</th>
-										<th className="py-3 px-2 text-right">Actions</th>
-									</tr>
-								</thead>
-								<tbody>
-									{filtered.map((invoice) => (
-										<tr
-											key={invoice.id}
-											onClick={() => setSelectedId(invoice.id)}
-											className="border-b border-gray-50 hover:bg-gray-50/70 cursor-pointer"
-										>
-											<td className="py-3 px-2 font-semibold text-[#0B1220]">{invoice.invoiceNumber}</td>
-											<td className="py-3 px-2 text-gray-600">{new Date(invoice.issueDate).toLocaleDateString()}</td>
-											<td className="py-3 px-2 text-gray-600">{new Date(invoice.dueDate).toLocaleDateString()}</td>
-											<td className="py-3 px-2 text-gray-700 font-semibold">{formatCurrency(invoice.amount)}</td>
-											<td className="py-3 px-2"><StatusBadge status={invoice.status} /></td>
-											<td className="py-3 px-2 text-right">
-												<div className="inline-flex items-center gap-1">
-													<Button
-														variant="ghost"
-														className="h-8 px-2"
-														onClick={(e) => {
-															e.stopPropagation();
-															toast.success(`Downloading ${invoice.invoiceNumber}`);
-														}}
-													>
-														<Download className="w-4 h-4" />
-													</Button>
-													{invoice.balance > 0 && (
-														<Button
-															variant="ghost"
-															className="h-8 px-2"
-															onClick={(e) => {
-																e.stopPropagation();
-																setPaying(invoice);
-															}}
-														>
-															Pay
-														</Button>
-													)}
-												</div>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					</CardContent>
-				</Card>
+              {/* Line Items Table */}
+              <div>
+                <h3 className="text-sm font-semibold text-brand-navy mb-2">
+                  Line Items
+                </h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead scope="col" className="px-4 py-3 text-xs">Description</TableHead>
+                      <TableHead scope="col" className="px-4 py-3 text-xs text-right">Qty</TableHead>
+                      <TableHead scope="col" className="px-4 py-3 text-xs text-right">Unit Price</TableHead>
+                      <TableHead scope="col" className="px-4 py-3 text-xs text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedInvoice.items?.map((item, idx) => (
+                      <TableRow key={idx} className="h-12">
+                        <TableCell className="px-4 py-3 text-sm">{item.description}</TableCell>
+                        <TableCell className="px-4 py-3 text-sm text-right">{item.quantity}</TableCell>
+                        <TableCell className="px-4 py-3 text-sm text-right">
+                          {formatCurrency(item.unitPrice)}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-sm text-right font-semibold">
+                          {formatCurrency(item.amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-				<Card className="border-gray-200 h-fit">
-					<CardContent className="p-4 text-xs">
-						{!selected && <div className="text-gray-500">Select an invoice to view details.</div>}
-						{selected && (
-							<div className="space-y-4">
-								<div>
-									<div className="text-lg font-bold text-[#0B1220]">{selected.invoiceNumber}</div>
-									<StatusBadge status={selected.status} />
-								</div>
-								<DetailRow label="Amount" value={formatCurrency(selected.amount)} />
-								<DetailRow label="Balance" value={formatCurrency(selected.balance)} />
-								<DetailRow label="Issue Date" value={new Date(selected.issueDate).toLocaleDateString()} />
-								<DetailRow label="Due Date" value={new Date(selected.dueDate).toLocaleDateString()} />
-								<DetailRow label="Shipment" value={`NEX-TRK-00012${selected.id.replace("inv-", "")}`} />
-								<div className="pt-1 grid grid-cols-1 gap-2">
-									<Button
-										variant="outline"
-										className="h-9 text-xs"
-										onClick={() => toast.success(`Invoice download started for ${selected.invoiceNumber}`)}
-									>
-										<Download className="w-3.5 h-3.5 mr-1.5" /> Download Invoice
-									</Button>
-									<Button
-										variant="outline"
-										className="h-9 text-xs"
-										onClick={() => toast.success(`Invoice ${selected.invoiceNumber} opened`)}
-									>
-										View Invoice
-									</Button>
-									<Button
-										className="h-9 text-xs bg-[#008A56] hover:bg-[#007045]"
-										onClick={() => setPaying(selected)}
-										disabled={selected.balance <= 0}
-									>
-										<CreditCard className="w-3.5 h-3.5 mr-1.5" /> Make Payment
-									</Button>
-								</div>
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			</div>
-
-			{paying && (
-				<div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-					<div className="bg-white w-full max-w-md rounded-xl border border-gray-200 shadow-2xl">
-						<div className="p-4 border-b border-gray-100 flex items-center justify-between">
-							<h3 className="text-sm font-bold text-[#0B1220]">Confirm Payment</h3>
-							<button onClick={() => setPaying(null)} className="text-gray-400 hover:text-gray-700">
-								<X className="w-4 h-4" />
-							</button>
-						</div>
-						<div className="p-4 text-xs text-gray-600">
-							Confirm payment of <span className="font-semibold text-[#0B1220]">{formatCurrency(paying.balance)}</span> for
-							<span className="font-semibold text-[#0B1220]"> {paying.invoiceNumber}</span>?
-						</div>
-						<div className="p-4 pt-0 flex gap-2">
-							<Button variant="outline" className="flex-1 h-9 text-xs" onClick={() => setPaying(null)}>
-								Cancel
-							</Button>
-							<Button className="flex-1 h-9 text-xs bg-[#008A56] hover:bg-[#007045]" onClick={confirmPayment}>
-								Confirm
-							</Button>
-						</div>
-					</div>
-				</div>
-			)}
-		</div>
-	);
-}
-
-function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
-	return (
-		<Card className="border-gray-200">
-			<CardContent className="p-4">
-				<div className="flex items-center justify-between">
-					<div className="text-xs text-gray-500">{label}</div>
-					<div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center">
-						<Receipt className={`w-3.5 h-3.5 ${color}`} />
-					</div>
-				</div>
-				<div className={`text-2xl font-extrabold mt-1 ${color}`}>{value}</div>
-			</CardContent>
-		</Card>
-	);
-}
-
-function StatusBadge({ status }: { status: PortalInvoice["status"] }) {
-	const cls =
-		status === "paid"
-			? "bg-emerald-100 text-emerald-700"
-			: status === "overdue"
-				? "bg-red-100 text-red-700"
-				: "bg-amber-100 text-amber-700";
-	return <Badge className={`text-[10px] uppercase font-bold ${cls}`}>{status}</Badge>;
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-	return (
-		<div className="grid grid-cols-[92px_1fr] gap-2">
-			<div className="text-gray-500">{label}</div>
-			<div className="font-semibold text-[#0B1220]">{value}</div>
-		</div>
-	);
+              {/* Totals Summary */}
+              <div className="border-t border-gray-200 pt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="font-semibold text-brand-navy">
+                    {formatCurrency(selectedInvoice.subtotal)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    VAT ({((selectedInvoice.vatRate ?? 0.12) * 100).toFixed(0)}%)
+                  </span>
+                  <span className="font-semibold text-brand-navy">
+                    {formatCurrency(selectedInvoice.vatAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm border-t border-gray-100 pt-2">
+                  <span className="font-semibold text-brand-navy">Total</span>
+                  <span className="font-bold text-brand-navy">
+                    {formatCurrency(selectedInvoice.totalAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Paid Amount</span>
+                  <span className="font-semibold text-emerald-600">
+                    {formatCurrency(selectedInvoice.paidAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm border-t border-gray-100 pt-2">
+                  <span className="font-semibold text-brand-navy">
+                    Outstanding Balance
+                  </span>
+                  <span
+                    className={`font-bold ${selectedInvoice.balance > 0 ? "text-red-600" : "text-emerald-600"}`}
+                  >
+                    {formatCurrency(selectedInvoice.balance)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
