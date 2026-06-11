@@ -29,7 +29,7 @@ const RouteMapDynamic = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[480px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-sm text-muted-foreground">
+      <div className="h-[480px] w-full bg-gray-100 dark:bg-white/[0.03] animate-pulse rounded-xl flex items-center justify-center text-sm text-muted-foreground">
         Loading map…
       </div>
     ),
@@ -211,7 +211,7 @@ export default function RoutesPage() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[900px] text-sm">
                   <thead>
-                    <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50/50">
+                    <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02]">
                       <th className="py-3 px-4 font-medium">Route ID</th>
                       <th className="py-3 px-4 font-medium">Corridor</th>
                       <th className="py-3 px-4 font-medium">Distance</th>
@@ -225,7 +225,7 @@ export default function RoutesPage() {
                     {filteredRoutes.length === 0 && (
                       <tr>
                         <td colSpan={7} className="py-16 text-center">
-                          <GitBranch className="w-12 h-12 mx-auto mb-3 text-gray-200" />
+                          <GitBranch className="w-12 h-12 mx-auto mb-3 text-gray-200 dark:text-white/10" />
                           <p className="text-muted-foreground font-medium">No routes found</p>
                           <p className="text-xs text-muted-foreground mt-1">
                             Try adjusting your search filter
@@ -236,15 +236,15 @@ export default function RoutesPage() {
                     {filteredRoutes.map((route) => (
                       <tr
                         key={route.id}
-                        className="border-b border-brand-border/60 hover:bg-gray-50 transition-colors"
+                        className="border-b border-brand-border/60 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors"
                       >
-                        <td className="py-3 px-4 font-mono text-xs font-semibold text-brand-navy">
+                        <td className="py-3 px-4 font-mono text-xs font-semibold text-brand-navy dark:text-white">
                           {route.id}
                         </td>
                         <td className="py-3 px-4">
-                          <span className="font-medium text-brand-navy">{route.origin}</span>
+                          <span className="font-medium text-brand-navy dark:text-white">{route.origin}</span>
                           <span className="mx-2 text-muted-foreground">→</span>
-                          <span className="font-medium text-brand-navy">{route.destination}</span>
+                          <span className="font-medium text-brand-navy dark:text-white">{route.destination}</span>
                         </td>
                         <td className="py-3 px-4 font-medium">{route.distanceKm} km</td>
                         <td className="py-3 px-4 text-muted-foreground">{route.avgDuration}</td>
@@ -279,7 +279,7 @@ export default function RoutesPage() {
             <Card>
               <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-brand-navy flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-brand-navy dark:text-white flex items-center gap-2">
                     <Zap className="w-5 h-5 text-brand-teal" />
                     Route Optimization Engine
                   </h3>
@@ -329,33 +329,33 @@ export default function RoutesPage() {
                 {/* Before vs After */}
                 <Card>
                   <CardContent className="p-6">
-                    <h4 className="text-sm font-bold text-brand-navy uppercase tracking-wide mb-4">
+                    <h4 className="text-sm font-bold text-brand-navy dark:text-white uppercase tracking-wide mb-4">
                       Optimization Results
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="rounded-xl border border-brand-border p-4">
+                      <div className="rounded-xl border border-brand-border dark:border-white/10 p-4">
                         <p className="text-xs text-muted-foreground mb-1">Total Distance</p>
                         <div className="flex items-baseline gap-2">
                           <span className="text-lg font-bold text-red-500 line-through">731 km</span>
-                          <span className="text-lg font-bold text-emerald-600">684 km</span>
+                          <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">684 km</span>
                         </div>
-                        <p className="text-xs text-emerald-600 font-medium mt-1">↓ 47 km saved daily</p>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">↓ 47 km saved daily</p>
                       </div>
-                      <div className="rounded-xl border border-brand-border p-4">
+                      <div className="rounded-xl border border-brand-border dark:border-white/10 p-4">
                         <p className="text-xs text-muted-foreground mb-1">Total Time</p>
                         <div className="flex items-baseline gap-2">
                           <span className="text-lg font-bold text-red-500 line-through">16.2 hrs</span>
-                          <span className="text-lg font-bold text-emerald-600">14.5 hrs</span>
+                          <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">14.5 hrs</span>
                         </div>
-                        <p className="text-xs text-emerald-600 font-medium mt-1">↓ 1.7 hrs saved daily</p>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">↓ 1.7 hrs saved daily</p>
                       </div>
-                      <div className="rounded-xl border border-brand-border p-4">
+                      <div className="rounded-xl border border-brand-border dark:border-white/10 p-4">
                         <p className="text-xs text-muted-foreground mb-1">Fuel Cost</p>
                         <div className="flex items-baseline gap-2">
                           <span className="text-lg font-bold text-red-500 line-through">₱18,400</span>
-                          <span className="text-lg font-bold text-emerald-600">₱15,200</span>
+                          <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">₱15,200</span>
                         </div>
-                        <p className="text-xs text-emerald-600 font-medium mt-1">↓ ₱3,200 saved daily</p>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">↓ ₱3,200 saved daily</p>
                       </div>
                     </div>
                   </CardContent>
@@ -364,17 +364,17 @@ export default function RoutesPage() {
                 {/* Recommendations */}
                 <Card>
                   <CardContent className="p-6">
-                    <h4 className="text-sm font-bold text-brand-navy uppercase tracking-wide mb-4">
+                    <h4 className="text-sm font-bold text-brand-navy dark:text-white uppercase tracking-wide mb-4">
                       Recommendations
                     </h4>
                     <div className="space-y-3">
                       {recommendations.map((rec) => (
                         <div
                           key={rec.id}
-                          className="flex items-center gap-4 rounded-xl border border-brand-border p-4 hover:bg-gray-50/50 transition-colors"
+                          className="flex items-center gap-4 rounded-xl border border-brand-border dark:border-white/10 p-4 hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors"
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-brand-navy">
+                            <p className="text-sm font-medium text-brand-navy dark:text-white">
                               {rec.description}
                             </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
@@ -382,7 +382,7 @@ export default function RoutesPage() {
                             </p>
                           </div>
                           {rec.applied ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                               <CheckCircle2 className="w-4 h-4" /> Applied
                             </span>
                           ) : (
