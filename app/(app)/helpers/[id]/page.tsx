@@ -372,7 +372,7 @@ export default function HelperDetailPage() {
           <Card>
             <CardContent className="p-0">
               <div className="relative">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
                 <table className="w-full min-w-[740px] text-sm">
                   <thead>
                     <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50">
@@ -470,7 +470,7 @@ export default function HelperDetailPage() {
                     </div>
                   </div>
                   <div className="relative">
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
                     <table className="w-full min-w-[920px] text-sm">
                       <thead>
                         <tr className="text-left text-xs uppercase text-muted-foreground border-b border-brand-border bg-gray-50">

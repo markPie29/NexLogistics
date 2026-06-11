@@ -69,7 +69,7 @@ export default function DriverEarningsPage() {
   const ytdNet = myHistory.filter((s) => s.status === "paid").reduce((a, b) => a + b.netPay, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-28">
+    <div className="min-h-[100dvh] bg-gray-50 pb-28 overscroll-none">
       {/* Sticky Navy Header */}
       <header className="sticky top-0 z-30 bg-[#0B1C2E] text-white shadow-md">
         <div className="px-4 py-3 flex items-center gap-3">
