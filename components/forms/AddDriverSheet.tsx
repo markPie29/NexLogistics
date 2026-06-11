@@ -101,7 +101,7 @@ export function AddDriverSheet({ open, onOpenChange, editDriver }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto text-foreground">
         <SheetHeader>
           <SheetTitle>{isEditMode ? `Edit Driver — ${editDriver?.name}` : "Add New Driver"}</SheetTitle>
           <SheetDescription>
@@ -109,7 +109,7 @@ export function AddDriverSheet({ open, onOpenChange, editDriver }: Props) {
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4 text-brand-gray dark:text-foreground">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Full Name" error={errors.name?.message}>
               <Input placeholder="Juan Dela Cruz" {...register("name")} />
@@ -191,7 +191,7 @@ export function AddDriverSheet({ open, onOpenChange, editDriver }: Props) {
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <Label className="text-brand-gray dark:text-foreground" >{label}</Label>
       {children}
       {error && <p className="text-xs text-status-danger">{error}</p>}
     </div>
