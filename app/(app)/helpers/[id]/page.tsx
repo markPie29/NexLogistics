@@ -151,7 +151,7 @@ export default function HelperDetailPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-[100dvh] space-y-6">
       <PageHeader
         title={helper.name}
         subtitle={`${(helper.employmentType || "per_trip").replace(/_/g, " ")} helper`}
@@ -176,7 +176,7 @@ export default function HelperDetailPage() {
       />
 
       {/* Stat Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           label="Status"
           value={helper.status.replace(/_/g, " ")}
@@ -360,7 +360,7 @@ export default function HelperDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="trips">
-        <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
+        <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap [-webkit-overflow-scrolling:touch] [overscroll-behavior-x:contain] no-scrollbar">
           <TabsTrigger value="trips">Trip History ({helperTrips.length})</TabsTrigger>
           <TabsTrigger value="payroll">Payroll Summary</TabsTrigger>
           <TabsTrigger value="payroll_settings">Payroll Settings</TabsTrigger>
@@ -371,6 +371,7 @@ export default function HelperDetailPage() {
         <TabsContent value="trips">
           <Card>
             <CardContent className="p-0">
+              <div className="relative">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[740px] text-sm">
                   <thead>
@@ -450,6 +451,8 @@ export default function HelperDetailPage() {
                   </tbody>
                 </table>
               </div>
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-white to-transparent md:hidden" />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -466,6 +469,7 @@ export default function HelperDetailPage() {
                       {formatCurrency(totalEarned)}
                     </div>
                   </div>
+                  <div className="relative">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[920px] text-sm">
                       <thead>
@@ -524,6 +528,8 @@ export default function HelperDetailPage() {
                         })}
                       </tbody>
                     </table>
+                  </div>
+                  <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-white to-transparent md:hidden" />
                   </div>
                 </>
               ) : (

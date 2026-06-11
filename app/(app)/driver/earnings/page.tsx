@@ -69,7 +69,7 @@ export default function DriverEarningsPage() {
   const ytdNet = myHistory.filter((s) => s.status === "paid").reduce((a, b) => a + b.netPay, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-28">
       {/* Sticky Navy Header */}
       <header className="sticky top-0 z-30 bg-[#0B1C2E] text-white shadow-md">
         <div className="px-4 py-3 flex items-center gap-3">
@@ -105,7 +105,7 @@ export default function DriverEarningsPage() {
                   <Badge variant="neutral" className="bg-white/20 text-white border-0">{activePeriod.status.replace("_", " ")}</Badge>
                 </div>
                 <div className="text-xs text-white/80">{activePeriod.name}</div>
-                <div className="text-4xl font-bold mt-2">{formatCurrency(livePreview.summary.netPay)}</div>
+                <div className="text-2xl sm:text-4xl font-bold mt-2">{formatCurrency(livePreview.summary.netPay)}</div>
                 <div className="text-xs text-white/80 mt-1">
                   {livePreview.summary.tripsCount} trip{livePreview.summary.tripsCount === 1 ? "" : "s"} ·
                   Pay date: {activePeriod.payDate ? new Date(activePeriod.payDate).toLocaleDateString() : "TBD"}
@@ -245,7 +245,7 @@ export default function DriverEarningsPage() {
       </main>
 
       {/* Bottom nav (matches /driver pattern) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-brand-border z-30">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-brand-border z-30" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="grid grid-cols-4 max-w-md mx-auto">
           <Link href="/driver" className="flex flex-col items-center py-2.5 text-muted-foreground hover:text-brand-teal">
             <Truck className="w-5 h-5" />

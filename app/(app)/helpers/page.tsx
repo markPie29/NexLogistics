@@ -82,7 +82,7 @@ export default function HelpersPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-[100dvh] space-y-6">
       <PageHeader
         title="Helper Management"
         subtitle="Manage loaders, helpers, and assistant crew assigned to drivers"
@@ -93,7 +93,7 @@ export default function HelpersPage() {
             <DialogContent className="max-w-lg">
               <DialogHeader><DialogTitle>Add New Helper</DialogTitle></DialogHeader>
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Roberto Lim" /></div>
                   <div><Label>Phone *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0917XXXXXXX" /></div>
                 </div>
@@ -119,7 +119,7 @@ export default function HelpersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {employmentType !== "per_trip" && (
                     <div><Label>Monthly Salary (₱)</Label><Input type="number" value={monthlyBaseSalary || ""} onChange={(e) => setMonthlyBaseSalary(Number(e.target.value) || 0)} /></div>
                   )}
@@ -151,7 +151,7 @@ export default function HelpersPage() {
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search helper name..." className="pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full md:w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="active">Active</SelectItem>
@@ -205,7 +205,7 @@ export default function HelpersPage() {
                       <td className="py-3 px-4"><Badge variant={STATUS_VARIANT[h.status]}>{h.status.replace("_", " ")}</Badge></td>
                       <td className="py-3 px-4">
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild><button className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"><MoreHorizontal className="w-4 h-4" /></button></DropdownMenuTrigger>
+                          <DropdownMenuTrigger asChild><button className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-lg hover:bg-gray-100 flex items-center justify-center"><MoreHorizontal className="w-4 h-4" /></button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => router.push(`/helpers/${h.id}`)}><Eye className="w-4 h-4" /> View Profile</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => router.push(`/helpers/${h.id}`)}><Pencil className="w-4 h-4" /> Edit</DropdownMenuItem>

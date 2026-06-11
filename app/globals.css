@@ -84,6 +84,13 @@
   .dark .glass {
     background: rgba(11, 18, 32, 0.7);
   }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Leaflet adjustments */
