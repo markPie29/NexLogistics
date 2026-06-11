@@ -1,10 +1,9 @@
 "use client";
 import { useState, useMemo } from "react";
 import {
-  Warehouse, Package, Search, Plus, Clock,
+  Warehouse, Package, TruckIcon, Search, Plus, Clock,
   ArrowDownToLine, ArrowUpFromLine
 } from "lucide-react";
-import { AddItemModal } from "@/components/warehouse/AddItemModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,13 +13,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { KpiCard } from "@/components/dashboard/KpiCard";
+import { toast } from "sonner";
 
-// ─── Inventory Types (exported so AddItemModal can import them) ───────────────
-export type InventoryStatus = "In Stock" | "Low Stock" | "Out of Stock";
-export type Category = "Parcels" | "Pallets" | "Containers" | "Documents";
-export type WarehouseLocation = "Warehouse A" | "Warehouse B" | "Warehouse C";
+// ─── Inventory Seed Data ───────────────────────────────────────────────────────
+type InventoryStatus = "In Stock" | "Low Stock" | "Out of Stock";
+type Category = "Parcels" | "Pallets" | "Containers" | "Documents";
+type WarehouseLocation = "Warehouse A" | "Warehouse B" | "Warehouse C";
 
-export interface InventoryItem {
+interface InventoryItem {
   sku: string;
   name: string;
   category: Category;
@@ -81,43 +81,41 @@ const DOCK_SCHEDULE: DockEntry[] = [
 
 // ─── Status Badge Styles ───────────────────────────────────────────────────────
 const INVENTORY_STATUS_STYLES: Record<InventoryStatus, string> = {
-  "In Stock": "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
-  "Low Stock": "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-  "Out of Stock": "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400",
+  "In Stock": "bg-emerald-50 text-emerald-700",
+  "Low Stock": "bg-amber-50 text-amber-700",
+  "Out of Stock": "bg-red-50 text-red-700",
 };
 
 const DOCK_STATUS_STYLES: Record<DockStatus, string> = {
-  "Scheduled": "bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400",
-  "In Progress": "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-  "Completed": "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
+  "Scheduled": "bg-sky-50 text-sky-700",
+  "In Progress": "bg-amber-50 text-amber-700",
+  "Completed": "bg-emerald-50 text-emerald-700",
 };
 
 const DOCK_TYPE_STYLES: Record<DockType, string> = {
-  "Inbound": "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
-  "Outbound": "bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400",
+  "Inbound": "bg-blue-50 text-blue-700",
+  "Outbound": "bg-purple-50 text-purple-700",
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function WarehousePage() {
-  const [inventory, setInventory] = useState<InventoryItem[]>(INVENTORY_DATA);
   const [searchQuery, setSearchQuery] = useState("");
-  const [addModalOpen, setAddModalOpen] = useState(false);
 
   const filteredInventory = useMemo(() => {
-    if (!searchQuery.trim()) return inventory;
+    if (!searchQuery.trim()) return INVENTORY_DATA;
     const q = searchQuery.toLowerCase();
-    return inventory.filter(
+    return INVENTORY_DATA.filter(
       (item) =>
         item.sku.toLowerCase().includes(q) ||
         item.name.toLowerCase().includes(q)
     );
-  }, [searchQuery, inventory]);
+  }, [searchQuery]);
 
-  // Computed KPIs (reactive — recalculate when inventory changes)
-  const totalSkus = inventory.length;
-  const totalInStock = inventory.reduce((sum, i) => sum + i.qtyInStock, 0);
+  // Computed KPIs
+  const totalSkus = INVENTORY_DATA.length;
+  const totalInStock = INVENTORY_DATA.reduce((sum, i) => sum + i.qtyInStock, 0);
   const pendingInbound = DOCK_SCHEDULE.filter((d) => d.type === "Inbound" && d.status !== "Completed").length;
   const pendingOutbound = DOCK_SCHEDULE.filter((d) => d.type === "Outbound" && d.status !== "Completed").length;
 
@@ -142,14 +140,6 @@ export default function WarehousePage() {
         title="Warehouse Management"
         subtitle="Multi-location inventory and dock operations"
         breadcrumbs={[{ label: "Others" }, { label: "Warehouse" }]}
-      />
-
-      {/* Add Item Modal */}
-      <AddItemModal
-        open={addModalOpen}
-        onOpenChange={setAddModalOpen}
-        existingSkus={inventory.map((i) => i.sku)}
-        onAdd={handleAddItem}
       />
 
       {/* KPI Row */}
@@ -194,7 +184,7 @@ export default function WarehousePage() {
 
       {/* Tabs: Inventory / Dock Schedule */}
       <Tabs defaultValue="inventory">
-        <TabsList className="bg-gray-100 dark:bg-brand-navy-light">
+        <TabsList>
           <TabsTrigger value="inventory">Inventory</TabsTrigger>
           <TabsTrigger value="dock">Dock Schedule</TabsTrigger>
         </TabsList>
@@ -202,9 +192,9 @@ export default function WarehousePage() {
         {/* ─── Inventory Tab ──────────────────────────────────────────── */}
         <TabsContent value="inventory">
           <Card>
-            <CardHeader className="">
+            <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <CardTitle className="text-base dark:text-white">Warehouse Inventory</CardTitle>
+                <CardTitle className="text-base">Warehouse Inventory</CardTitle>
                 <div className="flex items-center gap-2">
                   <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -215,8 +205,8 @@ export default function WarehousePage() {
                       className="pl-9 w-[240px]"
                     />
                   </div>
-                  <Button size="sm" onClick={() => setAddModalOpen(true)} className="p-5 bg-brand-navy hover:bg-brand-navy/90 dark:bg-brand-navy-light dark:hover:bg-brand-navy-light/90">
-                    <Plus className="w-4 h-4 mr-1 text-white" />
+                  <Button size="sm" onClick={handleAddItem} className="bg-brand-navy hover:bg-brand-navy/90">
+                    <Plus className="w-4 h-4 mr-1" />
                     Add Item
                   </Button>
                 </div>
@@ -226,28 +216,28 @@ export default function WarehousePage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50/50 dark:bg-white/[0.02]">
-                      <th className="text-left font-semibold text-brand-navy dark:text-brand-teal px-4 py-3">SKU</th>
-                      <th className="text-left font-semibold text-brand-navy dark:text-brand-teal px-4 py-3">Item Name</th>
-                      <th className="text-left font-semibold text-brand-navy dark:text-brand-teal px-4 py-3">Category</th>
-                      <th className="text-left font-semibold text-brand-navy dark:text-brand-teal px-4 py-3">Location</th>
-                      <th className="text-right font-semibold text-brand-navy dark:text-brand-teal px-4 py-3">Qty</th>
-                      <th className="text-right font-semibold text-brand-navy dark:text-brand-teal px-4 py-3">Reserved</th>
-                      <th className="text-right font-semibold text-brand-navy dark:text-brand-teal px-4 py-3">Available</th>
-                      <th className="text-left font-semibold text-brand-navy dark:text-brand-teal px-4 py-3">Status</th>
+                    <tr className="border-b bg-gray-50/50">
+                      <th className="text-left font-semibold text-brand-navy px-4 py-3">SKU</th>
+                      <th className="text-left font-semibold text-brand-navy px-4 py-3">Item Name</th>
+                      <th className="text-left font-semibold text-brand-navy px-4 py-3">Category</th>
+                      <th className="text-left font-semibold text-brand-navy px-4 py-3">Location</th>
+                      <th className="text-right font-semibold text-brand-navy px-4 py-3">Qty</th>
+                      <th className="text-right font-semibold text-brand-navy px-4 py-3">Reserved</th>
+                      <th className="text-right font-semibold text-brand-navy px-4 py-3">Available</th>
+                      <th className="text-left font-semibold text-brand-navy px-4 py-3">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredInventory.map((item) => (
-                      <tr key={item.sku} className="border-b last:border-0 hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs font-bold text-brand-navy dark:text-white">{item.sku}</td>
-                        <td className="px-4 py-3 font-medium text-brand-navy dark:text-white">{item.name}</td>
+                      <tr key={item.sku} className="border-b last:border-0 hover:bg-gray-50/50 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs font-bold text-brand-navy">{item.sku}</td>
+                        <td className="px-4 py-3 font-medium text-brand-navy">{item.name}</td>
                         <td className="px-4 py-3">
-                          <Badge variant="neutral" className="bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 border-0 text-[10px]">{item.category}</Badge>
+                          <Badge variant="neutral" className="bg-gray-100 text-gray-700 border-0 text-[10px]">{item.category}</Badge>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
-                            <span className="text-brand-navy dark:text-white text-xs font-medium">{item.location}</span>
+                            <span className="text-brand-navy text-xs font-medium">{item.location}</span>
                             <span className="text-[10px] text-muted-foreground">{WAREHOUSE_LABELS[item.location]}</span>
                           </div>
                         </td>
@@ -276,9 +266,9 @@ export default function WarehousePage() {
         {/* ─── Dock Schedule Tab ──────────────────────────────────────── */}
         <TabsContent value="dock">
           <Card>
-            <CardHeader className="">
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2 dark:text-white">
+                <CardTitle className="text-base flex items-center gap-2">
                   <Clock className="w-4 h-4 text-brand-teal" />
                   Today&apos;s Dock Schedule
                 </CardTitle>
@@ -291,20 +281,20 @@ export default function WarehousePage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50/50 dark:bg-white/[0.02]">
-                      <th className="text-left font-semibold text-brand-navy dark:text-white px-4 py-3">Time Slot</th>
-                      <th className="text-left font-semibold text-brand-navy dark:text-white px-4 py-3">Vehicle</th>
-                      <th className="text-left font-semibold text-brand-navy dark:text-white px-4 py-3">Type</th>
-                      <th className="text-left font-semibold text-brand-navy dark:text-white px-4 py-3">Status</th>
-                      <th className="text-left font-semibold text-brand-navy dark:text-white px-4 py-3">Client</th>
+                    <tr className="border-b bg-gray-50/50">
+                      <th className="text-left font-semibold text-brand-navy px-4 py-3">Time Slot</th>
+                      <th className="text-left font-semibold text-brand-navy px-4 py-3">Vehicle</th>
+                      <th className="text-left font-semibold text-brand-navy px-4 py-3">Type</th>
+                      <th className="text-left font-semibold text-brand-navy px-4 py-3">Status</th>
+                      <th className="text-left font-semibold text-brand-navy px-4 py-3">Client</th>
                     </tr>
                   </thead>
                   <tbody>
                     {DOCK_SCHEDULE.map((entry) => (
-                      <tr key={entry.id} className="border-b last:border-0 hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs font-medium text-brand-navy dark:text-white">{entry.timeSlot}</td>
+                      <tr key={entry.id} className="border-b last:border-0 hover:bg-gray-50/50 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs font-medium text-brand-navy">{entry.timeSlot}</td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center px-1.5 py-0.5 bg-brand-navy/10 dark:bg-white/10 text-brand-navy dark:text-white text-[11px] font-mono font-bold rounded">
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-brand-navy/10 text-brand-navy text-[11px] font-mono font-bold rounded">
                             {entry.vehicle}
                           </span>
                         </td>
@@ -321,7 +311,7 @@ export default function WarehousePage() {
                         <td className="px-4 py-3">
                           <Badge variant="neutral" className={`${DOCK_STATUS_STYLES[entry.status]} border-0 text-[10px]`}>{entry.status}</Badge>
                         </td>
-                        <td className="px-4 py-3 font-medium text-brand-navy dark:text-white">{entry.client}</td>
+                        <td className="px-4 py-3 font-medium text-brand-navy">{entry.client}</td>
                       </tr>
                     ))}
                   </tbody>
