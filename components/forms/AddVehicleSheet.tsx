@@ -60,13 +60,13 @@ export function AddVehicleSheet({ open, onOpenChange }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto text-foreground">
         <SheetHeader>
           <SheetTitle>Add New Vehicle</SheetTitle>
           <SheetDescription>Register a new vehicle in your fleet.</SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4 text-brand-gray dark:text-foreground">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Plate Number" error={errors.plate?.message}>
               <Input placeholder="NEX-111" {...register("plate")} />
@@ -133,7 +133,13 @@ export function AddVehicleSheet({ open, onOpenChange }: Props) {
             <Field label="Permit Expiry" error={errors.permitExpiry?.message}><Input type="date" {...register("permitExpiry")} /></Field>
           </div>
 
-          <Field label="Notes"><Textarea rows={3} {...register("notes")} /></Field>
+          <Field label="Notes">
+            <Textarea
+              rows={3}
+              className="dark:border-white/10 dark:bg-white/5 dark:text-foreground dark:placeholder:text-muted-foreground"
+              {...register("notes")}
+            />
+          </Field>
 
           <SheetFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -148,9 +154,9 @@ export function AddVehicleSheet({ open, onOpenChange }: Props) {
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <Label className="text-brand-gray dark:text-foreground">{label}</Label>
       {children}
-      {error && <p className="text-xs text-status-danger">{error}</p>}
+      {error && <p className="text-xs text-status-danger dark:text-red-400">{error}</p>}
     </div>
   );
 }
