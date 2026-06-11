@@ -66,7 +66,7 @@ export default function DispatchPage() {
       />
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onStart} onDragEnd={onEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin snap-x snap-mandatory md:snap-none -mx-4 px-4 md:mx-0 md:px-0">
           {COLUMNS.map((col) => (
             <Column key={col.id} col={col} trips={grouped[col.id]} drivers={drivers} vehicles={vehicles} />
           ))}
@@ -84,7 +84,7 @@ function Column({ col, trips, drivers, vehicles }: any) {
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[300px] w-[300px] rounded-2xl border bg-white p-3 transition ${isOver ? "border-brand-teal bg-brand-teal-light/30" : "border-brand-border"}`}
+      className={`min-w-[260px] w-[260px] sm:min-w-[280px] sm:w-[280px] md:min-w-[300px] md:w-[300px] flex-shrink-0 snap-start rounded-2xl border bg-white p-3 transition ${isOver ? "border-brand-teal bg-brand-teal-light/30" : "border-brand-border"}`}
     >
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-2">
@@ -114,8 +114,8 @@ function TripCard({ trip, drivers, vehicles, dragging }: any) {
       className={`rounded-xl border border-brand-border bg-white p-3 shadow-sm hover:shadow-card cursor-grab active:cursor-grabbing transition ${isDragging || dragging ? "opacity-80 ring-2 ring-brand-teal" : ""}`}
     >
       <Link href={`/trips/${trip.id}`} onClick={(e) => e.stopPropagation()} className="text-xs font-bold text-brand-teal hover:underline">{trip.id}</Link>
-      <div className="text-sm mt-1 text-brand-navy font-medium leading-tight">
-        {trip.pickup.address} <ArrowRight className="inline w-3 h-3" /> {trip.dropoff.address}
+      <div className="text-sm mt-1 text-brand-navy font-medium leading-tight line-clamp-2">
+        {trip.pickup.address.split(",")[0]} <ArrowRight className="inline w-3 h-3 mx-0.5" /> {trip.dropoff.address.split(",")[0]}
       </div>
       <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1"><UserIcon className="w-3 h-3" />{driver?.name?.split(" ")[0] || "—"}</span>
