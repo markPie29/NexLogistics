@@ -258,14 +258,14 @@ export default function PayrollHubPage() {
                         return (
                           <tr key={p.id} className="border-b border-brand-border/50 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                             <td className="py-3 px-4">
-                              <div className="font-semibold text-brand-navy">{p.name}</div>
+                              <div className="font-semibold text-brand-navy dark:text-white">{p.name}</div>
                               <div className="text-[10px] text-muted-foreground">Pay: {p.payDate ? new Date(p.payDate).toLocaleDateString() : "TBD"}</div>
                             </td>
                             <td className="py-3 px-4 text-xs text-muted-foreground">
                               {new Date(p.startDate).toLocaleDateString("en-PH", { month: "short", day: "numeric" })} – {new Date(p.endDate).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
                             </td>
                             <td className="py-3 px-4 text-right font-medium">{ps.length}</td>
-                            <td className="py-3 px-4 text-right font-bold text-brand-navy">{formatCurrency(net)}</td>
+                            <td className="py-3 px-4 text-right font-bold text-brand-navy dark:text-white">{formatCurrency(net)}</td>
                             <td className="py-3 px-4">
                               <Badge variant={STATUS_VARIANT[p.status]}>{p.status.replace(/_/g, " ")}</Badge>
                             </td>
@@ -317,7 +317,7 @@ export default function PayrollHubPage() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Progress</span>
-                        <span className="font-bold text-brand-navy">{monthlyStatus.completedThisMonth}/{monthlyStatus.expectedCutoffs}</span>
+                        <span className="font-bold text-brand-navy dark:text-white">{monthlyStatus.completedThisMonth}/{monthlyStatus.expectedCutoffs}</span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div className="h-full bg-brand-teal rounded-full transition-all" style={{ width: `${(monthlyStatus.completedThisMonth / monthlyStatus.expectedCutoffs) * 100}%` }} />
@@ -356,7 +356,7 @@ export default function PayrollHubPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className={`text-sm font-semibold ${isActive ? "text-brand-navy" : isDone ? "text-emerald-700" : "text-gray-400"}`}>
+                              <span className={`text-sm font-semibold ${isActive ? "text-brand-navy dark:text-white" : isDone ? "text-emerald-700" : "text-gray-400"}`}>
                                 {step.label}
                               </span>
                               {isActive && <Badge variant="info" className="text-[9px] px-1.5 py-0">NOW</Badge>}
@@ -535,7 +535,7 @@ function DeductionsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-brand-navy">Deductions & Incentives</h3>
+          <h3 className="font-bold text-brand-navy dark:text-white">Deductions & Incentives</h3>
           <p className="text-xs text-muted-foreground">Track cash advances, penalties, bonuses, and rewards.</p>
         </div>
         <div className="flex gap-2">
@@ -636,7 +636,7 @@ function TripRatesTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-brand-navy">Trip Rate Matrix</h3>
+          <h3 className="font-bold text-brand-navy dark:text-white">Trip Rate Matrix</h3>
           <p className="text-xs text-muted-foreground">Configure how drivers/helpers are paid per route, vehicle, and rate model.</p>
         </div>
       </div>
@@ -656,7 +656,7 @@ function TripRatesTab() {
             <tbody>
               {rates.map((r) => (
                 <tr key={r.id} className="border-b border-brand-border/50 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
-                  <td className="py-2.5 px-4 font-medium text-brand-navy">{r.name}</td>
+                  <td className="py-2.5 px-4 font-medium text-brand-navy dark:text-white">{r.name}</td>
                   <td className="py-2.5 px-4 text-xs">{r.vehicleType}</td>
                   <td className="py-2.5 px-4 text-xs text-muted-foreground">{r.routeOrigin} → {r.routeDestination}</td>
                   <td className="py-2.5 px-4"><Badge variant="info" className="text-[10px]">{RATE_TYPE_LABEL[r.rateType]}</Badge></td>
@@ -714,7 +714,7 @@ function PayProfilesTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-brand-navy">Pay Profiles</h3>
+          <h3 className="font-bold text-brand-navy dark:text-white">Pay Profiles</h3>
           <p className="text-xs text-muted-foreground">Payroll mode, base salary, and deduction settings per employee.</p>
         </div>
         <Select value={roleFilter} onValueChange={(v: any) => setRoleFilter(v)}>
@@ -741,7 +741,7 @@ function PayProfilesTab() {
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} className="border-b border-brand-border/50 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
-                  <td className="py-2.5 px-4 font-medium text-brand-navy">{item.name}</td>
+                  <td className="py-2.5 px-4 font-medium text-brand-navy dark:text-white">{item.name}</td>
                   <td className="py-2.5 px-4"><Badge variant={item.role === "Helper" ? "purple" : "info"} className="text-[10px]">{item.role}</Badge></td>
                   <td className="py-2.5 px-4">
                     {item.profile ? (
@@ -780,7 +780,7 @@ function OfficeStaffTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-brand-navy">Office Staff Payroll</h3>
+          <h3 className="font-bold text-brand-navy dark:text-white">Office Staff Payroll</h3>
           <p className="text-xs text-muted-foreground">Fixed monthly-salary employees (admin, HR, accounting, etc.)</p>
         </div>
         <div className="flex gap-3 text-xs">
@@ -814,7 +814,7 @@ function OfficeStaffTab() {
                 return (
                   <tr key={e.id} className="border-b border-brand-border/50 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors">
                     <td className="py-2.5 px-4">
-                      <div className="font-medium text-brand-navy">{e.name}</div>
+                      <div className="font-medium text-brand-navy dark:text-white">{e.name}</div>
                       <div className="text-[10px] text-muted-foreground">{e.email}</div>
                     </td>
                     <td className="py-2.5 px-4"><Badge variant="info" className="text-[10px]">{DEPT_LABEL[e.department]}</Badge></td>

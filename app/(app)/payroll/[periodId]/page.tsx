@@ -173,7 +173,7 @@ export default function PayrollPeriodDetailPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-semibold text-brand-navy">Payroll Workflow</p>
+            <p className="text-sm font-semibold text-brand-navy dark:text-white">Payroll Workflow</p>
             <button
               type="button"
               onClick={() => setShowGuide(!showGuide)}
@@ -211,11 +211,11 @@ export default function PayrollPeriodDetailPage() {
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {WORKFLOW_GUIDE.map((ws, i) => (
                 <div key={i} className={`rounded-lg border p-3 text-xs space-y-1 ${
-                  i === curIdx ? "border-brand-teal/60 bg-brand-teal/5" : "border-brand-border/60 bg-gray-50/60"
+                  i === curIdx ? "border-brand-teal/60 bg-brand-teal/5" : "border-brand-border/60 bg-gray-50/60 dark:border-0 dark:bg-brand-navy-light"
                 }`}>
-                  <div className={`font-semibold ${i === curIdx ? "text-brand-teal" : "text-brand-navy"}`}>{ws.title}</div>
-                  <p className="text-muted-foreground leading-relaxed">{ws.desc}</p>
-                  <p className="font-medium text-brand-navy">→ {ws.action}</p>
+                  <div className={`font-semibold ${i === curIdx ? "text-brand-teal" : "text-brand-navy dark:text-white "}`}>{ws.title}</div>
+                  <p className="text-muted-foreground dark:text-white leading-relaxed">{ws.desc}</p>
+                  <p className="font-medium text-brand-navy dark:text-white">→ {ws.action}</p>
                 </div>
               ))}
             </div>
@@ -284,15 +284,15 @@ export default function PayrollPeriodDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Card><CardContent className="p-4">
           <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Employees</div>
-          <div className="text-2xl font-bold text-brand-navy">{periodSummaries.length}</div>
+          <div className="text-2xl font-bold text-brand-navy dark:text-white">{periodSummaries.length}</div>
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Trips</div>
-          <div className="text-2xl font-bold text-brand-navy">{totals.trips}</div>
+          <div className="text-2xl font-bold text-brand-navy dark:text-white">{totals.trips}</div>
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Trip Earnings</div>
-          <div className="text-lg font-bold text-brand-navy">{formatCurrency(totals.tripEarnings)}</div>
+          <div className="text-lg font-bold text-brand-navy dark:text-white">{formatCurrency(totals.tripEarnings)}</div>
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Incentives</div>
@@ -300,7 +300,7 @@ export default function PayrollPeriodDetailPage() {
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Gross Pay</div>
-          <div className="text-lg font-bold text-brand-navy">{formatCurrency(totals.gross)}</div>
+          <div className="text-lg font-bold text-brand-navy dark:text-white">{formatCurrency(totals.gross)}</div>
         </CardContent></Card>
         <Card className="bg-brand-teal/10 border-brand-teal/40"><CardContent className="p-4">
           <div className="text-[10px] uppercase text-brand-teal tracking-wide font-bold">Total Net</div>
@@ -312,7 +312,7 @@ export default function PayrollPeriodDetailPage() {
       {isLocked && (
         <Card>
           <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-sm font-semibold text-brand-navy flex items-center gap-2">
+            <CardTitle className="text-sm font-semibold text-brand-navy dark:text-white flex items-center gap-2">
               <ClipboardCheck className="w-4 h-4 text-brand-teal" /> Audit Trail
             </CardTitle>
           </CardHeader>
@@ -342,7 +342,7 @@ export default function PayrollPeriodDetailPage() {
       <Card>
         <CardContent className="p-4 pb-0">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-brand-navy">Employee Payslips</p>
+            <p className="text-md font-semibold text-brand-navy dark:text-white">Employee Payslips</p>
             <div className="flex items-center gap-2">
               <Select value={roleFilter} onValueChange={(v: any) => setRoleFilter(v)}>
                 <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -396,7 +396,7 @@ export default function PayrollPeriodDetailPage() {
                 return (
                   <tr key={s.id} className="border-b border-brand-border/60 hover:bg-gray-50/60 dark:hover:bg-white/[0.06] transition-colors group">
                     <td className="py-3 px-4">
-                      <div className="font-medium text-brand-navy">{empName}</div>
+                      <div className="font-medium text-brand-navy dark:text-white">{empName}</div>
                       <div className="text-[10px] text-muted-foreground">{empSub}</div>
                     </td>
                     <td className="py-3 px-4">
@@ -456,7 +456,7 @@ export default function PayrollPeriodDetailPage() {
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-brand-navy">
+            <DialogTitle className="flex items-center gap-2 text-brand-navy dark:text-white">
               <ShieldCheck className="w-5 h-5 text-brand-teal" /> Approve Payroll — {period.name}
             </DialogTitle>
           </DialogHeader>
@@ -498,7 +498,7 @@ export default function PayrollPeriodDetailPage() {
       <Dialog open={showPayDialog} onOpenChange={setShowPayDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-brand-navy">
+            <DialogTitle className="flex items-center gap-2 text-brand-navy dark:text-white">
               <Wallet className="w-5 h-5 text-emerald-600" /> Record Payment — {period.name}
             </DialogTitle>
           </DialogHeader>
@@ -723,11 +723,11 @@ function AuditRow({ icon, label, by, at, notes, extra }: {
     <div className="flex items-start gap-2 py-2 border-b border-brand-border/40 last:border-0">
       <span className="mt-0.5 shrink-0">{icon}</span>
       <div className="flex-1 text-sm">
-        <span className="font-medium text-brand-navy">{label}</span>
+        <span className="font-medium text-brand-navy dark:text-white">{label}</span>
         {by && <span className="text-muted-foreground"> · {by}</span>}
         {at && <span className="text-muted-foreground"> · {new Date(at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}</span>}
         {extra && <div className="text-xs text-muted-foreground mt-0.5">{extra}</div>}
-        {notes && <div className="text-xs text-brand-navy bg-gray-50 rounded mt-1 px-2 py-1 border border-brand-border/40">{notes}</div>}
+        {notes && <div className="text-xs text-brand-navy  bg-gray-50 rounded mt-1 px-2 py-1 border border-brand-border/40">{notes}</div>}
       </div>
     </div>
   );
