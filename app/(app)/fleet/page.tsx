@@ -41,6 +41,9 @@ export default function FleetPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [assignedDriverFilter, setAssignedDriverFilter] = useState<string>("all");
+  const [insuranceBefore, setInsuranceBefore] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -50,9 +53,15 @@ export default function FleetPage() {
       if (search && !`${v.plate} ${v.brand} ${v.model}`.toLowerCase().includes(search.toLowerCase())) return false;
       if (statusFilter !== "all" && v.status !== statusFilter) return false;
       if (typeFilter !== "all" && v.type !== typeFilter) return false;
+      if (assignedDriverFilter !== "all" && String(v.assignedDriverId) !== assignedDriverFilter) return false;
+      if (insuranceBefore) {
+        const cutoff = new Date(insuranceBefore);
+        if (isNaN(cutoff.getTime())) return false;
+        if (new Date(v.insuranceExpiry).getTime() > cutoff.getTime()) return false;
+      }
       return true;
     });
-  }, [vehicles, search, statusFilter, typeFilter]);
+  }, [vehicles, search, statusFilter, typeFilter, assignedDriverFilter, insuranceBefore]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -114,8 +123,30 @@ export default function FleetPage() {
             {types.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm"><Filter className="w-4 h-4" /> More Filters</Button>
+        <Button variant="outline" size="sm" onClick={() => setShowMoreFilters((s) => !s)} aria-expanded={showMoreFilters}><Filter className="w-4 h-4" /> More Filters</Button>
       </div>
+
+      {showMoreFilters && (
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
+          <Select value={assignedDriverFilter} onValueChange={setAssignedDriverFilter}>
+            <SelectTrigger className="w-64"><SelectValue placeholder="Assigned Driver" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Drivers</SelectItem>
+              {drivers.map((d) => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-muted-foreground">Insurance expiring before</div>
+            <Input type="date" value={insuranceBefore} onChange={(e) => setInsuranceBefore(e.target.value)} />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { setAssignedDriverFilter("all"); setInsuranceBefore(""); setShowMoreFilters(false); }}>Apply</Button>
+            <Button variant="outline" size="sm" onClick={() => { setAssignedDriverFilter("all"); setInsuranceBefore(""); }}>Clear</Button>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <Card>
