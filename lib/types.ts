@@ -280,6 +280,7 @@ export interface Expense {
   vendor?: string;
   receiptUrl?: string;
   notes?: string;
+  paymentMethod?: string;
 }
 
 export type PayrollStatus = "draft" | "approved" | "paid";

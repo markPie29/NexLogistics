@@ -13,7 +13,7 @@ import { Input, Label } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { useExpenseStore, useFleetStore, useDriverStore } from "@/lib/store";
+import { useExpenseStore, useFleetStore, useDriverStore, useTripStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useForm } from "react-hook-form";
@@ -34,49 +34,257 @@ const expenseSchema = z.object({
   date: z.string(),
   vendor: z.string().optional(),
   notes: z.string().optional(),
+  paymentMethod: z.string().optional(),
 });
 type ExpenseForm = z.infer<typeof expenseSchema>;
 
-// MOCK DATA FOR CHARTS
-const trendData = [
-  { date: "May 24", fuel: 220000, expenses: 60000 },
-  { date: "May 25", fuel: 260000, expenses: 90000 },
-  { date: "May 26", fuel: 250000, expenses: 80000 },
-  { date: "May 27", fuel: 280000, expenses: 120000 },
-  { date: "May 28", fuel: 240000, expenses: 100000 },
-  { date: "May 29", fuel: 270000, expenses: 140000 },
-  { date: "May 30", fuel: 320000, expenses: 170000 },
-];
-
-const categoryData = [
-  { name: "Toll Fees", value: 245670.50, color: "#3B82F6", percent: "29.5%" },
-  { name: "Repairs & Maintenance", value: 198320.00, color: "#F59E0B", percent: "23.8%" },
-  { name: "Driver Allowance", value: 156840.00, color: "#EAB308", percent: "18.8%" },
-  { name: "Tires", value: 98500.00, color: "#8B5CF6", percent: "11.8%" },
-  { name: "Parking", value: 45630.25, color: "#6366F1", percent: "5.5%" },
-  { name: "Others", value: 87580.00, color: "#64748B", percent: "10.6%" },
-];
 const COLORS = ["#3B82F6", "#F59E0B", "#EAB308", "#8B5CF6", "#6366F1", "#64748B"];
+
+const getPaymentMethodFallback = (e: any) => {
+  if (e.paymentMethod) {
+    if (e.paymentMethod === "fuel_card") return "Fuel Card";
+    return e.paymentMethod.charAt(0).toUpperCase() + e.paymentMethod.slice(1);
+  }
+  if (e.category === "fuel") return "Fuel Card";
+  if (e.category === "toll" || e.category === "cash_advance") return "Cash";
+  if (e.category === "repair") return "Card";
+  return "Cash";
+};
 
 export default function ExpensesPage() {
   const expenses = useExpenseStore((s) => s.expenses);
   const addExpense = useExpenseStore((s) => s.addExpense);
   const vehicles = useFleetStore((s) => s.vehicles);
   const drivers = useDriverStore((s) => s.drivers);
+  const trips = useTripStore((s) => s.trips);
+
   const [tab, setTab] = useState<string>("overview");
   const [open, setOpen] = useState(false);
 
+  // Filter states
+  const [selectedVehicle, setSelectedVehicle] = useState<string>("all-vehicles");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all-categories");
+  const [selectedPayment, setSelectedPayment] = useState<string>("all-payment");
+
+  // Pagination states
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ExpenseForm>({
     resolver: zodResolver(expenseSchema),
-    defaultValues: { category: "fuel", date: new Date().toISOString().split("T")[0] },
+    defaultValues: { 
+      category: "fuel", 
+      date: new Date().toISOString().split("T")[0],
+      paymentMethod: "fuel_card"
+    },
   });
 
   const onSubmit = (d: ExpenseForm) => {
     addExpense({ ...d, date: new Date(d.date).toISOString() });
     toast.success("Expense recorded");
-    reset();
+    reset({
+      category: "fuel",
+      date: new Date().toISOString().split("T")[0],
+      paymentMethod: "fuel_card",
+      amount: undefined,
+      liters: undefined,
+      vendor: "",
+      notes: ""
+    });
     setOpen(false);
   };
+
+  // Reset pagination on tab/filter change
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [tab, selectedVehicle, selectedCategory, selectedPayment, pageSize]);
+
+  // Derived filtered dataset
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(e => {
+      // 1. Tab filtering
+      if (tab === "fuel" && e.category !== "fuel") return false;
+      if (tab === "expenses" && e.category === "fuel") return false;
+
+      // 2. Vehicle filtering
+      if (selectedVehicle !== "all-vehicles" && e.vehicleId !== selectedVehicle) return false;
+
+      // 3. Category filtering (only relevant if not on fuel tab)
+      if (tab !== "fuel" && selectedCategory !== "all-categories" && e.category !== selectedCategory) return false;
+
+      // 4. Payment method filtering
+      if (selectedPayment !== "all-payment") {
+        const method = getPaymentMethodFallback(e).toLowerCase().replace(" ", "_");
+        if (method !== selectedPayment) return false;
+      }
+
+      return true;
+    });
+  }, [expenses, tab, selectedVehicle, selectedCategory, selectedPayment]);
+
+  // Dynamic KPI Card Values
+  const kpiMetrics = useMemo(() => {
+    const fuelExpenses = filteredExpenses.filter(e => e.category === "fuel");
+    const totalFuelCost = fuelExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalExpenses = filteredExpenses.filter(e => e.category !== "fuel").reduce((sum, e) => sum + e.amount, 0);
+    const totalCost = totalFuelCost + totalExpenses;
+
+    const relevantTrips = selectedVehicle !== "all-vehicles"
+      ? trips.filter(t => t.vehicleId === selectedVehicle)
+      : trips;
+    const totalDistance = relevantTrips.reduce((sum, t) => sum + (t.distanceKm || 0), 0);
+    const avgCostPerKm = totalDistance > 0 ? totalCost / totalDistance : 0;
+
+    const totalTransactions = filteredExpenses.length;
+
+    return {
+      totalFuelCost,
+      totalExpenses,
+      totalCost,
+      avgCostPerKm,
+      totalTransactions
+    };
+  }, [filteredExpenses, trips, selectedVehicle]);
+
+  // Recharts Trend Data (Fuel vs Expenses Trend)
+  const trendData = useMemo(() => {
+    const dateMap: { [date: string]: { fuel: number; expenses: number } } = {};
+    const sortedFiltered = [...filteredExpenses].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    sortedFiltered.forEach(e => {
+      const d = new Date(e.date);
+      const formattedDate = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      if (!dateMap[formattedDate]) {
+        dateMap[formattedDate] = { fuel: 0, expenses: 0 };
+      }
+      if (e.category === "fuel") {
+        dateMap[formattedDate].fuel += e.amount;
+      } else {
+        dateMap[formattedDate].expenses += e.amount;
+      }
+    });
+
+    const data = Object.keys(dateMap).map(date => ({
+      date,
+      fuel: dateMap[date].fuel,
+      expenses: dateMap[date].expenses
+    }));
+
+    return data.length > 0 ? data : [{ date: "No data", fuel: 0, expenses: 0 }];
+  }, [filteredExpenses]);
+
+  // Recharts Donut Data (Expenses by Category / Fuel by Vehicle)
+  const categoryData = useMemo(() => {
+    const categoryMap: { [key: string]: number } = {};
+    let total = 0;
+
+    filteredExpenses.forEach(e => {
+      let key = "";
+      if (tab === "fuel") {
+        const v = vehicles.find(veh => veh.id === e.vehicleId);
+        key = v ? v.plate : "Unassigned";
+      } else {
+        if (e.category === "fuel") key = "Fuel Cost";
+        else if (e.category === "repair") key = "Repairs & Maintenance";
+        else if (e.category === "toll") key = "Toll Fees";
+        else if (e.category === "cash_advance") key = "Driver Allowance";
+        else key = "Others";
+      }
+      categoryMap[key] = (categoryMap[key] || 0) + e.amount;
+      total += e.amount;
+    });
+
+    return Object.keys(categoryMap).map((name, index) => {
+      const value = categoryMap[name];
+      const percent = total > 0 ? `${((value / total) * 100).toFixed(1)}%` : "0%";
+      return {
+        name,
+        value,
+        percent,
+        color: COLORS[index % COLORS.length]
+      };
+    });
+  }, [filteredExpenses, tab, vehicles]);
+
+  // Top Vehicles by Cost
+  const topVehicles = useMemo(() => {
+    const vehicleCostMap: { [id: string]: number } = {};
+    filteredExpenses.forEach(e => {
+      if (e.vehicleId) {
+        vehicleCostMap[e.vehicleId] = (vehicleCostMap[e.vehicleId] || 0) + e.amount;
+      }
+    });
+
+    const sortedVehicles = Object.keys(vehicleCostMap)
+      .map(id => {
+        const v = vehicles.find(veh => veh.id === id);
+        const amount = vehicleCostMap[id];
+        return {
+          id,
+          plate: v ? v.plate : "Unknown",
+          desc: v ? `${v.brand} ${v.model}` : "Unknown Vehicle",
+          amt: amount
+        };
+      })
+      .sort((a, b) => b.amt - a.amt);
+
+    const totalCost = sortedVehicles.reduce((sum, v) => sum + v.amt, 0);
+
+    return sortedVehicles.slice(0, 5).map(v => {
+      const percent = totalCost > 0 ? (v.amt / totalCost) * 100 : 0;
+      return {
+        plate: v.plate,
+        desc: v.desc,
+        amt: formatCurrency(v.amt),
+        pct: `${percent.toFixed(1)}%`,
+        percentBar: `w-[${Math.round(percent)}%]`
+      };
+    });
+  }, [filteredExpenses, vehicles]);
+
+  // Payment Method Breakdown
+  const paymentBreakdown = useMemo(() => {
+    const paymentMap: { [method: string]: number } = {};
+    let total = 0;
+    
+    filteredExpenses.forEach(e => {
+      const method = getPaymentMethodFallback(e);
+      paymentMap[method] = (paymentMap[method] || 0) + e.amount;
+      total += e.amount;
+    });
+
+    return Object.keys(paymentMap).map(method => {
+      const amount = paymentMap[method];
+      const percent = total > 0 ? (amount / total) * 100 : 0;
+      return {
+        method,
+        amount,
+        pct: `${percent.toFixed(1)}%`
+      };
+    }).sort((a, b) => b.amount - a.amount);
+  }, [filteredExpenses]);
+
+  // Summary Card Metrics
+  const summaryMetrics = useMemo(() => {
+    const openingBalance = 2500000;
+    const closingBalance = openingBalance - kpiMetrics.totalCost;
+    return {
+      openingBalance,
+      closingBalance
+    };
+  }, [kpiMetrics.totalCost]);
+
+  // Sorting & Pagination
+  const sortedTransactions = useMemo(() => {
+    return [...filteredExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [filteredExpenses]);
+
+  const totalCount = sortedTransactions.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedTransactions.slice(start, start + pageSize);
+  }, [sortedTransactions, currentPage, pageSize]);
 
   return (
     <div className="space-y-6 pb-8">
@@ -88,7 +296,7 @@ export default function ExpensesPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" className="border-brand-border shadow-sm font-medium">
-            May 24 – May 30, 2024
+            Active Period
             <CalendarIcon className="w-4 h-4 ml-2 text-muted-foreground" />
           </Button>
           <Button variant="outline" className="border-brand-border shadow-sm font-medium">
@@ -107,7 +315,14 @@ export default function ExpensesPage() {
               <SheetHeader><SheetTitle>New Expense</SheetTitle></SheetHeader>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-6">
                 <div><Label>Category</Label>
-                  <Select value={watch("category")} onValueChange={(v: any) => setValue("category", v)}>
+                  <Select value={watch("category")} onValueChange={(v: any) => {
+                    setValue("category", v);
+                    if (v === "fuel") {
+                      setValue("paymentMethod", "fuel_card");
+                    } else {
+                      setValue("paymentMethod", "cash");
+                    }
+                  }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="fuel">Fuel</SelectItem>
@@ -120,19 +335,29 @@ export default function ExpensesPage() {
                 </div>
                 <div><Label>Vehicle</Label>
                   <Select onValueChange={(v) => setValue("vehicleId", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                     <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.plate}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div><Label>Driver (optional)</Label>
                   <Select onValueChange={(v) => setValue("driverId", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select driver" /></SelectTrigger>
                     <SelectContent>{drivers.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Payment Method</Label>
+                  <Select value={watch("paymentMethod")} onValueChange={(v: any) => setValue("paymentMethod", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select payment method" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="fuel_card">Fuel Card</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><Label>Amount (₱)</Label><Input type="number" step="0.01" {...register("amount")} />{errors.amount && <p className="text-xs text-red-600 mt-1">Required</p>}</div>
-                  <div><Label>Liters</Label><Input type="number" step="0.01" {...register("liters")} /></div>
+                  <div><Label>Liters (Optional)</Label><Input type="number" step="0.01" {...register("liters")} /></div>
                 </div>
                 <div><Label>Date</Label><Input type="date" {...register("date")} /></div>
                 <div><Label>Vendor</Label><Input {...register("vendor")} /></div>
@@ -151,33 +376,33 @@ export default function ExpensesPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 shrink-0">
         <KpiBlock 
           title="Total Fuel Cost" 
-          value="₱1,248,765.40" 
-          trend="↑ 8.6%" trendColor="text-green-500" 
-          icon={Fuel} iconBg="bg-green-100/50" iconColor="text-green-600" 
+          value={formatCurrency(kpiMetrics.totalFuelCost)} 
+          trend="Fuel Transactions" trendColor="text-green-500 font-semibold" 
+          icon={Fuel} iconBg="bg-green-100/50 dark:bg-green-950/30" iconColor="text-green-600 dark:text-green-400" 
         />
         <KpiBlock 
           title="Total Expenses" 
-          value="₱832,540.75" 
-          trend="↑ 5.3%" trendColor="text-red-500" 
-          icon={Receipt} iconBg="bg-blue-100/50" iconColor="text-blue-600" 
+          value={formatCurrency(kpiMetrics.totalExpenses)} 
+          trend="Other Operating" trendColor="text-blue-500 font-semibold" 
+          icon={Receipt} iconBg="bg-blue-100/50 dark:bg-blue-950/30" iconColor="text-blue-600 dark:text-blue-400" 
         />
         <KpiBlock 
           title="Total Cost" 
-          value="₱2,081,306.15" 
-          trend="↑ 7.2%" trendColor="text-green-500" 
-          icon={FileText} iconBg="bg-purple-100/50" iconColor="text-purple-600" 
+          value={formatCurrency(kpiMetrics.totalCost)} 
+          trend="Combined Spending" trendColor="text-purple-500 font-semibold" 
+          icon={FileText} iconBg="bg-purple-100/50 dark:bg-purple-950/30" iconColor="text-purple-600 dark:text-purple-400" 
         />
         <KpiBlock 
           title="Avg. Cost / KM" 
-          value="₱18.54" 
-          trend="↑ 3.1%" trendColor="text-red-500" 
-          icon={BarChart3} iconBg="bg-orange-100/50" iconColor="text-orange-600" 
+          value={formatCurrency(kpiMetrics.avgCostPerKm)} 
+          trend="Total Fleet Distance" trendColor="text-orange-500 font-semibold" 
+          icon={BarChart3} iconBg="bg-orange-100/50 dark:bg-orange-950/30" iconColor="text-orange-600 dark:text-orange-400" 
         />
         <KpiBlock 
           title="Total Transactions" 
-          value="186" 
-          trend="↑ 6.5%" trendColor="text-green-500" 
-          icon={CreditCard} iconBg="bg-emerald-100/50" iconColor="text-emerald-600" 
+          value={kpiMetrics.totalTransactions.toString()} 
+          trend="Records count" trendColor="text-emerald-500 font-semibold" 
+          icon={CreditCard} iconBg="bg-emerald-100/50 dark:bg-emerald-950/30" iconColor="text-emerald-600 dark:text-emerald-400" 
         />
       </div>
 
@@ -207,24 +432,49 @@ export default function ExpensesPage() {
 
       {/* Filter Row */}
       <div className="flex flex-wrap items-center gap-3 shrink-0">
-        <Select defaultValue="all-vehicles">
+        <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
           <SelectTrigger className="w-[180px] h-9 text-sm"><SelectValue placeholder="All Vehicles" /></SelectTrigger>
-          <SelectContent><SelectItem value="all-vehicles">All Vehicles</SelectItem></SelectContent>
+          <SelectContent>
+            <SelectItem value="all-vehicles">All Vehicles</SelectItem>
+            {vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.plate}</SelectItem>)}
+          </SelectContent>
         </Select>
-        <Select defaultValue="all-categories">
-          <SelectTrigger className="w-[180px] h-9 text-sm"><SelectValue placeholder="All Categories" /></SelectTrigger>
-          <SelectContent><SelectItem value="all-categories">All Categories</SelectItem></SelectContent>
-        </Select>
-        <Select defaultValue="all-payment">
+
+        {tab !== "fuel" && (
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-[180px] h-9 text-sm"><SelectValue placeholder="All Categories" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all-categories">All Categories</SelectItem>
+              <SelectItem value="repair">Repair</SelectItem>
+              <SelectItem value="toll">Toll</SelectItem>
+              <SelectItem value="cash_advance">Cash Advance</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+
+        <Select value={selectedPayment} onValueChange={setSelectedPayment}>
           <SelectTrigger className="w-[200px] h-9 text-sm"><SelectValue placeholder="All Payment Methods" /></SelectTrigger>
-          <SelectContent><SelectItem value="all-payment">All Payment Methods</SelectItem></SelectContent>
+          <SelectContent>
+            <SelectItem value="all-payment">All Payment Methods</SelectItem>
+            <SelectItem value="cash">Cash</SelectItem>
+            <SelectItem value="card">Card</SelectItem>
+            <SelectItem value="fuel_card">Fuel Card</SelectItem>
+          </SelectContent>
         </Select>
         
         <div className="flex-1" />
         
-        <Button variant="outline" className="bg-white border-brand-border h-9 text-sm shadow-sm">
+        <Button variant="outline" 
+          className="bg-white border-brand-border h-9 text-sm shadow-sm"
+          onClick={() => {
+            setSelectedVehicle("all-vehicles");
+            setSelectedCategory("all-categories");
+            setSelectedPayment("all-payment");
+          }}
+        >
           <Filter className="w-4 h-4 mr-2" />
-          More Filters
+          Clear Filters
         </Button>
       </div>
 
@@ -235,10 +485,16 @@ export default function ExpensesPage() {
             {/* Trend Chart */}
             <Card className="shadow-sm border-brand-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-[15px] font-semibold">Fuel vs Expenses Trend</CardTitle>
+                <CardTitle className="text-[15px] font-semibold">
+                  {tab === "fuel" ? "Fuel Cost Trend" : tab === "expenses" ? "Expenses Trend" : "Fuel vs Expenses Trend"}
+                </CardTitle>
                 <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground pt-1">
-                  <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500"></div>Fuel Cost</div>
-                  <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500"></div>Expenses</div>
+                  {tab !== "expenses" && (
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500"></div>Fuel Cost</div>
+                  )}
+                  {tab !== "fuel" && (
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500"></div>Expenses</div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -247,13 +503,17 @@ export default function ExpensesPage() {
                     <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} tickFormatter={(v) => `₱${v/1000}K`} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} tickFormatter={(v) => `₱${v}`} />
                       <Tooltip 
                         contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                         formatter={(val: number) => `₱${val.toLocaleString()}`}
                       />
-                      <Line type="monotone" dataKey="fuel" stroke="#22C55E" strokeWidth={2} dot={{ r: 4, fill: '#22C55E' }} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="expenses" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4, fill: '#3B82F6' }} activeDot={{ r: 6 }} />
+                      {tab !== "expenses" && (
+                        <Line type="monotone" dataKey="fuel" stroke="#22C55E" strokeWidth={2} dot={{ r: 4, fill: '#22C55E' }} activeDot={{ r: 6 }} />
+                      )}
+                      {tab !== "fuel" && (
+                        <Line type="monotone" dataKey="expenses" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4, fill: '#3B82F6' }} activeDot={{ r: 6 }} />
+                      )}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -263,7 +523,9 @@ export default function ExpensesPage() {
             {/* Donut Chart */}
             <Card className="shadow-sm border-brand-border">
               <CardHeader className="pb-0">
-                <CardTitle className="text-[15px] font-semibold">Expenses by Category</CardTitle>
+                <CardTitle className="text-[15px] font-semibold">
+                  {tab === "fuel" ? "Fuel Consumption by Vehicle" : "Expenses by Category"}
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex items-center p-4">
                 <div className="w-[180px] h-[180px] relative shrink-0">
@@ -278,7 +540,7 @@ export default function ExpensesPage() {
                         stroke="none"
                       >
                         {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
                       <Tooltip formatter={(value: number) => `₱${value.toLocaleString()}`} />
@@ -287,12 +549,14 @@ export default function ExpensesPage() {
                   {/* Center Label */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
                     <span className="text-[11px] text-muted-foreground font-medium">Total</span>
-                    <span className="font-bold text-[13px] text-brand-navy">₱832,540.75</span>
+                    <span className="font-bold text-[13px] text-brand-navy dark:text-white truncate max-w-[110px]">
+                      {formatCurrency(kpiMetrics.totalCost)}
+                    </span>
                   </div>
                 </div>
                 
                 {/* Custom Legend */}
-                <div className="flex-1 pl-4 space-y-3">
+                <div className="flex-1 pl-4 space-y-3 max-h-[180px] overflow-y-auto">
                   {categoryData.map((cat, i) => (
                     <div key={i} className="flex items-center justify-between text-[11px] xl:text-xs">
                       <div className="flex items-center justify-between gap-1 w-full min-w-0 pr-2">
@@ -300,7 +564,7 @@ export default function ExpensesPage() {
                           <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                           <span className="text-muted-foreground truncate">{cat.name}</span>
                         </div>
-                        <span className="font-medium text-brand-navy shrink-0">{cat.percent}</span>
+                        <span className="font-medium text-brand-navy dark:text-white shrink-0">{cat.percent}</span>
                       </div>
                     </div>
                   ))}
@@ -315,7 +579,7 @@ export default function ExpensesPage() {
               <CardTitle className="text-[15px] font-semibold">Recent Transactions</CardTitle>
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
-              <table className="w-full text-xs xl:text-sm text-brand-navy min-w-[900px]">
+              <table className="w-full text-xs xl:text-sm text-brand-navy dark:text-slate-200 min-w-[900px]">
                 <thead className="text-left text-muted-foreground border-b border-brand-border dark:border-white/10 font-medium text-[11px] xl:text-xs uppercase tracking-wider">
                   <tr>
                     <th className="py-3 px-4 font-semibold">Date & Time</th>
@@ -330,68 +594,112 @@ export default function ExpensesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-border/60">
-                  <TableRow 
-                    d1="May 30, 2024" d2="08:45 AM" 
-                    type="Fuel" typeCol="text-green-600 bg-green-100/50 border border-green-200"
-                    v1="NEX-101" v2="Mark Santos"
-                    desc1="Petron - SLEX Mamplasan" desc2="Diesel"
-                    cat="Fuel" catCol="text-green-600 bg-green-100/50"
-                    pay="Fuel Card" payCol="text-purple-600 bg-purple-100/50"
-                    amt="₱18,450.00"
-                  />
-                  <TableRow 
-                    d1="May 30, 2024" d2="11:20 AM" 
-                    type="Expense" typeCol="text-blue-600 bg-blue-100/50 border border-blue-200"
-                    v1="NEX-104" v2="John Cruz"
-                    desc1="SLEX - Mamplasan" desc2="Toll Fee"
-                    cat="Toll Fees" catCol="text-orange-600 bg-orange-100/50"
-                    pay="Cash" payCol="text-teal-600 bg-teal-100/50"
-                    amt="₱1,250.00"
-                  />
-                  <TableRow 
-                    d1="May 29, 2024" d2="07:30 PM" 
-                    type="Expense" typeCol="text-blue-600 bg-blue-100/50 border border-blue-200"
-                    v1="NEX-102" v2="Allan Reyes"
-                    desc1="Kalayaan Tire Center" desc2="Tire Replacement"
-                    cat="Tires" catCol="text-blue-600 bg-blue-100/50"
-                    pay="Card" payCol="text-teal-600 bg-teal-100/50"
-                    amt="₱9,800.00"
-                  />
-                  <TableRow 
-                    d1="May 29, 2024" d2="05:15 PM" 
-                    type="Fuel" typeCol="text-green-600 bg-green-100/50 border border-green-200"
-                    v1="NEX-106" v2="Ryan Garcia"
-                    desc1="Shell - Alabang" desc2="Diesel"
-                    cat="Fuel" catCol="text-green-600 bg-green-100/50"
-                    pay="Fuel Card" payCol="text-purple-600 bg-purple-100/50"
-                    amt="₱16,250.00"
-                  />
-                  <TableRow 
-                    d1="May 29, 2024" d2="01:10 PM" 
-                    type="Expense" typeCol="text-blue-600 bg-blue-100/50 border border-blue-200"
-                    v1="NEX-103" v2="Carlo Mendoza"
-                    desc1="Driver Meal Allowance" desc2="May 29"
-                    cat="Driver Allowance" catCol="text-yellow-600 bg-yellow-100/50"
-                    pay="Cash" payCol="text-teal-600 bg-teal-100/50"
-                    amt="₱850.00"
-                  />
+                  {paginatedTransactions.map((e) => {
+                    const vehicle = vehicles.find((v) => v.id === e.vehicleId);
+                    const driver = drivers.find((d) => d.id === e.driverId);
+                    const dateObj = new Date(e.date);
+                    const d1 = dateObj.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+                    const d2 = dateObj.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+                    const isFuel = e.category === "fuel";
+                    const type = isFuel ? "Fuel" : "Expense";
+                    const typeCol = isFuel
+                      ? "text-green-600 bg-green-100/50 border border-green-200 dark:text-green-400 dark:bg-green-950/30 dark:border-green-900/50"
+                      : "text-blue-600 bg-blue-100/50 border border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-900/50";
+
+                    let catName: string = e.category;
+                    let catCol = "text-gray-600 bg-gray-100/50 dark:text-gray-400 dark:bg-gray-950/30";
+                    if (e.category === "fuel") {
+                      catName = "Fuel";
+                      catCol = "text-green-600 bg-green-100/50 dark:text-green-400 dark:bg-green-950/30";
+                    } else if (e.category === "repair") {
+                      catName = "Repair";
+                      catCol = "text-blue-600 bg-blue-100/50 dark:text-blue-400 dark:bg-blue-950/30";
+                    } else if (e.category === "toll") {
+                      catName = "Toll Fees";
+                      catCol = "text-orange-600 bg-orange-100/50 dark:text-orange-400 dark:bg-orange-950/30";
+                    } else if (e.category === "cash_advance") {
+                      catName = "Driver Allowance";
+                      catCol = "text-yellow-600 bg-yellow-100/50 dark:text-yellow-400 dark:bg-yellow-950/30";
+                    } else {
+                      catName = "Other";
+                    }
+
+                    const pay = getPaymentMethodFallback(e);
+                    let payCol = "text-teal-600 bg-teal-100/50 dark:text-teal-400 dark:bg-teal-950/30";
+                    if (pay === "Fuel Card") {
+                      payCol = "text-purple-600 bg-purple-100/50 dark:text-purple-400 dark:bg-purple-950/30";
+                    } else if (pay === "Card") {
+                      payCol = "text-blue-600 bg-blue-100/50 dark:text-blue-400 dark:bg-blue-950/30";
+                    }
+
+                    return (
+                      <TableRow 
+                        key={e.id}
+                        d1={d1} d2={d2}
+                        type={type} typeCol={typeCol}
+                        v1={vehicle ? vehicle.plate : "Unassigned"} v2={driver ? driver.name : "No Driver"}
+                        desc1={e.vendor || "N/A"} desc2={e.notes || catName}
+                        cat={catName} catCol={catCol}
+                        pay={pay} payCol={payCol}
+                        amt={formatCurrency(e.amount)}
+                      />
+                    );
+                  })}
+                  {paginatedTransactions.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-muted-foreground">
+                        No transactions found for the selected filters.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
               <div className="p-4 border-t border-brand-border/60 dark:border-white/10 flex items-center justify-between text-[13px] text-muted-foreground bg-gray-50/30 dark:bg-white/[0.02]">
-                <span>Showing 1 to 5 of 186 transactions</span>
+                <span>
+                  Showing {Math.min(totalCount, (currentPage - 1) * pageSize + 1)} to {Math.min(totalCount, currentPage * pageSize)} of {totalCount} transactions
+                </span>
                 <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" className="h-8 px-2.5 shadow-sm text-xs font-medium"><span className="sr-only">Prev</span>&lt;</Button>
-                  <Button variant="default" size="sm" className="h-8 w-8 p-0 bg-brand-teal shadow-sm text-xs font-medium text-white">1</Button>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-xs font-medium">2</Button>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-xs font-medium">3</Button>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-xs font-medium">4</Button>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-xs font-medium">5</Button>
-                  <Button variant="ghost" size="sm" className="h-8 px-2 text-xs font-medium">...</Button>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-xs font-medium">38</Button>
-                  <Button variant="outline" size="sm" className="h-8 px-2.5 shadow-sm text-xs font-medium"><span className="sr-only">Next</span>&gt;</Button>
-                  <Select defaultValue="10">
-                    <SelectTrigger className="h-8 ml-2 w-[90px] text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="10">10 / page</SelectItem></SelectContent>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 px-2.5 shadow-sm text-xs font-medium"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    &lt;
+                  </Button>
+                  
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <Button 
+                      key={i}
+                      variant={currentPage === i + 1 ? "default" : "ghost"} 
+                      size="sm" 
+                      className={`h-8 w-8 p-0 text-xs font-medium ${currentPage === i + 1 ? "bg-brand-teal text-white" : ""}`}
+                      onClick={() => setCurrentPage(i + 1)}
+                    >
+                      {i + 1}
+                    </Button>
+                  ))}
+
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 px-2.5 shadow-sm text-xs font-medium"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    &gt;
+                  </Button>
+                  
+                  <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(Number(v))}>
+                    <SelectTrigger className="h-8 ml-2 w-[100px] text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 / page</SelectItem>
+                      <SelectItem value="10">10 / page</SelectItem>
+                      <SelectItem value="20">20 / page</SelectItem>
+                      <SelectItem value="50">50 / page</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
               </div>
@@ -404,28 +712,28 @@ export default function ExpensesPage() {
           {/* Summary Card */}
           <Card className="shadow-sm border-brand-border">
             <CardHeader className="pb-3 border-b border-brand-border/60">
-              <CardTitle className="text-[14px] font-bold tracking-tight">Summary (May 24 – May 30, 2024)</CardTitle>
+              <CardTitle className="text-[14px] font-bold tracking-tight">Summary (Demo Period)</CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3.5 text-sm">
               <div className="flex justify-between items-center text-muted-foreground text-[13px]">
                 <span>Opening Balance</span>
-                <span className="font-semibold text-brand-navy dark:text-white">₱1,248,000.00</span>
+                <span className="font-semibold text-brand-navy dark:text-white">{formatCurrency(summaryMetrics.openingBalance)}</span>
               </div>
               <div className="flex justify-between items-center text-muted-foreground text-[13px]">
                 <span>Total Fuel Cost</span>
-                <span className="font-semibold text-brand-navy dark:text-white">₱1,248,765.40</span>
+                <span className="font-semibold text-brand-navy dark:text-white">{formatCurrency(kpiMetrics.totalFuelCost)}</span>
               </div>
               <div className="flex justify-between items-center text-muted-foreground text-[13px]">
                 <span>Total Expenses</span>
-                <span className="font-semibold text-brand-navy dark:text-white">₱832,540.75</span>
+                <span className="font-semibold text-brand-navy dark:text-white">{formatCurrency(kpiMetrics.totalExpenses)}</span>
               </div>
               <div className="flex justify-between items-center text-muted-foreground text-[13px]">
                 <span>Total Cost</span>
-                <span className="font-semibold text-brand-navy dark:text-white">₱2,081,306.15</span>
+                <span className="font-semibold text-brand-navy dark:text-white">{formatCurrency(kpiMetrics.totalCost)}</span>
               </div>
               <div className="border-t border-dashed border-gray-200 dark:border-white/10 pt-3 flex justify-between items-center font-bold text-[14px]">
                 <span className="text-brand-navy dark:text-white">Closing Balance</span>
-                <span className="text-green-600 dark:text-emerald-400">₱414,459.25</span>
+                <span className="text-green-600 dark:text-emerald-400">{formatCurrency(summaryMetrics.closingBalance)}</span>
               </div>
             </CardContent>
           </Card>
@@ -433,14 +741,26 @@ export default function ExpensesPage() {
           {/* Top Vehicles Card */}
           <Card className="shadow-sm border-brand-border">
             <CardHeader className="pb-3 border-b border-brand-border/60">
-              <CardTitle className="text-[14px] font-bold tracking-tight">Top Vehicles by Fuel Cost</CardTitle>
+              <CardTitle className="text-[14px] font-bold tracking-tight">
+                {tab === "fuel" ? "Top Vehicles by Fuel Cost" : "Top Vehicles by Spending"}
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-4 text-xs xl:text-[13px]">
-              <TopVehicle row="NEX-101" desc="Isuzu FTR 24ft" amt="₱245,670.50" pct="19.7%" percentBar="w-[80%]" />
-              <TopVehicle row="NEX-104" desc="Hino 500" amt="₱198,320.00" pct="15.9%" percentBar="w-[60%]" />
-              <TopVehicle row="NEX-102" desc="Fuso Canter" amt="₱156,840.00" pct="12.6%" percentBar="w-[45%]" />
-              <TopVehicle row="NEX-103" desc="Toyota Hiace" amt="₱123,450.75" pct="9.9%" percentBar="w-[35%]" />
-              <TopVehicle row="NEX-106" desc="Toyota Hilux" amt="₱98,760.25" pct="7.9%" percentBar="w-[20%]" />
+              {topVehicles.map((vehicle, idx) => (
+                <TopVehicle 
+                  key={idx}
+                  row={vehicle.plate} 
+                  desc={vehicle.desc} 
+                  amt={vehicle.amt} 
+                  pct={vehicle.pct} 
+                  percentBar={vehicle.percentBar} 
+                />
+              ))}
+              {topVehicles.length === 0 && (
+                <div className="text-muted-foreground text-center py-4">
+                  No vehicle data available.
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -450,39 +770,49 @@ export default function ExpensesPage() {
               <CardTitle className="text-[14px] font-bold tracking-tight">Payment Method Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-4 text-xs xl:text-[13px]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center text-teal-600 dark:text-teal-400 border border-teal-100 dark:border-teal-900/30 shrink-0">
-                    <Banknote className="w-4 h-4" />
+              {paymentBreakdown.map((pm: any, idx: number) => {
+                const isCash = pm.method === "Cash";
+                const isFuelCard = pm.method === "Fuel Card";
+                
+                let iconBg = "bg-gray-100 dark:bg-white/10";
+                let iconColor = "text-gray-600 dark:text-gray-300";
+                let iconBorder = "border-gray-200 dark:border-white/10";
+                let Icon = CreditCard;
+
+                if (isCash) {
+                  iconBg = "bg-teal-50 dark:bg-teal-900/20";
+                  iconColor = "text-teal-600 dark:text-teal-400";
+                  iconBorder = "border-teal-100 dark:border-teal-900/30";
+                  Icon = Banknote;
+                } else if (isFuelCard) {
+                  iconBg = "bg-purple-50 dark:bg-purple-900/20";
+                  iconColor = "text-purple-600 dark:text-purple-400";
+                  iconBorder = "border-purple-100 dark:border-purple-900/30";
+                  Icon = Wallet;
+                }
+
+                return (
+                  <div key={idx} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-md ${iconBg} ${iconColor} flex items-center justify-center border ${iconBorder} shrink-0`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <span className="font-semibold text-brand-navy dark:text-white">{pm.method}</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold text-brand-navy dark:text-white tabular-nums">
+                        {formatCurrency(pm.amount)} 
+                        <span className="text-muted-foreground font-medium text-[11px] ml-1">({pm.pct})</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="font-semibold text-brand-navy dark:text-white">Cash</span>
+                );
+              })}
+              {paymentBreakdown.length === 0 && (
+                <div className="text-muted-foreground text-center py-4">
+                  No payment breakdown available.
                 </div>
-                <div className="text-right">
-                  <div className="font-semibold text-brand-navy dark:text-white tabular-nums">₱1,245,450.25 <span className="text-muted-foreground font-medium text-[11px] ml-1">(59.8%)</span></div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 shrink-0">
-                    <CreditCard className="w-4 h-4" />
-                  </div>
-                  <span className="font-semibold text-brand-navy dark:text-white">Card</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-brand-navy dark:text-white tabular-nums">₱512,780.00 <span className="text-muted-foreground font-medium text-[11px] ml-1">(24.6%)</span></div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-900/30 shrink-0">
-                    <Wallet className="w-4 h-4" />
-                  </div>
-                  <span className="font-semibold text-brand-navy dark:text-white">Fuel Card</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-brand-navy dark:text-white tabular-nums">₱323,075.90 <span className="text-muted-foreground font-medium text-[11px] ml-1">(15.6%)</span></div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -494,18 +824,18 @@ export default function ExpensesPage() {
 // Subcomponents
 function KpiBlock({ title, value, trend, trendColor, icon: Icon, iconBg, iconColor }: any) {
   return (
-    <Card className="shadow-sm border-brand-border p-4 lg:p-5 flex flex-col gap-4 bg-white transition-colors relative overflow-hidden">
-      <div className="flex items-start justify-between relative z-10">
-        <div className={`p-2.5 rounded-lg ${iconBg} ${iconColor} shrink-0`}>
-          <Icon className="w-5 h-5 lg:w-6 lg:h-6" />
-        </div>
-        <div className="text-right">
-          <div className="text-[17px] md:text-[19px] lg:text-[22px] font-bold text-brand-navy tracking-tight whitespace-nowrap">{value}</div>
+    <Card className="shadow-sm border-brand-border dark:border-white/10 p-4 lg:p-5 flex flex-col gap-3 bg-white dark:bg-card transition-colors relative overflow-hidden">
+      <div className="flex items-center justify-between relative z-10">
+        <div className={`p-2 rounded-lg ${iconBg} ${iconColor} shrink-0`}>
+          <Icon className="w-5 h-5 lg:w-5 lg:h-5" />
         </div>
       </div>
-      <div className="relative z-10">
-        <div className="text-xs font-semibold text-brand-navy/80 mb-1">{title}</div>
-        <div className="text-[10px] xl:text-[11px] text-muted-foreground whitespace-nowrap">vs Apr 24 - Apr 30 <span className={`font-semibold ml-0.5 ${trendColor}`}>{trend}</span></div>
+      <div className="relative z-10 space-y-1 mt-1">
+        <div className="text-xs font-semibold text-brand-navy/60 dark:text-white/60">{title}</div>
+        <div className="text-[18px] md:text-[20px] lg:text-[22px] font-bold text-brand-navy dark:text-white tracking-tight whitespace-nowrap">{value}</div>
+        <div className="text-[10px] xl:text-[11px] text-muted-foreground whitespace-nowrap">
+          Context: <span className={`ml-0.5 ${trendColor}`}>{trend}</span>
+        </div>
       </div>
     </Card>
   )
@@ -530,12 +860,12 @@ function TableRow({ d1, d2, type, typeCol, v1, v2, desc1, desc2, cat, catCol, pa
         <div className="text-muted-foreground text-[11px]">{desc2}</div>
       </td>
       <td className="py-3 px-4">
-        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold text-brand-navy ${catCol}`}>{cat}</span>
+        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${catCol}`}>{cat}</span>
       </td>
       <td className="py-3 px-4">
-        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold text-brand-navy ${payCol}`}>{pay}</span>
+        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${payCol}`}>{pay}</span>
       </td>
-      <td className="py-3 px-4 text-right font-bold tracking-tight text-brand-navy tabular-nums">
+      <td className="py-3 px-4 text-right font-bold tracking-tight text-brand-navy dark:text-white tabular-nums">
         {amt}
       </td>
       <td className="py-3 px-4 text-center">
@@ -544,7 +874,7 @@ function TableRow({ d1, d2, type, typeCol, v1, v2, desc1, desc2, cat, catCol, pa
         </Button>
       </td>
       <td className="py-3 px-4 text-center">
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-brand-navy hover:bg-gray-100/80 border border-transparent">
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-brand-navy dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-white/10 border border-transparent">
           <MoreHorizontal className="w-4 h-4" />
         </Button>
       </td>
@@ -553,20 +883,24 @@ function TableRow({ d1, d2, type, typeCol, v1, v2, desc1, desc2, cat, catCol, pa
 }
 
 function TopVehicle({ row, desc, amt, pct, percentBar }: any) {
+  // Extract number from className w-[xx%] to use as width
+  const match = percentBar.match(/w-\[(\d+)%\]/);
+  const widthVal = match ? `${match[1]}%` : "0%";
+
   return (
     <div className="flex items-center justify-between gap-3">
-      <div className="w-9 h-9 rounded bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100">
-        <TruckIcon className="w-5 h-5 text-gray-500" />
+      <div className="w-9 h-9 rounded bg-gray-50 dark:bg-white/5 flex items-center justify-center shrink-0 border border-gray-100 dark:border-white/10">
+        <TruckIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="font-bold text-brand-navy truncate leading-tight">{row}</div>
+        <div className="font-bold text-brand-navy dark:text-white truncate leading-tight">{row}</div>
         <div className="text-muted-foreground text-[11px] truncate pt-0.5">{desc}</div>
       </div>
       <div className="text-right w-[100px] shrink-0">
-        <div className="font-semibold text-brand-navy leading-tight tabular-nums text-[13px]">{amt}</div>
+        <div className="font-semibold text-brand-navy dark:text-white leading-tight tabular-nums text-[13px]">{amt}</div>
         <div className="flex items-center justify-end gap-1.5 mt-1.5">
-          <div className="flex-1 h-[5px] bg-gray-100 rounded-full overflow-hidden max-w-[60px]">
-            <div className={`h-full bg-green-500 rounded-full ${percentBar}`} />
+          <div className="flex-1 h-[5px] bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden max-w-[60px]">
+            <div className="h-full bg-green-500 rounded-full" style={{ width: widthVal }} />
           </div>
           <span className="text-[10px] text-muted-foreground font-medium w-8 text-right tabular-nums tracking-tighter">{pct}</span>
         </div>
@@ -578,7 +912,7 @@ function TopVehicle({ row, desc, amt, pct, percentBar }: any) {
 // Optional icon to act as truck fallback
 function TruckIcon(props: any) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinelinejoin="round" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M10 17h4V5H2v12h3" />
       <path d="M20 17h2v-9h-4M5 17a2 2 0 1 0 4 0a2 2 0 1 0-4 0 M15 17a2 2 0 1 0 4 0a2 2 0 1 0-4 0" />
       <path d="M14 8h5l3 3v6h-3" />
