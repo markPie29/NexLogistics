@@ -8,7 +8,11 @@ export type Role =
   | "helper"
   | "accounting"
   | "client"
-  | "partner";
+  | "partner"
+  | "employee";
+
+// ─── Employee Type (subset of Role "employee") ────────────────
+export type EmployeeType = "office" | "driver" | "helper";
 
 export interface User {
   id: string;
@@ -24,6 +28,7 @@ export interface User {
   helperId?: string; // when role is helper
   clientId?: string; // when role is client
   partnerId?: string; // when role is partner
+  employeeId?: string; // when role is employee
   isPlatformOwner?: boolean; // hidden: platform-level feature toggle access
 }
 
@@ -760,3 +765,165 @@ export interface VehiclePermit {
   updatedAt: string; // ISO timestamp
 }
 
+
+// ─── Employee Self-Service Portal ────────────────────────────
+
+export type EmployeeRequestStatus = "pending" | "approved" | "rejected";
+
+// Approval step: each entry in chain = one approver level
+export interface ApprovalStep {
+  role: string;      // e.g. "HR", "Executive Officer-in-Charge", "Owner"
+  status: EmployeeRequestStatus;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  notes?: string;
+}
+
+export interface LeaveRequest {
+  id: string;
+  employeeId: string;
+  dateFrom: string;
+  dateTo: string;
+  type: string;       // e.g. "Sick Leave", "Vacation Leave", "Emergency Leave"
+  reason: string;
+  signature: string;  // typed name
+  status: EmployeeRequestStatus;
+  steps: ApprovalStep[];
+  submittedAt: string;
+  updatedAt: string;
+}
+
+export interface UndertimeRequest {
+  id: string;
+  employeeId: string;
+  date: string;
+  type: string;       // e.g. "Personal", "Medical"
+  time: string;       // HH:mm
+  reason: string;
+  signature: string;
+  status: EmployeeRequestStatus;
+  steps: ApprovalStep[];
+  submittedAt: string;
+  updatedAt: string;
+}
+
+export interface CashAdvanceRequest {
+  id: string;
+  employeeId: string;
+  date: string;
+  amount: number;     // PHP
+  purpose: string;
+  signature: string;
+  status: EmployeeRequestStatus;
+  steps: ApprovalStep[];
+  submittedAt: string;
+  updatedAt: string;
+}
+
+export interface UniformRequest {
+  id: string;
+  employeeId: string;
+  date: string;
+  size: string;       // e.g. "S", "M", "L", "XL", "XXL"
+  reason: string;
+  signature: string;
+  status: EmployeeRequestStatus;
+  steps: ApprovalStep[];
+  submittedAt: string;
+  updatedAt: string;
+}
+
+export interface PPERequest {
+  id: string;
+  employeeId: string;
+  date: string;
+  ppe: string;        // e.g. "Hard Hat", "Safety Vest", "Gloves"
+  reason: string;
+  signature: string;
+  status: EmployeeRequestStatus;
+  steps: ApprovalStep[];
+  submittedAt: string;
+  updatedAt: string;
+}
+
+export interface LiquidationRequest {
+  id: string;
+  employeeId: string;
+  date: string;
+  amount: number;
+  item: string;
+  signature: string;
+  status: EmployeeRequestStatus;
+  steps: ApprovalStep[];
+  submittedAt: string;
+  updatedAt: string;
+}
+
+export interface LoanRequest {
+  id: string;
+  employeeId: string;
+  date: string;
+  type: string;       // e.g. "SSS Loan", "Pag-IBIG Loan", "Company Loan"
+  reason: string;
+  signature: string;
+  status: EmployeeRequestStatus;
+  steps: ApprovalStep[];
+  submittedAt: string;
+  updatedAt: string;
+}
+
+// HR-issued documents pushed to the employee
+export type HRDocumentType =
+  | "incident_report"
+  | "notice_to_explain"
+  | "notice_of_decision"
+  | "written_warning"
+  | "suspension_notice"
+  | "termination_notice";
+
+export interface HRDocument {
+  id: string;
+  employeeId: string;
+  type: HRDocumentType;
+  title: string;
+  body: string;         // rich text / markdown content from HR
+  issuedBy: string;
+  issuedAt: string;
+  // NTE only: employee can submit a written response
+  employeeResponse?: string;
+  respondedAt?: string;
+}
+
+// Virtual credentials: company ID card, health card
+export type CredentialType = "company_id" | "health_card";
+
+export interface EmployeeCredential {
+  id: string;
+  employeeId: string;
+  type: CredentialType;
+  fileUrl?: string;      // uploaded image/PDF
+  uploadedAt?: string;
+  notes?: string;
+}
+
+// ─── Employee record (in portal context) ─────────────────────
+export type EmployeePortalType = "office" | "driver" | "helper";
+
+export interface EmployeeProfile {
+  id: string;           // ep-001 etc.
+  userId: string;       // links to User.id where role="employee"
+  name: string;
+  email: string;
+  phone?: string;
+  department?: string;
+  position?: string;
+  employeeType: EmployeePortalType;
+  hireDate: string;
+  // For driver/helper cross-reference
+  driverId?: string;
+  helperId?: string;
+  status: "active" | "on_leave" | "resigned";
+  photoUrl?: string;
+  notes?: string;
+  createdAt: string;
+}

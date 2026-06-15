@@ -131,6 +131,18 @@ const ROLE_CARDS: RoleCard[] = [
     accent: "text-rose-700",
     iconBg: "bg-rose-50 ring-1 ring-rose-200",
   },
+  {
+    role: "employee",
+    number: 9,
+    title: "EMPLOYEE PORTAL",
+    subtitle: "Staff self-service",
+    description: "View payslip, submit leave and request forms, check HR documents, and manage virtual credentials.",
+    email: "employee.maria@nexlogistics.demo",
+    demoPassword: "Employee123!",
+    icon: UsersIcon,
+    accent: "text-indigo-700",
+    iconBg: "bg-indigo-50 ring-1 ring-indigo-200",
+  },
 ];
 
 const QUICK_ACCESS = [
@@ -142,6 +154,7 @@ const QUICK_ACCESS = [
   { role: "accounting", label: "Accounting / HR", code: "Finance123!", icon: Calculator, color: "bg-orange-500/15 text-orange-300" },
   { role: "client", label: "Client Portal", code: "Client123!", icon: UsersIcon, color: "bg-brand-teal/20 text-brand-teal" },
   { role: "partner", label: "Subcon Partner", code: "Partner123!", icon: Handshake, color: "bg-rose-500/15 text-rose-300" },
+  { role: "employee", label: "Employee Portal", code: "Employee123!", icon: UsersIcon, color: "bg-indigo-500/15 text-indigo-300" },
 ] as const;
 
 export default function LoginPage() {

@@ -472,6 +472,11 @@ export function resetAllDemoData() {
     `${p}-driver-payroll-profiles`, `${p}-incentives`, `${p}-deductions`,
     `${p}-payroll-periods`, `${p}-partners`, `${p}-helpers`, `${p}-calendar`,
     `${p}-feature-flags`, `${p}-office-staff`, `${p}-vehicle-documents`,
+    // Employee Portal
+    `${p}-employee-profiles`, `${p}-leave-requests`, `${p}-undertime-requests`,
+    `${p}-cash-advance-requests`, `${p}-uniform-requests`, `${p}-ppe-requests`,
+    `${p}-liquidation-requests`, `${p}-loan-requests`, `${p}-hr-documents`,
+    `${p}-employee-credentials`,
   ].forEach((k) => localStorage.removeItem(k));
   window.location.reload();
 }
@@ -516,3 +521,18 @@ export type { FeatureKey } from "./features";
 
 // Vehicle Documents & Permits
 export { useVehicleDocumentStore } from "./vehicle-documents";
+
+// Employee Self-Service Portal
+export {
+  useEmployeeProfileStore,
+  useLeaveStore,
+  useUndertimeStore,
+  useCashAdvanceRequestStore,
+  useUniformRequestStore,
+  usePPERequestStore,
+  useLiquidationStore,
+  useLoanRequestStore,
+  useHRDocumentStore,
+  useCredentialStore,
+  defaultSteps,
+} from "./employee-portal";

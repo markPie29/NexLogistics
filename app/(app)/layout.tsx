@@ -72,6 +72,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // Employee Portal — full-screen, no sidebar or topbar
+  const isEmployeePortal =
+    pathname === "/employee-portal" ||
+    pathname?.startsWith("/employee-portal/");
+  if (isEmployeePortal) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="min-h-screen bg-white dark:bg-background">
       <Sidebar />

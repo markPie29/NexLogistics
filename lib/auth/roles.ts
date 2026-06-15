@@ -62,6 +62,14 @@ export const NAV_ITEMS: NavItem[] = [
   // === Partner-specific ===
   { label: "Partner Portal", href: "/partner-portal", icon: Handshake, group: "customer", roles: ["partner"] },
 
+  // === Employee Portal ===
+  { label: "My Dashboard", href: "/employee-portal", icon: LayoutDashboard, group: "operations", roles: ["employee"] },
+  { label: "This Week", href: "/employee-portal/this-week", icon: Wallet, group: "finance", roles: ["employee"] },
+  { label: "My Requests", href: "/employee-portal/requests", icon: FileText, group: "others", roles: ["employee"] },
+  { label: "HR Documents", href: "/employee-portal/hr-documents", icon: Briefcase, group: "others", roles: ["employee"] },
+  { label: "Virtual ID", href: "/employee-portal/credentials", icon: Users, group: "others", roles: ["employee"] },
+  { label: "My Trips", href: "/employee-portal/trips", icon: Route, group: "operations", roles: ["employee"] },
+
   // === Customer ===
   { label: "Client Management", href: "/clients", icon: Briefcase, group: "customer", roles: ["super_admin", "company_admin"], featureKey: "client_management" },
 
@@ -104,6 +112,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   accounting: "Accounting / HR",
   client: "Client / Customer",
   partner: "Subcon Partner",
+  employee: "Employee",
 };
 
 export function navForRole(role: Role | undefined) {
@@ -121,4 +130,5 @@ export const DEFAULT_LANDING: Record<Role, string> = {
   accounting: "/accounting",
   client: "/client-portal/overview",
   partner: "/partner-portal/overview",
+  employee: "/employee-portal",
 };

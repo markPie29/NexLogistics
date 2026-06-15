@@ -79,6 +79,16 @@ export const seedUsers: User[] = [
     isPlatformOwner: true,
     phone: "+63 999 000 0000",
   },
+  // Employee Self-Service Portal demo users
+  {
+    id: "u-010",
+    name: "Maria Santos",
+    email: "employee.maria@nexlogistics.demo",
+    role: "employee" as const,
+    _demoPassword: "Employee123!",
+    phone: "0917 400 0001",
+    employeeId: "ep-001",
+  },
 ];
 
 export const demoCompany = {
