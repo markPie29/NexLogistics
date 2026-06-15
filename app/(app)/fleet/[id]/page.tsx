@@ -63,7 +63,7 @@ export default function VehicleDetailPage() {
         <TabsContent value="overview">
           <Card>
             <CardHeader><CardTitle>Vehicle Details</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm dark:text-white">
               <Detail label="Plate" value={vehicle.plate} />
               <Detail label="Type" value={vehicle.type} />
               <Detail label="Brand / Model" value={`${vehicle.brand} ${vehicle.model}`} />
@@ -129,7 +129,7 @@ export default function VehicleDetailPage() {
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-brand-navy text-white text-xl font-bold flex items-center justify-center">{initials(driver.name)}</div>
                   <div>
-                    <div className="text-lg font-bold text-brand-navy">{driver.name}</div>
+                    <div className="text-lg font-bold text-brand-navy dark:text-white">{driver.name}</div>
                     <div className="text-sm text-muted-foreground">{driver.phone} · {driver.email}</div>
                     <div className="flex gap-3 mt-2 text-xs">
                       <span>License: <b>{driver.licenseNumber}</b></span>
@@ -179,8 +179,8 @@ function Stat({ label, value, icon: Icon }: { label: string; value: any; icon: a
 function Detail({ label, value }: { label: string; value: any }) {
   return (
     <div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="font-medium text-brand-navy mt-0.5">{value}</div>
+      <div className="text-xs text-muted-foreground ">{label}</div>
+      <div className="font-medium text-brand-navy mt-0.5 dark:text-white">{value}</div>
     </div>
   );
 }
