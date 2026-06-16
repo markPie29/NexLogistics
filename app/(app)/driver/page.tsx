@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { useTripStore, useFleetStore, useDriverStore, useClientStore, useUiStore } from "@/lib/store";
 import {
@@ -60,6 +60,7 @@ type View = "dashboard" | "trip_details" | "trips_list" | "messages";
 // â”€â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function DriverPage() {
   const router       = useRouter();
+  const searchParams = useSearchParams();
   const user         = useAuthStore((s) => s.user);
   const trips        = useTripStore((s) => s.trips);
   const setStatus    = useTripStore((s) => s.setStatus);
@@ -77,11 +78,18 @@ export default function DriverPage() {
   const [sheetNote,     setSheetNote]    = useState("");
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const v = params.get("view");
-    if (v === "trips") { setView("trips_list"); setActiveTab("trips"); }
-    if (v === "messages") { setView("messages"); setActiveTab("messages"); }
-  }, []);
+    const v = searchParams.get("view");
+    if (v === "trips") {
+      setView("trips_list");
+      setActiveTab("trips");
+    } else if (v === "messages") {
+      setView("messages");
+      setActiveTab("messages");
+    } else {
+      setView("dashboard");
+      setActiveTab("dashboard");
+    }
+  }, [searchParams]);
 
   // Resolve driver â€” fall back to first driver (Mark Santos) for demo
   const driverId = user?.driverId ?? drivers[0]?.id;

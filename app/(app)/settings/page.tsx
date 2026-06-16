@@ -58,6 +58,7 @@ const roleBadgeColors: Record<Role, string> = {
   accounting: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
   client: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-300",
   partner: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+  employee: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300",
 };
 
 const roleLabels: Record<Role, string> = {
@@ -69,6 +70,7 @@ const roleLabels: Record<Role, string> = {
   accounting: "Accounting",
   client: "Client",
   partner: "Partner",
+  employee: "Employee",
 };
 
 const allRoles: Role[] = [
@@ -80,6 +82,7 @@ const allRoles: Role[] = [
   "accounting",
   "client",
   "partner",
+  "employee",
 ];
 
 const permissionAreas = [
@@ -232,6 +235,24 @@ const defaultPermissions: Record<Role, Record<PermissionArea, boolean>> = {
     "Profit Center": false,
   },
   partner: {
+    Dashboard: true,
+    "Fleet Management": false,
+    "Driver Management": false,
+    "Helper Management": false,
+    "Trip & Dispatch": false,
+    "Trip Approvals": false,
+    Payroll: false,
+    Expenses: false,
+    Attendance: false,
+    Billing: false,
+    Reports: false,
+    "AI Insights": false,
+    Documents: false,
+    Warehouse: false,
+    Settings: false,
+    "Profit Center": false,
+  },
+  employee: {
     Dashboard: true,
     "Fleet Management": false,
     "Driver Management": false,

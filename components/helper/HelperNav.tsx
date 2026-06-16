@@ -17,7 +17,7 @@ export function HelperNav({ active }: { active: HelperTab }) {
   const router = useRouter();
   return (
     <nav
-      className="sticky bottom-0 z-30 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.07)] shrink-0"
+      className="fixed bottom-0 w-full z-50 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.07)] shrink-0 pointer-events-auto"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="max-w-lg mx-auto h-16 flex items-center">

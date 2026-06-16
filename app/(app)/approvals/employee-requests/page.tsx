@@ -424,7 +424,7 @@ export default function EmployeeRequestApprovalsPage() {
 
 interface TableProps {
   requests: AnyRequest[];
-  employees: ReturnType<typeof useEmployeeProfileStore>["employees"];
+  employees: any[];
   myStepRole: string | null;
   onApprove: (req: AnyRequest) => void;
   onReject: (req: AnyRequest) => void;

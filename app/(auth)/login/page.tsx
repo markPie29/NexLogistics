@@ -25,8 +25,7 @@ import type { Role, User as UserType } from "@/lib/types";
 import { toast } from "sonner";
 
 interface RoleCard {
-// ... rest of interfaces
-
+  role: Role;
   number: number;
   title: string;
   subtitle: string;
