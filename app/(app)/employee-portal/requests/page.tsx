@@ -29,13 +29,13 @@ import { toast } from "sonner";
 type FormType = "leave" | "undertime" | "cash_advance" | "uniform" | "ppe" | "liquidation" | "loan";
 
 const REQUEST_TYPES: { type: FormType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { type: "leave",        label: "Leave Form",          icon: Calendar },
-  { type: "undertime",    label: "Undertime Form",       icon: Clock },
-  { type: "cash_advance", label: "Cash Advance / Vale",  icon: DollarSign },
-  { type: "uniform",      label: "Uniform Request",      icon: Shirt },
-  { type: "ppe",          label: "PPE Request",          icon: HardHat },
-  { type: "liquidation",  label: "Liquidation (2A)",     icon: ArrowUpCircle },
-  { type: "loan",         label: "Loan Request",         icon: CreditCard },
+  { type: "leave", label: "Leave Form", icon: Calendar },
+  { type: "undertime", label: "Undertime Form", icon: Clock },
+  { type: "cash_advance", label: "Cash Advance / Vale", icon: DollarSign },
+  { type: "uniform", label: "Uniform Request", icon: Shirt },
+  { type: "ppe", label: "PPE Request", icon: HardHat },
+  { type: "liquidation", label: "Liquidation (2A)", icon: ArrowUpCircle },
+  { type: "loan", label: "Loan Request", icon: CreditCard },
 ];
 
 // ── Zod schemas ───────────────────────────────────────────────
@@ -94,9 +94,9 @@ const loanSchema = z.object({
 // ── Status badge component ────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === "approved") return <Badge variant="success" className="text-[10px]">Approved</Badge>;
-  if (status === "rejected") return <Badge variant="danger" className="text-[10px]">Rejected</Badge>;
-  return <Badge variant="warning" className="text-[10px]">Pending</Badge>;
+  if (status === "approved") return <Badge variant="success" className="text-[10px] !bg-emerald-500/20 !text-emerald-900 ring-emerald-500/30">Approved</Badge>;
+  if (status === "rejected") return <Badge variant="danger" className="text-[10px] !bg-red-500/20 !text-red-900 ring-red-500/30">Rejected</Badge>;
+  return <Badge variant="warning" className="text-[10px] !bg-amber-500/50 !text-amber-900 ring-amber-500/30">Pending</Badge>;
 }
 
 // ── Approval steps display ────────────────────────────────────
@@ -108,7 +108,7 @@ function ApprovalSteps({ steps }: { steps: { role: string; status: string }[] })
         <span key={i} className={cn(
           "text-[10px] px-2 py-0.5 rounded-full font-medium",
           st.status === "approved" ? "bg-emerald-100 text-emerald-700" :
-          st.status === "rejected" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"
+            st.status === "rejected" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"
         )}>
           {st.role}
         </span>
@@ -247,12 +247,12 @@ function RequestFormDialog({
   const today = new Date().toISOString().split("T")[0];
 
   const { register: regLeave, handleSubmit: hsLeave, formState: { errors: eLeave } } = useForm({ resolver: zodResolver(leaveSchema), defaultValues: { dateFrom: today, dateTo: today, type: "", reason: "", signature: employeeName } });
-  const { register: regUt,    handleSubmit: hsUt,    formState: { errors: eUt    } } = useForm({ resolver: zodResolver(undertimeSchema), defaultValues: { date: today, type: "", time: "", reason: "", signature: employeeName } });
-  const { register: regCa,    handleSubmit: hsCa,    formState: { errors: eCa    } } = useForm({ resolver: zodResolver(cashAdvanceSchema), defaultValues: { date: today, amount: 0, purpose: "", signature: employeeName } });
-  const { register: regUni,   handleSubmit: hsUni,   formState: { errors: eUni   } } = useForm({ resolver: zodResolver(uniformSchema), defaultValues: { date: today, size: "", reason: "", signature: employeeName } });
-  const { register: regPpe,   handleSubmit: hsPpe,   formState: { errors: ePpe   } } = useForm({ resolver: zodResolver(ppeSchema), defaultValues: { date: today, ppe: "", reason: "", signature: employeeName } });
-  const { register: regLiq,   handleSubmit: hsLiq,   formState: { errors: eLiq   } } = useForm({ resolver: zodResolver(liquidationSchema), defaultValues: { date: today, amount: 0, item: "", signature: employeeName } });
-  const { register: regLoan,  handleSubmit: hsLoan,  formState: { errors: eLoan  } } = useForm({ resolver: zodResolver(loanSchema), defaultValues: { date: today, type: "", reason: "", signature: employeeName } });
+  const { register: regUt, handleSubmit: hsUt, formState: { errors: eUt } } = useForm({ resolver: zodResolver(undertimeSchema), defaultValues: { date: today, type: "", time: "", reason: "", signature: employeeName } });
+  const { register: regCa, handleSubmit: hsCa, formState: { errors: eCa } } = useForm({ resolver: zodResolver(cashAdvanceSchema), defaultValues: { date: today, amount: 0, purpose: "", signature: employeeName } });
+  const { register: regUni, handleSubmit: hsUni, formState: { errors: eUni } } = useForm({ resolver: zodResolver(uniformSchema), defaultValues: { date: today, size: "", reason: "", signature: employeeName } });
+  const { register: regPpe, handleSubmit: hsPpe, formState: { errors: ePpe } } = useForm({ resolver: zodResolver(ppeSchema), defaultValues: { date: today, ppe: "", reason: "", signature: employeeName } });
+  const { register: regLiq, handleSubmit: hsLiq, formState: { errors: eLiq } } = useForm({ resolver: zodResolver(liquidationSchema), defaultValues: { date: today, amount: 0, item: "", signature: employeeName } });
+  const { register: regLoan, handleSubmit: hsLoan, formState: { errors: eLoan } } = useForm({ resolver: zodResolver(loanSchema), defaultValues: { date: today, type: "", reason: "", signature: employeeName } });
 
   const submit = (data: any, fn: (d: any) => any) => {
     fn({ ...data, employeeId });
@@ -284,7 +284,7 @@ function RequestFormDialog({
             <Field label="Type of Leave" error={eLeave.type?.message}>
               <select {...regLeave("type")} className={inputCls}>
                 <option value="">Select...</option>
-                {["Sick Leave","Vacation Leave","Emergency Leave","Maternity Leave","Paternity Leave"].map((o) => <option key={o}>{o}</option>)}
+                {["Sick Leave", "Vacation Leave", "Emergency Leave", "Maternity Leave", "Paternity Leave"].map((o) => <option key={o}>{o}</option>)}
               </select>
             </Field>
             <Field label="Reason/s" error={eLeave.reason?.message}><textarea {...regLeave("reason")} className={`${inputCls} h-20 resize-none`} /></Field>
@@ -299,7 +299,7 @@ function RequestFormDialog({
             <Field label="Type of Undertime" error={eUt.type?.message}>
               <select {...regUt("type")} className={inputCls}>
                 <option value="">Select...</option>
-                {["Personal","Medical","Emergency","Family Matter"].map((o) => <option key={o}>{o}</option>)}
+                {["Personal", "Medical", "Emergency", "Family Matter"].map((o) => <option key={o}>{o}</option>)}
               </select>
             </Field>
             <Field label="Indicate Time" error={eUt.time?.message}><input type="time" {...regUt("time")} className={inputCls} /></Field>
@@ -325,7 +325,7 @@ function RequestFormDialog({
             <Field label="Uniform Size" error={eUni.size?.message}>
               <select {...regUni("size")} className={inputCls}>
                 <option value="">Select...</option>
-                {["XS","S","M","L","XL","XXL","XXXL"].map((o) => <option key={o}>{o}</option>)}
+                {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map((o) => <option key={o}>{o}</option>)}
               </select>
             </Field>
             <Field label="Reason" error={eUni.reason?.message}><textarea {...regUni("reason")} className={`${inputCls} h-20 resize-none`} /></Field>
@@ -340,7 +340,7 @@ function RequestFormDialog({
             <Field label="PPE Item" error={ePpe.ppe?.message}>
               <select {...regPpe("ppe")} className={inputCls}>
                 <option value="">Select...</option>
-                {["Hard Hat","Safety Vest","Gloves","Safety Shoes","Goggles","Ear Plugs","Face Mask","Full Body Harness"].map((o) => <option key={o}>{o}</option>)}
+                {["Hard Hat", "Safety Vest", "Gloves", "Safety Shoes", "Goggles", "Ear Plugs", "Face Mask", "Full Body Harness"].map((o) => <option key={o}>{o}</option>)}
               </select>
             </Field>
             <Field label="Reason" error={ePpe.reason?.message}><textarea {...regPpe("reason")} className={`${inputCls} h-20 resize-none`} /></Field>
@@ -365,7 +365,7 @@ function RequestFormDialog({
             <Field label="Type of Loan" error={eLoan.type?.message}>
               <select {...regLoan("type")} className={inputCls}>
                 <option value="">Select...</option>
-                {["SSS Loan","Pag-IBIG Loan","Company Loan","Emergency Loan"].map((o) => <option key={o}>{o}</option>)}
+                {["SSS Loan", "Pag-IBIG Loan", "Company Loan", "Emergency Loan"].map((o) => <option key={o}>{o}</option>)}
               </select>
             </Field>
             <Field label="Reason" error={eLoan.reason?.message}><textarea {...regLoan("reason")} className={`${inputCls} h-20 resize-none`} /></Field>
@@ -390,7 +390,7 @@ function collectStores() {
   };
 }
 
-const inputCls = "w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/40";
+const inputCls = "w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/40 text-brand-navy";
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (

@@ -135,7 +135,7 @@ export default function HRDocumentsPage() {
                 <div className="text-sm font-medium">{openDoc.issuedBy}</div>
 
                 <div className="text-xs font-semibold text-muted-foreground">Content</div>
-                <div className="text-sm leading-relaxed bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <div className="text-sm leading-relaxed bg-brand-navy-light rounded-xl p-3 border text-white">
                   {openDoc.body}
                 </div>
 
@@ -156,7 +156,7 @@ export default function HRDocumentsPage() {
                         value={nteReply}
                         onChange={(e) => setNteReply(e.target.value)}
                         placeholder="Write your explanation here..."
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/40 h-32 resize-none"
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/40 h-32 resize-none text-brand-navy"
                       />
                     )}
                   </>
@@ -166,7 +166,9 @@ export default function HRDocumentsPage() {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpenDoc(null)}>Close</Button>
                 {openDoc.type === "notice_to_explain" && !openDoc.employeeResponse && (
-                  <Button variant="primary" onClick={handleNTESubmit}>Submit Response</Button>
+                  <Button variant="primary" onClick={handleNTESubmit} className = "bg-brand-teal hover:bg-brand-teal/80">
+                    Submit Response
+                  </Button>
                 )}
               </DialogFooter>
             </>

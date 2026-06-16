@@ -103,10 +103,10 @@ export default function EmployeePortalPage() {
 
   // Quick action items
   const quickActions = [
-    { label: "This Week", icon: Wallet,     href: "/employee-portal/this-week",   color: "bg-brand-teal/10 text-brand-teal" },
-    { label: "Requests",  icon: FileText,   href: "/employee-portal/requests",    color: "bg-blue-100 text-blue-600" },
-    { label: "HR Docs",   icon: Briefcase,  href: "/employee-portal/hr-documents", color: "bg-amber-100 text-amber-600", badge: nteCount > 0 ? nteCount : undefined },
-    { label: "My ID",     icon: CreditCard, href: "/employee-portal/credentials", color: "bg-violet-100 text-violet-600" },
+    { label: "This Week", icon: Wallet, href: "/employee-portal/this-week", color: "bg-brand-teal/10 text-brand-teal" },
+    { label: "Requests", icon: FileText, href: "/employee-portal/requests", color: "bg-blue-100 text-blue-600" },
+    { label: "HR Docs", icon: Briefcase, href: "/employee-portal/hr-documents", color: "bg-amber-100 text-amber-600", badge: nteCount > 0 ? nteCount : undefined },
+    { label: "My ID", icon: CreditCard, href: "/employee-portal/credentials", color: "bg-violet-100 text-violet-600" },
     ...(isDriverOrHelper
       ? [{ label: "My Trips", icon: Truck, href: "/employee-portal/trips", color: "bg-emerald-100 text-emerald-600" }]
       : []),
@@ -115,7 +115,7 @@ export default function EmployeePortalPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <div className="bg-[#0B1220] text-white px-5 pt-10 pb-8 relative">
+      <div className="bg-[#0B1220] text-white px-5 pt-10 pb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-brand-teal flex items-center justify-center shrink-0">
@@ -158,7 +158,7 @@ export default function EmployeePortalPage() {
       {/* KPI cards */}
       <div className="px-4 -mt-4 grid grid-cols-2 gap-3">
         {/* Earnings card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
           <div className="flex items-center gap-2 mb-1">
             <Wallet className="w-4 h-4 text-brand-teal" />
             <span className="text-xs text-muted-foreground">
@@ -171,16 +171,16 @@ export default function EmployeePortalPage() {
           <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
             {myPayroll
               ? (() => {
-                  const p = periods.find((x) => x.id === myPayroll.payrollPeriodId);
-                  return p?.name ?? "See details";
-                })()
+                const p = periods.find((x) => x.id === myPayroll.payrollPeriodId);
+                return p?.name ?? "See details";
+              })()
               : "No payroll yet"}
           </div>
         </div>
 
         {/* Trips / Pending card */}
         {isDriverOrHelper ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
             <div className="flex items-center gap-2 mb-1">
               <Truck className="w-4 h-4 text-emerald-500" />
               <span className="text-xs text-muted-foreground">Trips This Week</span>
@@ -189,7 +189,7 @@ export default function EmployeePortalPage() {
             <div className="text-[10px] text-muted-foreground mt-0.5">Completed</div>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
             <div className="flex items-center gap-2 mb-1">
               <Clock className="w-4 h-4 text-blue-500" />
               <span className="text-xs text-muted-foreground">Pending Requests</span>
@@ -315,7 +315,7 @@ export default function EmployeePortalPage() {
 }
 
 function StatusBadge({ status }: { status: "pending" | "approved" | "rejected" }) {
-  if (status === "approved") return <Badge variant="success" className="text-[10px]">Approved</Badge>;
-  if (status === "rejected") return <Badge variant="danger" className="text-[10px]">Rejected</Badge>;
-  return <Badge variant="warning" className="text-[10px]">Pending</Badge>;
+  if (status === "approved") return <Badge variant="success" className="text-[10px] !bg-brand-navy/50 text-emerald-400 ring-emerald-500/30">Approved</Badge>;
+  if (status === "rejected") return <Badge variant="danger" className="text-[10px] !bg-brand-navy/50 text-red-400 ring-red-500/30">Rejected</Badge>;
+  return <Badge variant="warning" className="text-[10px] !bg-brand-navy/50 text-amber-400 ring-amber-500/30">Pending</Badge>;
 }

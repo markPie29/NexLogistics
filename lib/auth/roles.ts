@@ -79,6 +79,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Helper Management", href: "/helpers", icon: Users, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"], featureKey: "helper_management" },
   { label: "Trip & Dispatch", href: "/trips", icon: Route, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"], featureKey: "trip_dispatch" },
   { label: "Trip Approvals", href: "/approvals", icon: CheckCircle2, group: "operations", roles: ["super_admin"], featureKey: "trip_approvals" },
+  { label: "Employee Requests", href: "/approvals/employee-requests", icon: Users, group: "operations", roles: ["super_admin", "company_admin", "accounting"] },
   { label: "Subcon Partners", href: "/partners", icon: Handshake, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "accounting"], featureKey: "subcon_partners" },
   { label: "Live GPS Tracking", href: "/gps", icon: MapPinned, group: "operations", roles: ["super_admin", "company_admin", "dispatcher", "driver", "helper"], featureKey: "gps_tracking" },
   { label: "PMS / Maintenance", href: "/pms", icon: Wrench, group: "operations", roles: ["super_admin", "company_admin", "dispatcher"], featureKey: "pms_maintenance" },
