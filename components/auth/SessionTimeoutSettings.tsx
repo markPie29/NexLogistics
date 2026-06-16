@@ -15,11 +15,11 @@ export function SessionTimeoutSettings() {
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     const mins = parseInt(val, 10);
-    if (isNaN(mins) || mins < 1) {
-      toast.error("Please enter a valid number of minutes (minimum 1).");
+    if (isNaN(mins) || mins < 5) {
+      toast.error("Please enter a valid number of minutes (minimum 5).");
       return;
     }
-    
+
     setTimeoutValue(mins);
     setSaved(true);
     toast.success(`Session timeout updated to ${mins} minutes.`);
@@ -30,19 +30,19 @@ export function SessionTimeoutSettings() {
     <div className="p-1">
       <form onSubmit={handleUpdate} className="space-y-2">
         <div className="flex items-center justify-between gap-4">
-          <Label htmlFor="session-timeout" className="flex items-center gap-2 cursor-pointer">
-            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-            <span>Session Timeout (mins)</span>
+          <Label htmlFor="session-timeout" className="flex items-center gap-2 cursor-pointer text-foreground">
+            <Clock className="w-3.5 h-3.5 text-brand-navy" />
+            <span className="font-medium text-black/50">Session Timeout (mins)</span>
           </Label>
-          <div className="relative w-24">
+          <div className="relative w-20">
             <Input
               id="session-timeout"
               type="number"
-              min="1"
+              min="5"
               max="1440"
               value={val}
               onChange={(e) => setVal(e.target.value)}
-              className="h-8 text-xs pr-8"
+              className="h-8 text-xs !text-brand-navy font-semibold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               onBlur={handleUpdate}
             />
             {saved && (

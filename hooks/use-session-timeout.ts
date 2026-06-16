@@ -10,7 +10,9 @@ export function useSessionTimeout() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const sessionTimeout = useAuthStore((s) => s.sessionTimeout);
+  const rawSessionTimeout = useAuthStore((s) => s.sessionTimeout);
+  // Ensure timeout is at least 5 minutes to prevent instant loop if someone saved < 5 minutes
+  const sessionTimeout = Math.max(rawSessionTimeout, 5);
   const [showWarning, setShowWarning] = useState(false);
   const [countdown, setCountdown] = useState(SESSION_CONFIG.warningSeconds);
   

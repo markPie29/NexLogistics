@@ -18,12 +18,12 @@ export function SessionTimeoutGuard() {
 
   return (
     <AlertDialog open={showWarning}>
-      <AlertDialogContent className="max-w-[400px]">
+      <AlertDialogContent className="max-w-[400px] dark:bg-brand-navy !border-0">
         <AlertDialogHeader>
           <div className="mx-auto w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mb-2">
             <Clock className="w-6 h-6 text-amber-600 animate-pulse" />
           </div>
-          <AlertDialogTitle className="text-center text-xl font-extrabold tracking-tight">
+          <AlertDialogTitle className="text-center text-xl font-extrabold tracking-tight dark:text-white">
             Session Timeout
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-brand-gray dark:text-white/60">
@@ -34,14 +34,14 @@ export function SessionTimeoutGuard() {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-col sm:flex-row gap-2 mt-4">
-          <AlertDialogCancel 
-            onClick={stayLoggedIn} 
-            className="flex-1 rounded-xl h-11 font-bold"
+          <AlertDialogCancel
+            onClick={stayLoggedIn}
+            className="flex-1 rounded-xl h-11 font-bold !bg-brand-teal/80 hover:!bg-brand-teal !text-white"
           >
             Stay Logged In
           </AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={logout} 
+          <AlertDialogAction
+            onClick={logout}
             className="flex-1 rounded-xl h-11 font-bold"
           >
             Logout Now
