@@ -315,7 +315,7 @@ export default function EmployeePortalPage() {
 }
 
 function StatusBadge({ status }: { status: "pending" | "approved" | "rejected" }) {
-  if (status === "approved") return <Badge variant="success" className="text-[10px] !bg-brand-navy/50 text-emerald-400 ring-emerald-500/30">Approved</Badge>;
-  if (status === "rejected") return <Badge variant="danger" className="text-[10px] !bg-brand-navy/50 text-red-400 ring-red-500/30">Rejected</Badge>;
-  return <Badge variant="warning" className="text-[10px] !bg-brand-navy/50 text-amber-400 ring-amber-500/30">Pending</Badge>;
+  if (status === "approved") return <Badge variant="success" className="text-[10px] !bg-brand-navy text-emerald-400 ring-emerald-500/30">Approved</Badge>;
+  if (status === "rejected") return <Badge variant="danger" className="text-[10px] !bg-brand-navy text-red-400 ring-red-500/30">Rejected</Badge>;
+  return <Badge variant="warning" className="text-[10px] !bg-brand-navy text-amber-400 ring-amber-500/30">Pending</Badge>;
 }

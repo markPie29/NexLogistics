@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User, Role } from "@/lib/types";
 import { BRAND } from "@/lib/config/brand";
+import { SESSION_CONFIG } from "@/lib/config/session";
 import { seedUsers, demoCompany } from "@/lib/data/users";
 
 interface AuthState {
@@ -12,6 +13,9 @@ interface AuthState {
   isAuthenticated: () => boolean;
   hasRole: (...roles: Role[]) => boolean;
   company: { id: string; name: string; code: string };
+  // Per-account session settings
+  sessionTimeout: number; // in minutes
+  setSessionTimeout: (minutes: number) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -19,6 +23,8 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       company: demoCompany,
+      sessionTimeout: SESSION_CONFIG.timeoutMinutes,
+      setSessionTimeout: (minutes) => set({ sessionTimeout: minutes }),
       loginAsRole: (role) => {
         const u = seedUsers.find((x) => x.role === role) || null;
         set({ user: u });

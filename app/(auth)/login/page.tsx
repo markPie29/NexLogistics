@@ -1,5 +1,6 @@
-﻿"use client";
-import { useRouter } from "next/navigation";
+"use client";
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Shield,
   Building2,
@@ -159,7 +160,17 @@ const QUICK_ACCESS = [
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const loginAsRole = useAuthStore((s) => s.loginAsRole);
+
+  useEffect(() => {
+    if (searchParams.get("reason") === "inactivity") {
+      toast.info("You were logged out due to inactivity.", {
+        description: "Please sign in again to continue.",
+        duration: 5000,
+      });
+    }
+  }, [searchParams]);
 
   const handleLogin = (role: Role, label: string) => {
     const u = loginAsRole(role);

@@ -33,6 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ROLE_LABEL } from "@/lib/auth/roles";
 import { initials } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { SessionTimeoutSettings } from "@/components/auth/SessionTimeoutSettings";
 
 export function Topbar() {
   const router = useRouter();
@@ -281,6 +282,10 @@ export function Topbar() {
             <DropdownMenuLabel>{company.name}</DropdownMenuLabel>
             <DropdownMenuItem><User className="w-4 h-4" /> My Profile</DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/settings")}><SettingsIcon className="w-4 h-4" /> Settings</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <div className="px-2 py-1.5">
+              <SessionTimeoutSettings />
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem destructive onClick={onLogout}>
               <LogOut className="w-4 h-4" /> Sign Out

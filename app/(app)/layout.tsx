@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { SessionTimeoutGuard } from "@/components/auth/SessionTimeoutGuard";
 import { useUiStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +61,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     (pathname?.startsWith("/driver/") && !pathname.startsWith("/drivers")) ||
     (user.role === "driver" && pathname?.startsWith("/pod"));
   if (isDriverApp) {
-    return <>{children}</>;
+    return (
+      <>
+        <SessionTimeoutGuard />
+        {children}
+      </>
+    );
   }
 
   // Helper mobile app — full-screen, no sidebar or topbar
@@ -69,7 +75,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     pathname?.startsWith("/helper/") ||
     (user.role === "helper" && pathname?.startsWith("/pod"));
   if (isHelperApp) {
-    return <>{children}</>;
+    return (
+      <>
+        <SessionTimeoutGuard />
+        {children}
+      </>
+    );
   }
 
   // Employee Portal — full-screen, no sidebar or topbar
@@ -77,11 +88,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     pathname === "/employee-portal" ||
     pathname?.startsWith("/employee-portal/");
   if (isEmployeePortal) {
-    return <>{children}</>;
+    return (
+      <>
+        <SessionTimeoutGuard />
+        {children}
+      </>
+    );
   }
 
   return (
     <div className="min-h-screen bg-white dark:bg-background">
+      <SessionTimeoutGuard />
       <Sidebar />
       <div className={cn("transition-[padding] duration-300", collapsed ? "pl-[78px]" : "pl-[260px]")}>
         <Topbar />
