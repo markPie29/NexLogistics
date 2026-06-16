@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Shield,
@@ -18,12 +18,15 @@ import {
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/lib/store/auth";
 import { DEFAULT_LANDING } from "@/lib/auth/roles";
+import { seedUsers } from "@/lib/data/users";
+import { OtpModal } from "@/components/auth/OtpModal";
 import { Button } from "@/components/ui/button";
-import type { Role } from "@/lib/types";
+import type { Role, User as UserType } from "@/lib/types";
 import { toast } from "sonner";
 
 interface RoleCard {
-  role: Role;
+// ... rest of interfaces
+
   number: number;
   title: string;
   subtitle: string;
@@ -163,6 +166,11 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const loginAsRole = useAuthStore((s) => s.loginAsRole);
 
+  // OTP State
+  const [otpUser, setOtpUser] = useState<{ user: UserType; label: string } | null>(null);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState("");
+
   useEffect(() => {
     if (searchParams.get("reason") === "inactivity") {
       toast.info("You were logged out due to inactivity.", {
@@ -173,15 +181,38 @@ export default function LoginPage() {
   }, [searchParams]);
 
   const handleLogin = (role: Role, label: string) => {
-    const u = loginAsRole(role);
-    if (u) {
-      toast.success(`Welcome, ${u.name}!`, { description: `Signed in as ${label}.` });
-      router.push(DEFAULT_LANDING[role]);
+    const user = seedUsers.find((u) => u.role === role);
+    if (user) {
+      // Generate a random 6-digit OTP for demo purposes
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOtp(otp);
+      setOtpUser({ user, label });
+      setShowOtpModal(true);
+    }
+  };
+
+  const handleVerifyOtp = (otp: string) => {
+    if (otp === generatedOtp && otpUser) {
+      const u = loginAsRole(otpUser.user.role);
+      if (u) {
+        setShowOtpModal(false);
+        toast.success(`Welcome, ${u.name}!`, { 
+          description: `Identity verified. Signed in as ${otpUser.label}.` 
+        });
+        router.push(DEFAULT_LANDING[otpUser.user.role]);
+      }
     }
   };
 
   return (
     <div className="min-h-screen gradient-navy text-white relative overflow-hidden">
+      <OtpModal
+        isOpen={showOtpModal}
+        user={otpUser?.user || null}
+        generatedOtp={generatedOtp}
+        onVerify={handleVerifyOtp}
+        onCancel={() => setShowOtpModal(false)}
+      />
       {/* decorative grid */}
       <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
         style={{
